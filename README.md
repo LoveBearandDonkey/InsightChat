@@ -1,4 +1,6 @@
-# Remotion video
+# InsightChat
+
+InsightChat 的 Remotion 视频项目。
 
 <p align="center">
   <a href="https://github.com/remotion-dev/logo">
@@ -8,8 +10,6 @@
     </picture>
   </a>
 </p>
-
-Welcome to your Remotion project!
 
 ## Commands
 

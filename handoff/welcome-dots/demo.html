@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>欢迎页点阵动效 · 独立参考</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body {
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      background: #f5f5f5;
+      color: #111;
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    .hero {
+      position: relative;
+      width: min(720px, 100vw);
+      height: min(720px, 100vh);
+      display: grid;
+      place-items: center;
+      isolation: isolate;
+    }
+    .dots {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(560px, 92vw);
+      height: min(602px, 92vh);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      --welcome-dots-rgb: 99 102 241;
+      --welcome-dots-hot-rgb: 123 37 244;
+      --welcome-dots-alpha: 0.08;
+    }
+    .content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      pointer-events: none;
+    }
+    .logo {
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 12px;
+      border-radius: 16px;
+      background: linear-gradient(145deg, #7b25f4, #6366f1);
+      box-shadow: 0 10px 32px rgb(99 102 241 / 25%);
+    }
+    h1 { margin: 0; font-size: 24px; line-height: 1.3; }
+    p { margin: 10px 0 0; color: #697386; font-size: 13px; }
+    .actions {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 2;
+      display: flex;
+      gap: 8px;
+    }
+    button {
+      border: 1px solid rgb(0 0 0 / 10%);
+      border-radius: 10px;
+      padding: 9px 13px;
+      background: rgb(255 255 255 / 90%);
+      color: inherit;
+      cursor: pointer;
+    }
+    body.dark { background: #101010; color: #eee; }
+    body.dark p { color: #aaa; }
+    body.dark .dots { --welcome-dots-alpha: 0.22; }
+    body.dark button {
+      border-color: rgb(255 255 255 / 12%);
+      background: rgb(255 255 255 / 8%);
+    }
+  </style>
+</head>
+<body>
+  <main class="hero" id="hero">
+    <canvas class="dots" id="dots" aria-hidden="true"></canvas>
+    <div class="content">
+      <div class="logo"></div>
+      <h1>你好，我是性能分析助手</h1>
+      <p>移动鼠标查看悬浮响应</p>
+    </div>
+  </main>
+  <div class="actions">
+    <button type="button" id="replay">重播初始动效</button>
+    <button type="button" id="theme">切换明暗主题</button>
+  </div>
+
+  <script src="welcome-dots.js"></script>
+  <script>
+    const effect = WelcomeDots.create(document.querySelector('#dots'), {
+      hitArea: document.querySelector('#hero'),
+    });
+    effect.ripple();
+
+    document.querySelector('#replay').addEventListener('click', () => effect.ripple());
+    document.querySelector('#theme').addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+      effect.refreshTheme();
+    });
+    window.addEventListener('pagehide', () => effect.destroy(), { once: true });
+  </script>
+</body>
+</html>

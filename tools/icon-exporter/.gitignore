@@ -1,0 +1,13 @@
+# 本工具是要整个文件夹拷到别的机器上跑的，依赖必须跟着走，
+# 所以这里反向解除项目根 .gitignore 里的 node_modules 规则。
+#
+# 依赖已全部换成纯 JS / WASM（esbuild-wasm、libwebp.wasm），
+# 不含任何平台相关的原生二进制，可跨 Windows / macOS / Linux 直接使用。
+# 体积约 58 MB / 4296 个文件。
+#
+# 如果不想把这些文件进版本库，删掉下面这行，改用打包 zip 的方式交付即可，
+# 接手方按 README 里的 `npm ci` 恢复依赖。
+!node_modules/
+
+out/
+*.log

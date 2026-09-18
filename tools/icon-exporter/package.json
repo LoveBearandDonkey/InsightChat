@@ -1,0 +1,24 @@
+{
+  "name": "@internal/icon-exporter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "把组件库里的代码动效图标导出成透明底的 GIF / WebP / APNG / PNG 序列",
+  "bin": {
+    "icon-export": "./bin/icon-export.mjs"
+  },
+  "scripts": {
+    "doctor": "node ./bin/doctor.mjs",
+    "export": "node ./bin/icon-export.mjs"
+  },
+  "dependencies": {
+    "esbuild-wasm": "^0.28.2",
+    "gifenc": "^1.0.3",
+    "node-webpmux": "^3.2.0",
+    "puppeteer-core": "^24.43.1",
+    "upng-js": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
