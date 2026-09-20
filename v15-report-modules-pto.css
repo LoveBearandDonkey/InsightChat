@@ -1,0 +1,1448 @@
+/* ============================================================================
+ * V15 报告高频模块 · 页面局部样式
+ *
+ * 只包含两类内容：
+ *   1. 模块私有 layout / 结构 class（前缀 rp-）
+ *   2. data-viz 编码（标注 DATA-VIZ，说明编码的数据含义）
+ *
+ * 所有颜色、间距、圆角、字号、状态色一律取 PTO token；
+ * shell、pane、chrome、按钮、分段控件、tab、芯片、tooltip 均复用共享组件。
+ *
+ * 消费的共享部件：
+ *   patterns/ide-frame          .pto-ide-frame__*            （页面 shell）
+ *   patterns/workbench-shell    拖拽 split kernel（由 ide-frame 委托）
+ *   patterns/swimlane-task      .pto-swimlane-task-tooltip__* （hover tooltip）
+ *   css/style.css               .btn .btn-solid .btn-ghost .btn-sm .btn-icon
+ *                               .is-selected .segmented-control
+ *                               .tab-control .tab-control-item
+ *                               .stat-chip .legend-item .legend-dot
+ *
+ * 待共识系统吸收（tokens 已存在、css/style.css 尚无实现）：
+ *   .inspector-rail / .inspector-section / .inspector-soft-card
+ *   input 组件 class（--input-* token 已存在）
+ *   表格 class（--table-* token 已存在）
+ * ========================================================================== */
+
+/* ---------------------------------------------------------------- 页面根 --- */
+
+/* swimlane-task/pattern.css 带有 preview 页面级 body 规则（grid/place-items/
+   min-height/background）。这里显式复位，不改 pattern 内部任何 class。 */
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  display: block;
+  place-items: initial;
+  min-height: 0;
+  background: var(--ide-frame-page-bg);
+  color: var(--foreground);
+  font: var(--type-body);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* 全屏 standalone 宿主窗口。参照设计系统内的 pto-typical-ide-frame.html：
+   产品页占满视口时取消 4:3 预览比例，其余 skin 全部继承 ide-frame。 */
+.rp-frame {
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: auto;
+  border-radius: 0;
+  box-shadow: none;
+
+  /* DATA-VIZ 编码色。不是新的 UI token：只是把共享 viz highlight ramp
+     绑定到本页四个 step 阶段上，作用域限制在本页面。
+       compute       计算段
+       communication 通信段
+       waiting       等待 / 同步阻塞段
+       free          空闲段（中性，不占用 viz 色相）
+     canvas 侧（swimlane 任务条、热力图）读取同名变量，保证 DOM 与
+     canvas 两种渲染路径取色一致。 */
+  --rp-viz-compute: var(--highlight-copy-blue-source);
+  --rp-viz-communication: var(--highlight-l0a-violet-source);
+  --rp-viz-waiting: var(--highlight-mte-amber-source);
+  --rp-viz-free: color-mix(in srgb, var(--foreground) 22%, transparent);
+  --rp-viz-forward: var(--highlight-copy-blue-source);
+  --rp-viz-backward: var(--highlight-l0b-deep-violet-source);
+  /* bubble（空泡）不定义页面色：直接取 swimlane colormap 的中性色，
+     由 PtoSwimlaneTaskPattern.createTaskColormap 提供。 */
+}
+
+/* Inspector 折叠：pane 与 gutter 同时收起（gutter 由脚本置 hidden），
+   剩余 pane 填满宽度，不留窄残留列。 */
+.pto-ide-frame[data-inspector-open="false"] [data-ide-pane="inspector"] {
+  display: none;
+}
+
+.pto-ide-frame[data-inspector-open="false"] [data-ide-split="standalone-main"] > [data-ide-pane="editor-preview"] {
+  flex: 1 1 auto !important;
+  width: auto !important;
+}
+
+/* pane header 右侧的控制项容器（只提供排列，不改 pattern header 样式） */
+.rp-pane-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------------------------------ 顶栏 / 状态 --- */
+
+.rp-host-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-status {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.rp-status-group {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.rp-status-item {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------- Explorer 模块树 --- */
+
+.rp-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-2) var(--space-4);
+}
+
+.rp-tree-group {
+  padding: var(--space-2) var(--space-2) var(--space-1);
+  color: var(--foreground-muted);
+  font: var(--type-micro);
+  letter-spacing: var(--letter-spacing-label);
+  text-transform: uppercase;
+}
+
+.rp-tree-item {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 34px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--foreground-secondary);
+  font: var(--type-label);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--easing-default),
+    color var(--duration-fast) var(--easing-default);
+}
+
+.rp-tree-item:hover {
+  background: var(--state-hover);
+  color: var(--foreground);
+}
+
+/* 选中态用填充，不用左侧 accent rail */
+.rp-tree-item.is-selected {
+  background: var(--state-selected);
+  color: var(--foreground);
+}
+
+.rp-tree-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.rp-tree-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.72;
+}
+
+.rp-tree-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-tree-meta {
+  color: var(--foreground-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-label);
+}
+
+.rp-tree-note {
+  padding: var(--space-3) var(--space-2) 0;
+  color: var(--foreground-muted);
+  font: var(--type-body);
+}
+
+/* --------------------------------------------------------- 主视图 pane ----- */
+
+.rp-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.rp-module[hidden] {
+  display: none !important;
+}
+
+.rp-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.rp-toolbar-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.rp-input {
+  width: 168px;
+  min-height: var(--input-height-md);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--input-border);
+  border-radius: var(--input-radius);
+  outline: none;
+  background: var(--input-bg);
+  color: var(--foreground);
+  font: var(--type-body-sm);
+}
+
+.rp-input::placeholder {
+  color: var(--foreground-muted);
+}
+
+.rp-input:focus {
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* 当前粒度说明。说明文案按可读性基线走 14px，不做 ellipsis 压缩。 */
+.rp-mode {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--inspector-soft-card-bg);
+}
+
+.rp-mode-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--tone-info-bg);
+  color: var(--primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-body-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+}
+
+.rp-mode-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.rp-mode-name {
+  font: var(--type-title-3);
+  color: var(--foreground);
+}
+
+.rp-mode-desc {
+  margin-top: var(--space-1);
+  color: var(--foreground-secondary);
+  font: var(--type-body);
+}
+
+.rp-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.rp-section-title {
+  margin: 0;
+  font: var(--type-title-3);
+  color: var(--foreground);
+}
+
+.rp-section-hint {
+  color: var(--foreground-muted);
+  font: var(--type-body-sm);
+}
+
+/* --------------------------------------------------- T1 Rank 逐卡对比 ----- */
+
+.rp-chart-head,
+.rp-rank-row {
+  display: grid;
+  grid-template-columns: 148px minmax(280px, 1fr) 184px;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.rp-chart-head {
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  color: var(--foreground-muted);
+  font: var(--type-label);
+}
+
+.rp-chart-head-scale {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.rp-chart-head-right {
+  text-align: right;
+}
+
+.rp-rank-rows {
+  position: relative;
+}
+
+/* DATA-VIZ：垂直虚线 = 参考基线（当前范围或全局集群的 stepTime P50）。
+   用 gradient 绘制而不是 border-left，避免留下 side-rail 装饰签名。 */
+.rp-baseline {
+  position: absolute;
+  z-index: var(--z-raised);
+  top: 0;
+  bottom: 0;
+  left: calc(
+    var(--space-3) + 148px + var(--space-4) +
+      (100% - var(--space-3) * 2 - 148px - var(--space-4) * 2 - 184px) * var(--rp-baseline, 0)
+  );
+  width: 2px;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--primary) 0 4px,
+    transparent 4px 8px
+  );
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.rp-baseline-tag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--tone-info-bg);
+  color: var(--primary);
+  font: var(--type-micro);
+  white-space: nowrap;
+  transform: translate(-50%, -100%);
+}
+
+.rp-rank-row {
+  min-height: 46px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  animation: rp-row-in var(--duration-slow) var(--easing-out) both;
+}
+
+.rp-rank-row:nth-child(even) {
+  background: var(--state-muted);
+}
+
+/* DATA-VIZ：整行 danger 色调 = 该 Rank 被判定为异常卡 */
+.rp-rank-row.is-anomalous {
+  background: var(--tone-critical-bg);
+}
+
+.rp-rank-row.is-selected {
+  background: var(--state-selected);
+}
+
+.rp-rank-row--compact {
+  min-height: 38px;
+}
+
+.rp-rank-id {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.rp-rank-badge {
+  min-width: 40px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--tone-info-bg);
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-label);
+}
+
+.is-anomalous .rp-rank-badge {
+  background: var(--tone-critical-bg);
+  color: var(--danger);
+}
+
+.rp-rank-name {
+  display: block;
+  min-width: 0;
+  color: var(--foreground);
+  font: var(--type-label);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-rank-topo {
+  display: block;
+  margin-top: 2px;
+  color: var(--foreground-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-label);
+}
+
+/* DATA-VIZ：四段堆叠条 = 一个 step 的时间构成。
+   段宽按 ms 等比映射到统一刻度，段色取 viz highlight ramp；
+   patterns.json 无匹配 pattern（swimlane drawTaskBar 只渲染
+   IN/compute/OUT 三段固定几何），因此保留页面局部实现。 */
+.rp-stack {
+  height: 24px;
+  display: flex;
+  gap: 1px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--state-muted);
+}
+
+.rp-seg {
+  position: relative;
+  height: 100%;
+  width: var(--rp-seg-width, 0);
+}
+
+.rp-rank-rows.is-animated .rp-seg {
+  width: 0;
+  animation: rp-seg-grow var(--duration-slow) var(--easing-out) forwards;
+}
+
+.rp-seg--compute { background: var(--rp-viz-compute); }
+.rp-seg--communication { background: var(--rp-viz-communication); }
+.rp-seg--waiting { background: var(--rp-viz-waiting); }
+.rp-seg--free { background: var(--rp-viz-free); }
+
+/* DATA-VIZ：段内标注 = 该段绝对耗时，仅在异常卡的主因段上出现 */
+.rp-seg-tag {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--ark-neutral-0);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-label-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-label);
+  white-space: nowrap;
+}
+
+.rp-rank-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.rp-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.rp-rank-total {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-title-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-label);
+}
+
+.is-anomalous .rp-rank-total {
+  color: var(--danger);
+}
+
+.rp-unit {
+  color: var(--foreground-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-label);
+}
+
+/* ------------------------------------------------------ T1 节点聚合视图 --- */
+
+.rp-group-head,
+.rp-group-row {
+  display: grid;
+  grid-template-columns: 168px minmax(240px, 1fr) 104px 132px 84px;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.rp-group-head {
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  color: var(--foreground-muted);
+  font: var(--type-label);
+}
+
+.rp-group-row {
+  min-height: 48px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
+  cursor: pointer;
+  animation: rp-row-in var(--duration-slow) var(--easing-out) both;
+}
+
+.rp-group-row:nth-child(even) {
+  background: var(--state-muted);
+}
+
+.rp-group-row:hover {
+  background: var(--state-hover);
+}
+
+.rp-group-row.is-selected {
+  background: var(--state-selected);
+}
+
+.rp-group-row:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.rp-group-name {
+  display: block;
+  color: var(--foreground);
+  font: var(--type-label);
+}
+
+.rp-group-sub {
+  display: block;
+  margin-top: 2px;
+  color: var(--foreground-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-label);
+}
+
+.rp-stat {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-label);
+}
+
+.rp-stat-sub {
+  display: block;
+  margin-top: 2px;
+  color: var(--foreground-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-label);
+}
+
+.rp-group-flag {
+  justify-self: end;
+}
+
+/* ------------------------------------------------------- T1 集群总览 ------ */
+
+.rp-fleet {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.9fr);
+  gap: var(--space-4);
+}
+
+.rp-block {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.rp-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.rp-block-title {
+  margin: 0;
+  font: var(--type-title-3);
+  color: var(--foreground);
+}
+
+.rp-block-hint {
+  margin: 2px 0 0;
+  color: var(--foreground-muted);
+  font: var(--type-body-sm);
+}
+
+/* DATA-VIZ：热力图。每格 = 一段连续 Rank 区间，颜色 = 区间 P95 落在
+   顺序 ramp 上的位置；含异常 Rank 的格子改用 danger 并加白点标记。 */
+.rp-heatmap {
+  --rp-heat-cols: 24;
+  display: grid;
+  grid-template-columns: repeat(var(--rp-heat-cols), minmax(8px, 1fr));
+  gap: 3px;
+  align-content: start;
+}
+
+.rp-heat-cell {
+  position: relative;
+  aspect-ratio: 1.5 / 1;
+  min-height: 10px;
+  border: 0;
+  border-radius: 3px;
+  outline: 0;
+  padding: 0;
+  cursor: pointer;
+  transition: scale var(--duration-fast) var(--easing-default);
+}
+
+.rp-heat-cell:hover,
+.rp-heat-cell.is-selected {
+  z-index: var(--z-raised);
+  scale: 1.3;
+}
+
+.rp-heat-cell.is-selected {
+  box-shadow: 0 0 0 2px var(--ide-frame-pane-bg), 0 0 0 4px var(--primary);
+}
+
+/* DATA-VIZ：白点 = 该聚合格内至少含一个异常 Rank */
+.rp-heat-cell.has-anomaly::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-foreground);
+}
+
+.rp-heat-scale {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--foreground-muted);
+  font: var(--type-micro);
+}
+
+/* DATA-VIZ：顺序 ramp 图例，色标与热力图取色函数同源 */
+.rp-heat-ramp {
+  width: 96px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    to right,
+    var(--highlight-copy-blue-200),
+    var(--highlight-copy-blue-400),
+    var(--warning),
+    var(--danger)
+  );
+}
+
+/* DATA-VIZ：stepTime 直方图，bin 高度 = 落在该区间的卡数 */
+.rp-hist {
+  height: 172px;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  padding-top: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.rp-hist-bar {
+  flex: 1;
+  min-width: 5px;
+  border-radius: 3px 3px 0 0;
+  background: var(--rp-viz-compute);
+  cursor: pointer;
+}
+
+/* DATA-VIZ：尾部 bin 改 danger，标记长尾区间 */
+.rp-hist-bar.is-tail {
+  background: var(--danger);
+}
+
+.rp-quantiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.rp-quantile {
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--inspector-soft-card-bg);
+}
+
+.rp-quantile-label {
+  color: var(--foreground-muted);
+  font: var(--type-micro);
+  letter-spacing: var(--letter-spacing-label);
+}
+
+.rp-quantile-value {
+  margin-top: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-title-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-label);
+}
+
+.rp-drilldown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--inspector-soft-card-bg);
+}
+
+.rp-drilldown-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.rp-drilldown-title {
+  font: var(--type-label);
+  color: var(--foreground);
+}
+
+.rp-drilldown-meta {
+  color: var(--foreground-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-label);
+}
+
+/* --------------------------------------------- T2 / T3 swimlane 宿主 ----- */
+
+.rp-lanes {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* DATA-VIZ：时间轴刻度 */
+.rp-time-axis {
+  display: grid;
+  grid-template-columns: 116px repeat(6, minmax(0, 1fr));
+  padding-bottom: var(--space-2);
+  color: var(--foreground-muted);
+  font: var(--type-micro);
+  font-variant-numeric: tabular-nums;
+}
+
+.rp-time-axis span:not(:first-child) {
+  text-align: right;
+}
+
+.rp-lane {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+}
+
+.rp-lane + .rp-lane {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.rp-lane-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--foreground);
+  font: var(--type-label);
+}
+
+.rp-lane-mark {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+}
+
+/* DATA-VIZ：泳道标识色与该泳道的任务条同源 */
+.rp-lane-mark--compute {
+  background: var(--tone-info-bg);
+  color: var(--primary);
+}
+
+.rp-lane-mark--communication {
+  background: color-mix(in srgb, var(--rp-viz-communication) 18%, transparent);
+  color: var(--rp-viz-communication);
+}
+
+.rp-track {
+  position: relative;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--state-muted);
+}
+
+/* DATA-VIZ：网格线 = 时间轴 20% 分隔 */
+.rp-track::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0 calc(20% - 1px),
+    var(--border-subtle) calc(20% - 1px),
+    var(--border-subtle) 20%
+  );
+  pointer-events: none;
+}
+
+/* swimlane-task-bar 的宿主 canvas。几何由页面给出（起止时间 → left/width），
+   条形绘制全部交给 PtoSwimlaneTaskPattern.drawTaskBar。 */
+.rp-task {
+  position: absolute;
+  top: 3px;
+  height: 24px;
+  display: block;
+  cursor: pointer;
+}
+
+/* DATA-VIZ：虚线框 = 完全暴露在计算窗口之外的通信区间 */
+.rp-exposed {
+  position: absolute;
+  z-index: var(--z-raised);
+  top: 24px;
+  bottom: 4px;
+  border: 1px dashed color-mix(in srgb, var(--danger) 55%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--tone-critical-bg);
+  pointer-events: none;
+}
+
+.rp-exposed-tag {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  color: var(--danger);
+  font: var(--type-micro);
+  white-space: nowrap;
+  transform: translate(-50%, -125%);
+}
+
+/* ------------------------------------------------------- T3 流水线网格 --- */
+
+.rp-pipeline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 216px;
+  gap: var(--space-5);
+}
+
+.rp-pipe-axis,
+.rp-pipe-row {
+  display: grid;
+  grid-template-columns: 96px repeat(12, minmax(34px, 1fr));
+  gap: var(--space-1);
+}
+
+.rp-pipe-axis {
+  padding-bottom: var(--space-1);
+  color: var(--foreground-muted);
+  font: var(--type-micro);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.rp-pipe-row {
+  align-items: center;
+  min-height: 44px;
+}
+
+.rp-pipe-stage {
+  min-width: 0;
+  color: var(--foreground);
+  font: var(--type-label);
+}
+
+.rp-pipe-ranks {
+  display: block;
+  margin-top: 2px;
+  color: var(--foreground-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-label);
+}
+
+.rp-pipe-cell {
+  width: 100%;
+  height: 30px;
+  display: block;
+  cursor: pointer;
+}
+
+.rp-bubble-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+/* DATA-VIZ：环形占比 = bubble 率（空转时间 / 调度窗口总时间） */
+.rp-ring {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: conic-gradient(
+    var(--warning) calc(var(--rp-ring-rate, 0) * 1%),
+    var(--state-muted) 0
+  );
+}
+
+.rp-ring::after {
+  content: "";
+  width: 104px;
+  height: 104px;
+  border-radius: var(--radius-pill);
+  background: var(--ide-frame-pane-bg);
+}
+
+.rp-ring-copy {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.rp-ring-value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-title-md);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+.rp-ring-label {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--foreground-muted);
+  font: var(--type-micro);
+  letter-spacing: var(--letter-spacing-label);
+}
+
+.rp-bubble-time {
+  text-align: center;
+}
+
+.rp-bubble-time-value {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-title-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-label);
+}
+
+.rp-bubble-time-label {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--foreground-muted);
+  font: var(--type-body-sm);
+}
+
+/* ------------------------------------------------------- T4 带宽达标率 --- */
+
+.rp-bw-head,
+.rp-bw-row {
+  display: grid;
+  grid-template-columns: 176px minmax(240px, 1fr) 148px;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.rp-bw-head {
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  color: var(--foreground-muted);
+  font: var(--type-label);
+}
+
+/* DATA-VIZ：三档阈值刻度，宽度比例对应 <60% / 60–85% / >85% */
+.rp-bw-scale {
+  display: grid;
+  grid-template-columns: 60fr 25fr 15fr;
+  text-align: center;
+}
+
+.rp-bw-scale-bad { color: var(--danger); }
+.rp-bw-scale-warn { color: var(--warning); }
+.rp-bw-scale-good { color: var(--success); }
+
+.rp-bw-row {
+  min-height: 58px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+.rp-bw-row:nth-child(even) {
+  background: var(--state-muted);
+}
+
+.rp-bw-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.rp-bw-mark {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--tone-info-bg);
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+}
+
+.rp-bw-name {
+  display: block;
+  color: var(--foreground);
+  font: var(--type-label);
+}
+
+.rp-bw-detail {
+  display: block;
+  margin-top: 2px;
+  color: var(--foreground-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-label);
+}
+
+/* DATA-VIZ：轨道底色 = 三档健康区间；填充长度 = 实测/理论达标率 */
+.rp-bw-track {
+  position: relative;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    to right,
+    var(--tone-critical-bg) 0 60%,
+    var(--tone-warning-bg) 60% 85%,
+    var(--tone-green-strong) 85% 100%
+  );
+}
+
+.rp-bw-fill {
+  width: 0;
+  height: 100%;
+  border-radius: var(--radius-sm);
+  background: var(--rp-bw-color);
+  animation: rp-bw-grow var(--duration-slow) var(--easing-out) forwards;
+}
+
+/* DATA-VIZ：60% / 85% 阈值线，用 gradient 而非 border 绘制 */
+.rp-bw-threshold {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 1px;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--border-strong) 0 3px,
+    transparent 3px 6px
+  );
+}
+
+.rp-bw-threshold--60 { left: 60%; }
+.rp-bw-threshold--85 { left: 85%; }
+
+/* DATA-VIZ：轨道末端实线 = 理论带宽上限 */
+.rp-bw-theory {
+  position: absolute;
+  top: -5px;
+  right: -1px;
+  bottom: -5px;
+  width: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--foreground-secondary);
+}
+
+.rp-bw-value {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.rp-bw-measured {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-title-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-label);
+}
+
+.rp-bw-theory-text {
+  color: var(--foreground-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-label);
+}
+
+/* ------------------------------------------------------------- 图例 ------ */
+
+.rp-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  color: var(--foreground-secondary);
+}
+
+.rp-legend .legend-item {
+  flex: 0 0 auto;
+}
+
+.rp-legend .legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+/* DATA-VIZ：图例色点与各视图的编码色同源 */
+.rp-dot--compute { background: var(--rp-viz-compute); }
+.rp-dot--communication { background: var(--rp-viz-communication); }
+.rp-dot--waiting { background: var(--rp-viz-waiting); }
+.rp-dot--free { background: var(--rp-viz-free); }
+.rp-dot--forward { background: var(--rp-viz-forward); }
+.rp-dot--backward { background: var(--rp-viz-backward); }
+.rp-dot--danger { background: var(--danger); }
+.rp-dot--warning { background: var(--warning); }
+.rp-dot--success { background: var(--success); }
+
+/* --------------------------------------------- 状态芯片的语义色修饰 ------ */
+/* .stat-chip 只改文字色，不新造芯片形状。css/style.css 目前没有
+   .badge--* / .stat-chip--* 状态修饰，按 quick-reference 的 retrofit 约定
+   在页面局部实现并上报，供系统后续吸收。 */
+
+.rp-chip--danger { color: var(--danger); }
+.rp-chip--warn { color: var(--warning); }
+.rp-chip--good { color: var(--success); }
+.rp-chip--mono {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ------------------------------------------- Inspector（待系统吸收） ----- */
+/* tokens/components.css 已定义 --inspector-* 全套变量，quick-reference 也
+   记录了这些 class，但 css/style.css 尚无实现。这里按 token 实现，
+   class 名与文档保持一致，便于后续直接迁进共享系统。 */
+
+.inspector-rail {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--inspector-rail-padding-x) var(--inspector-rail-padding-bottom);
+}
+
+.inspector-rail[hidden] {
+  display: none !important;
+}
+
+.inspector-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--inspector-section-gap);
+  padding: var(--inspector-section-padding-y) 0;
+}
+
+.inspector-section + .inspector-section {
+  border-top: 1px solid var(--inspector-section-divider);
+}
+
+.inspector-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.inspector-section-title {
+  margin: 0;
+  color: var(--foreground);
+  font: var(--type-title-3);
+}
+
+.inspector-section-kicker {
+  color: var(--foreground-muted);
+  font: var(--type-micro);
+  letter-spacing: var(--letter-spacing-label);
+  text-transform: uppercase;
+}
+
+.inspector-soft-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--inspector-soft-card-gap);
+  padding: var(--inspector-soft-card-padding);
+  border-radius: var(--inspector-soft-card-radius);
+  background: var(--inspector-soft-card-bg);
+}
+
+.inspector-soft-card.is-info { background: var(--tone-info-bg); }
+.inspector-soft-card.is-warning { background: var(--tone-warning-bg); }
+.inspector-soft-card.is-danger { background: var(--tone-critical-bg); }
+.inspector-soft-card.is-success { background: var(--tone-green-strong); }
+
+.inspector-soft-card-title {
+  color: var(--foreground);
+  font: var(--type-label);
+}
+
+.inspector-soft-card-copy {
+  margin: 0;
+  color: var(--foreground-secondary);
+  font: var(--type-body);
+}
+
+/* ------------------------------------------------ Inspector 内的行/表 --- */
+
+.rp-metric-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.rp-metric-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 30px;
+}
+
+.rp-metric-label {
+  color: var(--foreground-secondary);
+  font: var(--type-label);
+}
+
+.rp-metric-value {
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-body-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.rp-metric-row.is-alert .rp-metric-value {
+  color: var(--danger);
+}
+
+.rp-metric-note {
+  margin-left: var(--space-1);
+  color: var(--foreground-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+/* --table-* token 已存在，共享系统暂无表格 class，先在页面局部实现 */
+.rp-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rp-table th {
+  height: var(--table-header-height);
+  padding: 0 var(--space-2);
+  border-bottom: 1px solid var(--table-border);
+  color: var(--foreground-muted);
+  font: var(--type-micro);
+  letter-spacing: var(--letter-spacing-label);
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.rp-table td {
+  height: var(--table-row-height);
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--table-border);
+  color: var(--foreground-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.rp-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.rp-table td.is-danger {
+  color: var(--danger);
+}
+
+.rp-table td.rp-table-action {
+  text-align: right;
+}
+
+.rp-strategy {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.rp-strategy-range {
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-body);
+}
+
+.rp-strategy-name {
+  display: block;
+  color: var(--foreground);
+  font: var(--type-label);
+}
+
+.rp-strategy-copy {
+  margin: var(--space-1) 0 0;
+  color: var(--foreground-secondary);
+  font: var(--type-body);
+}
+
+/* ---------------------------------------------------------- 动效 --------- */
+
+@keyframes rp-row-in {
+  from { opacity: 0; translate: -12px 0; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+@keyframes rp-seg-grow {
+  to { width: var(--rp-seg-width, 0); }
+}
+
+@keyframes rp-bw-grow {
+  to { width: var(--rp-bw-width, 0); }
+}
+
+/* ---------------------------------------------------------- 响应式 ------- */
+
+@media (max-width: 1440px) {
+  .rp-fleet {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rp-pipeline {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rp-bubble-summary {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--space-5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp-rank-row,
+  .rp-group-row,
+  .rp-rank-rows.is-animated .rp-seg,
+  .rp-bw-fill {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
+}

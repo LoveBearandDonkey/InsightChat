@@ -1,0 +1,1431 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rank Performance Report</title>
+    <link rel="icon" href="data:," />
+
+    <!--
+      资源依赖：./vendor/pto-design-system 是指向 PTO 设计系统仓库的目录联接
+      （D:\Projects\pto-design-system-wzh），已在 .gitignore 中排除。
+
+      路径必须落在页面所在目录之内：Live Server 之类的静态服务以工作区为根，
+      `../` 会逃出服务根被规范化掉，导致 token 链 404 —— 表现是外框画得出来、
+      文字却因 --foreground 未定义退回黑色，压在近黑背景上等于隐形。
+
+      换机器或重新克隆后需重建联接：
+        mklink /J "<repo>\vendor\pto-design-system" "<设计系统目录>"
+    -->
+
+    <!-- PTO 设计系统：token 链 -->
+    <link rel="stylesheet" href="./vendor/pto-design-system/tokens/foundation.css" />
+    <link rel="stylesheet" href="./vendor/pto-design-system/tokens/semantic.css" />
+    <link rel="stylesheet" href="./vendor/pto-design-system/tokens/components.css" />
+    <link rel="stylesheet" href="./vendor/pto-design-system/css/style.css" />
+
+    <!-- pattern：ide-frame（页面 shell）+ workbench-shell（拖拽 kernel）
+         + swimlane-task（任务条 / hover tooltip） -->
+    <link rel="stylesheet" href="./vendor/pto-design-system/patterns/workbench-shell/pattern.css" />
+    <link rel="stylesheet" href="./vendor/pto-design-system/patterns/ide-frame/pattern.css" />
+    <link rel="stylesheet" href="./vendor/pto-design-system/patterns/swimlane-task/pattern.css" />
+
+    <!-- 本页局部 layout / data-viz -->
+    <link rel="stylesheet" href="./v15-report-modules-pto.css" />
+  </head>
+  <body>
+    <section
+      class="pto-ide-frame rp-frame"
+      data-ide-frame
+      data-host="standalone"
+      data-cursor-dots="true"
+      data-inspector-open="true"
+      aria-label="Rank performance report"
+    >
+      <header class="pto-ide-frame__topbar pto-ide-frame__standalone-chrome">
+        <div class="pto-ide-frame__topbar-left">
+          <div class="pto-ide-frame__host-chip" data-ide-slot="host-chip">
+            <svg class="pto-ide-frame__host-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+              <path d="m7 9 3 3-3 3"></path>
+              <path d="M12 15h5"></path>
+            </svg>
+            <span class="rp-host-title">Rank Performance Report</span>
+          </div>
+          <div class="pto-ide-frame__workspace" data-ide-slot="workspace-switcher">
+            <span>v15-report-modules</span>
+            <span class="pto-ide-frame__crumbs" id="crumbs">top1 / rank-comparison</span>
+          </div>
+        </div>
+        <div class="pto-ide-frame__topbar-center"></div>
+        <div class="pto-ide-frame__topbar-right">
+          <div class="pto-ide-frame__window-actions" data-ide-slot="window-controls" aria-label="Window controls">
+            <button
+              class="pto-ide-frame__window-action is-selected"
+              type="button"
+              id="inspectorToggle"
+              aria-controls="report-inspector-pane"
+              aria-expanded="true"
+              aria-pressed="true"
+              title="Inspector"
+              aria-label="Toggle inspector"
+            >
+              <svg class="pto-ide-frame__window-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                <path d="M15 3v18"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div class="pto-ide-frame__body">
+        <nav class="pto-ide-frame__activity-rail pto-ide-frame__standalone-chrome" data-ide-slot="activity-rail" aria-label="Activity rail">
+          <button
+            class="btn btn-icon btn-ghost pto-ide-frame__rail-button is-selected"
+            type="button"
+            data-ide-toggle="explorer"
+            aria-controls="report-explorer-pane"
+            aria-expanded="true"
+            aria-pressed="true"
+            title="Explorer"
+            aria-label="Toggle file explorer"
+          >
+            <svg class="pto-ide-frame__rail-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9l-.81-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path>
+            </svg>
+          </button>
+          <button class="btn btn-icon btn-ghost pto-ide-frame__rail-button" type="button" title="Search" aria-label="Search">
+            <svg class="pto-ide-frame__rail-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.3-4.3"></path>
+            </svg>
+          </button>
+          <button class="btn btn-icon btn-ghost pto-ide-frame__rail-button" type="button" title="Source control" aria-label="Source control">
+            <svg class="pto-ide-frame__rail-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="18" cy="18" r="3"></circle>
+              <circle cx="6" cy="6" r="3"></circle>
+              <path d="M13 6h3a2 2 0 0 1 2 2v7"></path>
+              <path d="M6 9v12"></path>
+            </svg>
+          </button>
+          <button class="btn btn-icon btn-ghost pto-ide-frame__rail-button" type="button" title="Terminal" aria-label="Terminal">
+            <svg class="pto-ide-frame__rail-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+              <path d="m7 9 3 3-3 3"></path>
+              <path d="M12 15h5"></path>
+            </svg>
+          </button>
+        </nav>
+
+        <div class="pto-ide-frame__workarea">
+          <div
+            class="pto-ide-frame__split"
+            data-ide-split="standalone-main"
+            data-storage-key="v15-report-modules-main-v1"
+            data-split-direction="horizontal"
+            data-sizes="20,52,28"
+            data-pixel-sizes="300"
+            data-min-size="240,560,300"
+          >
+            <!-- ============================ Explorer：报告模块 =========== -->
+            <aside class="pto-ide-frame__pane pto-ide-frame__explorer" data-ide-pane="explorer" id="report-explorer-pane">
+              <header class="pto-ide-frame__pane-header">
+                <h2 class="pto-ide-frame__pane-title">报告模块</h2>
+                <span class="pto-ide-frame__pane-meta">4 items</span>
+              </header>
+              <div class="pto-ide-frame__pane-body" data-ide-slot="navigation">
+                <div class="rp-tree" role="tablist" aria-label="报告模块">
+                  <div class="rp-tree-group">高频模块</div>
+
+                  <button class="rp-tree-item is-selected" type="button" role="tab" aria-selected="true" data-module-select="top1">
+                    <svg class="rp-tree-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M3 5h12"></path><path d="M3 12h18"></path><path d="M3 19h8"></path>
+                    </svg>
+                    <span class="rp-tree-name">Rank 级横向对比</span>
+                    <span class="rp-tree-meta">V15</span>
+                  </button>
+
+                  <button class="rp-tree-item" type="button" role="tab" aria-selected="false" data-module-select="top2">
+                    <svg class="rp-tree-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="3" y="5" width="9" height="5" rx="1"></rect>
+                      <rect x="12" y="14" width="9" height="5" rx="1"></rect>
+                    </svg>
+                    <span class="rp-tree-name">计算-通信重叠率</span>
+                    <span class="rp-tree-meta">V16</span>
+                  </button>
+
+                  <button class="rp-tree-item" type="button" role="tab" aria-selected="false" data-module-select="top3">
+                    <svg class="rp-tree-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="3" y="4" width="18" height="4" rx="1"></rect>
+                      <rect x="6" y="10" width="15" height="4" rx="1"></rect>
+                      <rect x="9" y="16" width="12" height="4" rx="1"></rect>
+                    </svg>
+                    <span class="rp-tree-name">PP 流水线 Bubble</span>
+                    <span class="rp-tree-meta">V17</span>
+                  </button>
+
+                  <button class="rp-tree-item" type="button" role="tab" aria-selected="false" data-module-select="top4">
+                    <svg class="rp-tree-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M4 18V9"></path><path d="M10 18V5"></path><path d="M16 18v-6"></path><path d="M3 21h18"></path>
+                    </svg>
+                    <span class="rp-tree-name">带宽 vs 理论值</span>
+                    <span class="rp-tree-meta">V18</span>
+                  </button>
+
+                  <p class="rp-tree-note">四个模块共用同一份示意数据集，指标与洞察随所选模块同步到右侧 Inspector。</p>
+                </div>
+              </div>
+            </aside>
+
+            <!-- ============================ 主视图 ======================== -->
+            <section class="pto-ide-frame__pane" data-ide-pane="editor-preview">
+              <div class="pto-ide-frame__tabstrip" data-ide-slot="preview-tabs">
+                <div class="tab-control" role="tablist" aria-label="模块视图">
+                  <button class="tab-control-item is-selected" type="button" data-module-select="top1">TOP 1</button>
+                  <button class="tab-control-item" type="button" data-module-select="top2">TOP 2</button>
+                  <button class="tab-control-item" type="button" data-module-select="top3">TOP 3</button>
+                  <button class="tab-control-item" type="button" data-module-select="top4">TOP 4</button>
+                </div>
+              </div>
+              <header class="pto-ide-frame__pane-header">
+                <h2 class="pto-ide-frame__pane-title" id="viewTitle">Rank 级横向对比</h2>
+                <div class="rp-pane-actions">
+                  <span class="stat-chip" id="viewStatus">统一时间基线</span>
+                  <button class="btn btn-ghost btn-sm" type="button" id="replayBtn">重播</button>
+                </div>
+              </header>
+
+              <div class="pto-ide-frame__pane-body" data-ide-slot="preview">
+                <!-- ---------------------- TOP 1 ---------------------- -->
+                <div class="rp-module rp-view" data-module="top1">
+                  <div class="rp-toolbar">
+                    <div class="segmented-control" role="group" aria-label="集群规模">
+                      <button class="btn btn-sm" type="button" data-scale="1">单卡</button>
+                      <button class="btn btn-sm is-selected" type="button" data-scale="8">8 卡</button>
+                      <button class="btn btn-sm" type="button" data-scale="64">64 卡</button>
+                      <button class="btn btn-sm" type="button" data-scale="1024">1,024 卡</button>
+                      <button class="btn btn-sm" type="button" data-scale="10000">10,000 卡</button>
+                    </div>
+                    <div class="rp-toolbar-group">
+                      <input class="rp-input" id="rankSearch" inputmode="numeric" placeholder="输入 Rank ID" aria-label="Rank ID" />
+                      <button class="btn btn-solid btn-sm" type="button" id="locateBtn">定位 Rank</button>
+                      <button class="btn btn-sm" type="button" id="resetBtn">恢复全局</button>
+                    </div>
+                  </div>
+
+                  <div class="rp-mode">
+                    <div class="rp-mode-icon" id="modeIcon">卡</div>
+                    <div>
+                      <div class="rp-mode-head">
+                        <span class="rp-mode-name" id="modeName">Rank 逐卡对比</span>
+                        <span class="stat-chip rp-chip--mono">AUTO LOD</span>
+                      </div>
+                      <p class="rp-mode-desc" id="modeDesc"></p>
+                    </div>
+                  </div>
+
+                  <div id="t1Stage"></div>
+
+                  <div class="rp-legend">
+                    <span class="legend-item"><i class="legend-dot rp-dot--compute"></i><span class="legend-item-label">计算</span></span>
+                    <span class="legend-item"><i class="legend-dot rp-dot--communication"></i><span class="legend-item-label">通信</span></span>
+                    <span class="legend-item"><i class="legend-dot rp-dot--waiting"></i><span class="legend-item-label">等待</span></span>
+                    <span class="legend-item"><i class="legend-dot rp-dot--free"></i><span class="legend-item-label">Free</span></span>
+                    <span class="stat-chip rp-chip--mono">示意数据 · 8 卡/节点 · 32 节点/机架</span>
+                  </div>
+                </div>
+
+                <!-- ---------------------- TOP 2 ---------------------- -->
+                <div class="rp-module rp-view" data-module="top2" hidden>
+                  <div class="rp-section-head">
+                    <h3 class="rp-section-title">Rank 3 · Step 128 · critical path</h3>
+                    <span class="rp-section-hint">双泳道对齐同一时间轴 · 0—800 ms</span>
+                  </div>
+
+                  <div class="rp-lanes" id="overlapLanes">
+                    <div class="rp-time-axis">
+                      <span>执行泳道</span><span>0 ms</span><span>160</span><span>320</span><span>480</span><span>640</span><span>800 ms</span>
+                    </div>
+                    <div class="rp-lane">
+                      <div class="rp-lane-label"><span class="rp-lane-mark rp-lane-mark--compute">AI</span><span>计算</span></div>
+                      <div class="rp-track" data-lane="compute"></div>
+                    </div>
+                    <div class="rp-lane">
+                      <div class="rp-lane-label"><span class="rp-lane-mark rp-lane-mark--communication">HC</span><span>通信</span></div>
+                      <div class="rp-track" data-lane="communication"></div>
+                    </div>
+                  </div>
+
+                  <div class="rp-legend">
+                    <span class="legend-item"><i class="legend-dot rp-dot--compute"></i><span class="legend-item-label">计算区间</span></span>
+                    <span class="legend-item"><i class="legend-dot rp-dot--communication"></i><span class="legend-item-label">通信区间</span></span>
+                    <span class="legend-item"><i class="legend-dot rp-dot--danger"></i><span class="legend-item-label">暴露通信</span></span>
+                    <span class="stat-chip rp-chip--mono">示意数据 · hover 任务条查看明细</span>
+                  </div>
+                </div>
+
+                <!-- ---------------------- TOP 3 ---------------------- -->
+                <div class="rp-module rp-view" data-module="top3" hidden>
+                  <div class="rp-section-head">
+                    <h3 class="rp-section-title">4 stages · micro-batch 0–5 · 1F1B 调度窗口</h3>
+                    <span class="rp-section-hint">格内标签为 micro-batch 序号</span>
+                  </div>
+
+                  <div class="rp-pipeline">
+                    <div class="rp-lanes" id="pipelineLanes">
+                      <div class="rp-pipe-axis">
+                        <span></span><span>T1</span><span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span>
+                        <span>T7</span><span>T8</span><span>T9</span><span>T10</span><span>T11</span><span>T12</span>
+                      </div>
+                      <div id="pipelineRows"></div>
+                    </div>
+                    <aside class="rp-bubble-summary">
+                      <div class="rp-ring" style="--rp-ring-rate: 26">
+                        <div class="rp-ring-copy">
+                          <div>
+                            <strong class="rp-ring-value">26%</strong>
+                            <span class="rp-ring-label">Bubble rate</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="rp-bubble-time">
+                        <span class="rp-bubble-time-value">4.26 s</span>
+                        <span class="rp-bubble-time-label">每 step 无效等待</span>
+                      </div>
+                    </aside>
+                  </div>
+
+                  <div class="rp-legend">
+                    <span class="legend-item"><i class="legend-dot rp-dot--forward"></i><span class="legend-item-label">Forward</span></span>
+                    <span class="legend-item"><i class="legend-dot rp-dot--backward"></i><span class="legend-item-label">Backward</span></span>
+                    <span class="legend-item"><i class="legend-dot" id="bubbleLegendDot"></i><span class="legend-item-label">Bubble</span></span>
+                    <span class="legend-item"><i class="legend-dot rp-dot--warning"></i><span class="legend-item-label">尾部排空空泡</span></span>
+                    <span class="stat-chip rp-chip--mono">示意数据 · hover 格子查看明细</span>
+                  </div>
+                </div>
+
+                <!-- ---------------------- TOP 4 ---------------------- -->
+                <div class="rp-module rp-view" data-module="top4" hidden>
+                  <div class="rp-section-head">
+                    <h3 class="rp-section-title">Link throughput attainment</h3>
+                    <span class="rp-section-hint">实测吞吐统一换算为达标率 · aggregated by step</span>
+                  </div>
+
+                  <div class="rp-bw-head">
+                    <span>链路 / 方向</span>
+                    <div class="rp-bw-scale">
+                      <span class="rp-bw-scale-bad">需优化 &lt; 60%</span>
+                      <span class="rp-bw-scale-warn">可接受 60–85%</span>
+                      <span class="rp-bw-scale-good">健康 &gt; 85%</span>
+                    </div>
+                    <span class="rp-chart-head-right">实测 / 理论 · 达标率</span>
+                  </div>
+                  <div id="bandwidthRows"></div>
+
+                  <div class="rp-legend">
+                    <span class="legend-item"><i class="legend-dot rp-dot--danger"></i><span class="legend-item-label">&lt; 60%</span></span>
+                    <span class="legend-item"><i class="legend-dot rp-dot--warning"></i><span class="legend-item-label">60–85%</span></span>
+                    <span class="legend-item"><i class="legend-dot rp-dot--success"></i><span class="legend-item-label">&gt; 85%</span></span>
+                    <span class="stat-chip rp-chip--mono">示意数据</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- ============================ Inspector ==================== -->
+            <aside class="pto-ide-frame__pane" data-ide-pane="inspector" id="report-inspector-pane">
+              <header class="pto-ide-frame__pane-header">
+                <h2 class="pto-ide-frame__pane-title">Inspector</h2>
+                <span class="pto-ide-frame__pane-meta" id="inspectorMeta">top1</span>
+              </header>
+              <div class="pto-ide-frame__pane-body" data-ide-slot="inspector">
+                <!-- TOP 1：指标 / 洞察 / 异常清单 / 自适应策略，由脚本按规模刷新 -->
+                <div class="inspector-rail" data-inspector="top1" id="inspectorTop1"></div>
+
+                <!-- TOP 2 -->
+                <div class="inspector-rail" data-inspector="top2" hidden>
+                  <section class="inspector-section">
+                    <div class="inspector-section-head">
+                      <h3 class="inspector-section-title">关键指标</h3>
+                      <span class="inspector-section-kicker">overlap</span>
+                    </div>
+                    <div class="rp-metric-rows">
+                      <div class="rp-metric-row is-alert"><span class="rp-metric-label">重叠率</span><span class="rp-metric-value">0.0%</span></div>
+                      <div class="rp-metric-row is-alert"><span class="rp-metric-label">暴露通信</span><span class="rp-metric-value">128<span class="rp-metric-note">ms</span></span></div>
+                      <div class="rp-metric-row"><span class="rp-metric-label">诊断状态</span><span class="rp-metric-value">完全串行</span></div>
+                      <div class="rp-metric-row"><span class="rp-metric-label">AllReduce 起点</span><span class="rp-metric-value">BWD 结束后</span></div>
+                    </div>
+                  </section>
+                  <section class="inspector-section">
+                    <div class="inspector-section-head">
+                      <h3 class="inspector-section-title">自动洞察</h3>
+                      <span class="inspector-section-kicker">insight</span>
+                    </div>
+                    <div class="inspector-soft-card is-danger">
+                      <span class="inspector-soft-card-title">通信完整落在计算间隙中</span>
+                      <p class="inspector-soft-card-copy">AllReduce 从反向计算结束后才启动，造成 128 ms 裸露等待。优先检查异步通信开关与梯度 bucket 切分粒度。</p>
+                    </div>
+                  </section>
+                  <section class="inspector-section">
+                    <div class="inspector-section-head">
+                      <h3 class="inspector-section-title">阅读方式</h3>
+                    </div>
+                    <p class="inspector-soft-card-copy">两条泳道共享同一时间轴。通信条若落在计算条的空隙里，说明这段通信没有被计算掩盖；把通信条推到与计算条重合的位置，才算真正发生了重叠。</p>
+                  </section>
+                </div>
+
+                <!-- TOP 3 -->
+                <div class="inspector-rail" data-inspector="top3" hidden>
+                  <section class="inspector-section">
+                    <div class="inspector-section-head">
+                      <h3 class="inspector-section-title">关键指标</h3>
+                      <span class="inspector-section-kicker">pipeline</span>
+                    </div>
+                    <div class="rp-metric-rows">
+                      <div class="rp-metric-row is-alert"><span class="rp-metric-label">Bubble 率</span><span class="rp-metric-value">26%</span></div>
+                      <div class="rp-metric-row is-alert"><span class="rp-metric-label">累计空等</span><span class="rp-metric-value">4.26<span class="rp-metric-note">s / step</span></span></div>
+                      <div class="rp-metric-row"><span class="rp-metric-label">调度模式</span><span class="rp-metric-value">1F1B</span></div>
+                      <div class="rp-metric-row"><span class="rp-metric-label">stage / micro-batch</span><span class="rp-metric-value">4 / 6</span></div>
+                    </div>
+                  </section>
+                  <section class="inspector-section">
+                    <div class="inspector-section-head">
+                      <h3 class="inspector-section-title">自动洞察</h3>
+                      <span class="inspector-section-kicker">insight</span>
+                    </div>
+                    <div class="inspector-soft-card is-warning">
+                      <span class="inspector-soft-card-title">尾部排空是主要损失</span>
+                      <p class="inspector-soft-card-copy">Stage 3 的反向任务结束最晚，上游 stage 在 T11–T12 连续出现空泡。增大 micro-batch 数或改用 interleaved schedule 可缩短排空区。</p>
+                    </div>
+                  </section>
+                  <section class="inspector-section">
+                    <div class="inspector-section-head">
+                      <h3 class="inspector-section-title">阅读方式</h3>
+                    </div>
+                    <p class="inspector-soft-card-copy">横轴是调度槽位，纵轴是 stage。同一列上出现的空泡越多，说明该时刻整条流水线闲置的设备越多；右侧环形给出空转时间占调度窗口的比例。</p>
+                  </section>
+                </div>
+
+                <!-- TOP 4 -->
+                <div class="inspector-rail" data-inspector="top4" hidden>
+                  <section class="inspector-section">
+                    <div class="inspector-section-head">
+                      <h3 class="inspector-section-title">关键指标</h3>
+                      <span class="inspector-section-kicker">bandwidth</span>
+                    </div>
+                    <div class="rp-metric-rows">
+                      <div class="rp-metric-row is-alert"><span class="rp-metric-label">最低达标率</span><span class="rp-metric-value">58%</span></div>
+                      <div class="rp-metric-row"><span class="rp-metric-label">健康链路</span><span class="rp-metric-value">3<span class="rp-metric-note">/ 5</span></span></div>
+                      <div class="rp-metric-row is-alert"><span class="rp-metric-label">重点排查</span><span class="rp-metric-value">HCCS-1</span></div>
+                      <div class="rp-metric-row"><span class="rp-metric-label">未达健康线</span><span class="rp-metric-value">2<span class="rp-metric-note">条链路</span></span></div>
+                    </div>
+                  </section>
+                  <section class="inspector-section">
+                    <div class="inspector-section-head">
+                      <h3 class="inspector-section-title">自动洞察</h3>
+                      <span class="inspector-section-kicker">insight</span>
+                    </div>
+                    <div class="inspector-soft-card is-warning">
+                      <span class="inspector-soft-card-title">瓶颈集中在机内 HCCS</span>
+                      <p class="inspector-soft-card-copy">HCCS-1 仅达到理论带宽的 58%，而 RDMA 与 HBM 都处于健康区间。优先检查卡间拓扑映射、链路降级与小包比例。</p>
+                    </div>
+                  </section>
+                  <section class="inspector-section">
+                    <div class="inspector-section-head">
+                      <h3 class="inspector-section-title">阅读方式</h3>
+                    </div>
+                    <p class="inspector-soft-card-copy">不同链路的绝对带宽量纲差异很大，所以统一换算成达标率后再横向比较。轨道末端的实线是该链路的理论上限，虚线是 60% 与 85% 两条阈值。</p>
+                  </section>
+                </div>
+              </div>
+            </aside>
+          </div>
+
+          <footer class="pto-ide-frame__status-strip pto-ide-frame__standalone-chrome" data-ide-slot="status" aria-label="Report status">
+            <div class="rp-status">
+              <div class="rp-status-group">
+                <span class="rp-status-item" id="statusModule">TOP 1 · V15</span>
+                <span class="rp-status-item" id="statusScale">8 卡</span>
+              </div>
+              <div class="rp-status-group">
+                <span class="rp-status-item" id="statusBudget">当前仅渲染可见层级</span>
+                <span class="rp-status-item">示意数据</span>
+              </div>
+            </div>
+          </footer>
+        </div>
+      </div>
+    </section>
+
+    <script src="./vendor/pto-design-system/patterns/workbench-shell/pattern.js"></script>
+    <script src="./vendor/pto-design-system/patterns/swimlane-task/pattern.js"></script>
+    <script src="./vendor/pto-design-system/patterns/ide-frame/pattern.js"></script>
+    <script>
+      /* ======================================================================
+       * 页面只负责：domain data、pane content、commands、glue code。
+       * shell 由 patterns/ide-frame 提供；任务条与 hover tooltip 由
+       * patterns/swimlane-task 提供；拖拽由 workbench-shell 经 ide-frame 委托。
+       * ==================================================================== */
+      (() => {
+        "use strict";
+
+        const frame = document.querySelector("[data-ide-frame]");
+        const rootStyle = getComputedStyle(frame || document.documentElement);
+        const $ = (selector) => document.querySelector(selector);
+        const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+        const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+        const escapeHtml = (value) =>
+          String(value ?? "").replace(/[&<>'"]/g, (char) =>
+            ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]),
+          );
+
+        /* --- token 取色 ---------------------------------------------------
+         * canvas 需要 6 位 hex（swimlane 的混色/透明度运算要求）。
+         * 语义 token 里有 8 位 hex（例如 --ark-orange-500: #ffaa3bff），
+         * 这里统一裁到 6 位，不引入页面私有色值。 */
+        const hexToken = (name, fallback) => {
+          let value = rootStyle.getPropertyValue(name).trim();
+          if (/^#[0-9a-f]{8}$/i.test(value)) value = value.slice(0, 7);
+          if (/^#[0-9a-f]{3}$/i.test(value)) {
+            value = `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`;
+          }
+          return /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+        };
+        const cssToken = (name, fallback) => rootStyle.getPropertyValue(name).trim() || fallback;
+
+        const VIZ = {
+          compute: hexToken("--rp-viz-compute", "#3577f6"),
+          communication: hexToken("--rp-viz-communication", "#a855f7"),
+          waiting: hexToken("--rp-viz-waiting", "#eab308"),
+          forward: hexToken("--rp-viz-forward", "#3577f6"),
+          backward: hexToken("--rp-viz-backward", "#4f46e5"),
+          warning: hexToken("--warning", "#ffaa3b"),
+          danger: hexToken("--danger", "#ff4b7b"),
+        };
+        const fontFamily = cssToken("--font-sans", "sans-serif");
+
+        /* swimlane colormap：任务条取色统一走 createTaskColormap，
+         * 页面只提供 colorKey → viz token 的语义映射；
+         * 空泡不给页面色，直接落到 colormap 自带的 unknown 中性色。 */
+        const swimlane = window.PtoSwimlaneTaskPattern || null;
+        const colormap = swimlane?.createTaskColormap?.({
+          labelColors: {
+            compute: VIZ.compute,
+            communication: VIZ.communication,
+            forward: VIZ.forward,
+            backward: VIZ.backward,
+          },
+        });
+        const taskColor = (task, fallback) => colormap?.colorForTask?.(task) || fallback;
+        const NEUTRAL = taskColor({ colorKey: "unknown" }, "#6f6a64");
+
+        /* --- 共享 canvas 绘制 -------------------------------------------- */
+        function paintTaskBar(canvas, task, baseColor, state = {}) {
+          if (!swimlane) return;
+          const rect = canvas.getBoundingClientRect();
+          const width = Math.max(1, Math.round(rect.width));
+          const height = Math.max(1, Math.round(rect.height));
+          const dpr = window.devicePixelRatio || 1;
+          canvas.width = Math.round(width * dpr);
+          canvas.height = Math.round(height * dpr);
+          const ctx = canvas.getContext("2d");
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.scale(dpr, dpr);
+          ctx.clearRect(0, 0, width, height);
+          swimlane.drawTaskBar(ctx, {
+            task,
+            x: 0,
+            y: 0,
+            width,
+            height,
+            baseColor,
+            radius: 3,
+            fontFamily,
+            isSelected: !!state.isSelected,
+            isRelated: !!state.isRelated,
+            isEmphasized: !!state.isEmphasized,
+          });
+        }
+
+        /* ==================================================================
+         * TOP 1 · Rank 级横向对比（自适应规模）
+         * ================================================================ */
+        const MAX_TIME = 1250;
+        const SEGMENTS = ["compute", "communication", "waiting", "free"];
+        const SEGMENT_LABEL = { compute: "计算", communication: "通信", waiting: "等待", free: "Free" };
+        const state = { size: 8, data: [], focusRank: null, bucket: null, group: null, budget: "" };
+
+        /* 状态条右侧的渲染预算文案由 T1 的各层级渲染器写入，切换模块时复原 */
+        function setBudget(text) {
+          state.budget = text;
+          $("#statusBudget").textContent = text;
+        }
+
+        /* #t1Stage 的 innerHTML 会被整体替换，共享 tooltip 的监听挂在常驻
+           root 上，因此每次重渲染前先销毁旧 controller。 */
+        let fleetTooltip = null;
+        function disposeFleetTooltip() {
+          fleetTooltip?.destroy?.();
+          fleetTooltip = null;
+        }
+
+        const hash = (value, salt) => {
+          let x = (value + 1) * 2654435761 + salt * 1013904223;
+          x ^= x >>> 16;
+          return (x >>> 0) / 4294967295;
+        };
+
+        const makeRank = (rank, size) => {
+          const hot = (rank === 3 && size > 3) || (rank > 15 && (rank * 37 + 17) % 997 < 4);
+          const compute = Math.round(560 + hash(rank, 1) * 64);
+          const communication = Math.round(72 + hash(rank, 2) * 42 + (size > 256 ? Math.log2(size) * 2 : 0));
+          const waiting = Math.round(66 + hash(rank, 3) * 58 + (hot ? 145 + hash(rank, 8) * 110 : 0));
+          const free = Math.round(28 + hash(rank, 4) * 31);
+          return {
+            rank,
+            node: Math.floor(rank / 8),
+            rack: Math.floor(rank / 256),
+            stage: Math.min(3, Math.floor(rank / Math.max(1, Math.ceil(size / 4)))),
+            compute,
+            communication,
+            waiting,
+            free,
+            total: compute + communication + waiting + free,
+            hot,
+          };
+        };
+
+        const percentile = (values, p) => {
+          if (!values.length) return 0;
+          const sorted = [...values].sort((a, b) => a - b);
+          return sorted[Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * p))];
+        };
+
+        const mean = (items, key) => Math.round(items.reduce((sum, item) => sum + item[key], 0) / items.length);
+
+        const summarize = (items) => {
+          const totals = items.map((item) => item.total);
+          return {
+            count: items.length,
+            p50: percentile(totals, 0.5),
+            p95: percentile(totals, 0.95),
+            min: Math.min(...totals),
+            max: Math.max(...totals),
+            anomalies: items.filter((item) => item.hot).length,
+            compute: mean(items, "compute"),
+            communication: mean(items, "communication"),
+            waiting: mean(items, "waiting"),
+            free: mean(items, "free"),
+          };
+        };
+
+        const stack = (item, options = {}) =>
+          `<div class="rp-stack">${SEGMENTS.map((key, index) => {
+            const tagged = options.tagKey === key;
+            return `<div class="rp-seg rp-seg--${key}" style="--rp-seg-width:${((item[key] / MAX_TIME) * 100).toFixed(2)}%;animation-delay:${
+              (options.delay || 0) + index * 40
+            }ms">${tagged ? `<span class="rp-seg-tag">${SEGMENT_LABEL[key]} ${item[key]}</span>` : ""}</div>`;
+          }).join("")}</div>`;
+
+        const rankRow = (item, index = 0, compact = false) => {
+          const rate = Math.round((item.compute / item.total) * 100);
+          const delay = Math.min(index * 30, 240);
+          const classes = [
+            "rp-rank-row",
+            compact ? "rp-rank-row--compact" : "",
+            item.hot ? "is-anomalous" : "",
+            state.focusRank === item.rank ? "is-selected" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          return `<div class="${classes}" style="animation-delay:${delay}ms">
+            <div class="rp-rank-id">
+              <span class="rp-rank-badge">R${item.rank}</span>
+              <span>
+                <span class="rp-rank-name">node${item.node}</span>
+                <span class="rp-rank-topo">rack ${item.rack} · stage ${item.stage}</span>
+              </span>
+            </div>
+            ${stack(item, { delay: delay + 120, tagKey: !compact && item.hot ? "waiting" : null })}
+            <div class="rp-rank-value rp-num">
+              <span class="rp-rank-total">${item.total}</span><span class="rp-unit">ms</span>
+              <span class="stat-chip rp-chip--mono">${rate}% 计算</span>
+            </div>
+          </div>`;
+        };
+
+        const setMode = (icon, name, desc) => {
+          $("#modeIcon").textContent = icon;
+          $("#modeName").textContent = name;
+          $("#modeDesc").textContent = desc;
+        };
+
+        /* 逐卡视图：≤ 16 卡，或 Rank 精确定位 */
+        function renderDetail(items = state.data, title = null, baselineOverride = null) {
+          disposeFleetTooltip();
+          const base = baselineOverride ?? summarize(items).p50;
+          const scope = baselineOverride === null ? "当前范围" : "全局集群";
+          setMode(
+            state.size === 1 ? "1" : "卡",
+            state.size === 1 ? "单卡时间剖面" : "Rank 逐卡对比",
+            "规模较小时完整显示每一张卡。同一条时间基线下比较计算、通信、等待与 Free 四段构成，条形总长即 stepTime。",
+          );
+          $("#t1Stage").innerHTML = `
+            <div class="rp-section-head">
+              <h3 class="rp-section-title">${escapeHtml(title || (state.size === 1 ? "Rank 0 时间构成" : `全部 ${items.length} 张卡`))}</h3>
+              <span class="rp-section-hint">基线取${scope} P50 · 统一刻度 0—${MAX_TIME} ms</span>
+            </div>
+            <div class="rp-chart-head">
+              <span>设备 / 拓扑</span>
+              <div class="rp-chart-head-scale"><span>step 时间构成</span><span>0—${MAX_TIME} ms</span></div>
+              <span class="rp-chart-head-right">stepTime / 计算占比</span>
+            </div>
+            <div class="rp-rank-rows is-animated" style="--rp-baseline:${(base / MAX_TIME).toFixed(4)}">
+              <div class="rp-baseline"><span class="rp-baseline-tag">P50 ${base} ms</span></div>
+              ${items.map((item, index) => rankRow(item, index)).join("")}
+            </div>`;
+          setBudget(`渲染 ${items.length} 条卡级记录`);
+        }
+
+        /* 节点聚合视图：17–256 卡 */
+        function renderGroups() {
+          disposeFleetTooltip();
+          setMode(
+            "节",
+            "节点聚合对比",
+            "中等规模按 8 卡节点聚合。平均构成用来分类，P95 与极差用来找长尾；点击任一节点可下钻到卡级明细。",
+          );
+          const groups = [];
+          for (let start = 0; start < state.size; start += 8) {
+            const items = state.data.slice(start, start + 8);
+            groups.push({ start, end: start + items.length - 1, items, ...summarize(items) });
+          }
+          $("#t1Stage").innerHTML = `
+            <div class="rp-section-head">
+              <h3 class="rp-section-title">${groups.length} 个节点</h3>
+              <span class="rp-section-hint">点击节点下钻</span>
+            </div>
+            <div class="rp-group-head">
+              <span>节点 / Rank 范围</span><span>平均时间构成</span><span>P50</span><span>P95 / 极差</span>
+              <span class="rp-group-flag">异常</span>
+            </div>
+            <div>${groups
+              .map(
+                (group, index) => `<button class="rp-group-row" type="button" data-group="${index}" style="animation-delay:${Math.min(index * 20, 180)}ms">
+                  <span>
+                    <span class="rp-group-name">node${index}</span>
+                    <span class="rp-group-sub">Rank ${group.start}—${group.end} · ${group.count} 卡</span>
+                  </span>
+                  ${stack(group)}
+                  <span class="rp-stat rp-num">${group.p50} ms</span>
+                  <span>
+                    <span class="rp-stat rp-num">${group.p95} ms</span>
+                    <span class="rp-stat-sub">极差 ${group.max - group.min} ms</span>
+                  </span>
+                  <span class="rp-group-flag stat-chip ${group.anomalies ? "rp-chip--danger" : ""}">${
+                    group.anomalies ? `${group.anomalies} 异常` : "健康"
+                  }</span>
+                </button>`,
+              )
+              .join("")}</div>
+            <div id="groupDrill"></div>`;
+
+          $$("[data-group]").forEach((row) =>
+            row.addEventListener("click", () => {
+              const index = Number(row.dataset.group);
+              const group = groups[index];
+              state.group = index;
+              $$("[data-group]").forEach((node) => node.classList.toggle("is-selected", node === row));
+              $("#groupDrill").innerHTML = `<div class="rp-drilldown">
+                <div class="rp-drilldown-head">
+                  <span class="rp-drilldown-title">node${index} · Rank ${group.start}—${group.end}</span>
+                  <span class="rp-drilldown-meta">卡级明细 · P50 ${group.p50} ms</span>
+                </div>
+                <div>${group.items.map((item, rowIndex) => rankRow(item, rowIndex, true)).join("")}</div>
+              </div>`;
+            }),
+          );
+          setBudget(`聚合 ${state.size} 卡为 ${groups.length} 个节点行`);
+        }
+
+        /* 集群总览：> 256 卡。热力图取色走顺序 ramp token，异常改语义 danger */
+        const HEAT_RAMP = [
+          "--highlight-copy-blue-200",
+          "--highlight-copy-blue-300",
+          "--highlight-copy-blue-400",
+          "--highlight-copy-blue-500",
+          "--warning",
+        ];
+
+        const heatColor = (p95, anomalies) => {
+          if (anomalies) return cssToken("--danger", "#ff4b7b");
+          const t = clamp((p95 - 760) / 240, 0, 0.999);
+          return cssToken(HEAT_RAMP[Math.floor(t * HEAT_RAMP.length)], "#3577f6");
+        };
+
+        function renderFleet() {
+          disposeFleetTooltip();
+          setMode(
+            "群",
+            "集群聚合总览",
+            "千卡与万卡规模不再逐行绘制。固定预算的热力单元负责发现区域，分布图负责判断整体右移与长尾，异常 Rank 由右侧清单单独索引。",
+          );
+          const targetCells = state.size > 5000 ? 400 : 256;
+          const bucketSize = Math.ceil(state.size / targetCells);
+          const buckets = [];
+          for (let start = 0; start < state.size; start += bucketSize) {
+            const items = state.data.slice(start, Math.min(state.size, start + bucketSize));
+            buckets.push({ start, end: start + items.length - 1, items, ...summarize(items) });
+          }
+
+          const summary = summarize(state.data);
+          const minTime = Math.floor(summary.min / 50) * 50;
+          const maxTime = Math.ceil(summary.max / 50) * 50;
+          const binCount = 18;
+          const bins = Array.from({ length: binCount }, () => 0);
+          state.data.forEach((item) => {
+            const index = Math.min(
+              binCount - 1,
+              Math.floor(((item.total - minTime) / Math.max(1, maxTime - minTime)) * binCount),
+            );
+            bins[index] += 1;
+          });
+          const maxBin = Math.max(...bins);
+
+          $("#t1Stage").innerHTML = `
+            <div class="rp-fleet">
+              <article class="rp-block">
+                <div class="rp-block-head">
+                  <div>
+                    <h3 class="rp-block-title">集群热力图</h3>
+                    <p class="rp-block-hint">${buckets.length} 个聚合单元 · 每格 ${bucketSize} 卡 · 白点表示格内含异常 Rank</p>
+                  </div>
+                  <div class="rp-heat-scale"><span>健康</span><i class="rp-heat-ramp"></i><span>长尾 / 异常</span></div>
+                </div>
+                <div class="rp-heatmap" style="--rp-heat-cols:${state.size > 5000 ? 25 : 20}">
+                  ${buckets
+                    .map(
+                      (bucket, index) =>
+                        `<button class="rp-heat-cell${bucket.anomalies ? " has-anomaly" : ""}" type="button" data-bucket="${index}"
+                          style="background:${heatColor(bucket.p95, bucket.anomalies)}"
+                          aria-label="Rank ${bucket.start} 至 ${bucket.end}"></button>`,
+                    )
+                    .join("")}
+                </div>
+              </article>
+              <article class="rp-block">
+                <div class="rp-block-head">
+                  <div>
+                    <h3 class="rp-block-title">stepTime 分布</h3>
+                    <p class="rp-block-hint">识别整体右移与长尾，不依赖逐卡滚动</p>
+                  </div>
+                </div>
+                <div class="rp-hist">
+                  ${bins
+                    .map(
+                      (count, index) =>
+                        `<div class="rp-hist-bar${index > binCount * 0.78 ? " is-tail" : ""}" data-bin="${index}"
+                          style="height:${Math.max(3, (count / maxBin) * 100).toFixed(1)}%"></div>`,
+                    )
+                    .join("")}
+                </div>
+                <div class="rp-quantiles">
+                  <div class="rp-quantile"><span class="rp-quantile-label">P50</span><span class="rp-quantile-value rp-num">${summary.p50}</span></div>
+                  <div class="rp-quantile"><span class="rp-quantile-label">P95</span><span class="rp-quantile-value rp-num">${summary.p95}</span></div>
+                  <div class="rp-quantile"><span class="rp-quantile-label">MAX</span><span class="rp-quantile-value rp-num">${summary.max}</span></div>
+                </div>
+              </article>
+            </div>
+            <div id="fleetDrill"></div>`;
+
+          const binMeta = bins.map((count, index) => ({
+            count,
+            from: Math.round(minTime + ((maxTime - minTime) * index) / binCount),
+            to: Math.round(minTime + ((maxTime - minTime) * (index + 1)) / binCount),
+          }));
+
+          const selectBucket = (index) => {
+            const bucket = buckets[index];
+            state.bucket = index;
+            $$(".rp-heat-cell").forEach((cell) => cell.classList.toggle("is-selected", Number(cell.dataset.bucket) === index));
+            const slowest = [...bucket.items].sort((a, b) => b.total - a.total).slice(0, 8);
+            $("#fleetDrill").innerHTML = `<div class="rp-drilldown">
+              <div class="rp-drilldown-head">
+                <span class="rp-drilldown-title">Rank ${bucket.start}—${bucket.end} · ${bucket.count} 卡</span>
+                <span class="rp-drilldown-meta">P50 ${bucket.p50} · P95 ${bucket.p95} ms · ${bucket.anomalies} 异常</span>
+              </div>
+              <div>${slowest.map((item, rowIndex) => rankRow(item, rowIndex, true)).join("")}</div>
+            </div>`;
+          };
+
+          $$("[data-bucket]").forEach((cell) =>
+            cell.addEventListener("click", () => selectBucket(Number(cell.dataset.bucket))),
+          );
+
+          /* 热力格与分布 bin 的 hover 复用 swimlane 的共享 tooltip，
+             不再自造 ::after 气泡。 */
+          fleetTooltip = swimlane?.initHoverTooltip?.({
+            root: $("#t1Stage"),
+            targets: ".rp-heat-cell, .rp-hist-bar",
+            appendTo: $("#t1Stage"),
+            getTask: (target) => {
+              if (target.dataset.bucket !== undefined) return buckets[Number(target.dataset.bucket)];
+              return binMeta[Number(target.dataset.bin)] || null;
+            },
+            getTooltipHtml: (task) => {
+              if (task && task.count !== undefined && task.from !== undefined) {
+                return `<div class="pto-swimlane-task-tooltip__title">${task.from}—${task.to} ms</div>
+                  <div class="pto-swimlane-task-tooltip__row"><span class="pto-swimlane-task-tooltip__key">cards</span><span class="pto-swimlane-task-tooltip__value">${task.count}</span></div>`;
+              }
+              if (!task) return "";
+              return `<div class="pto-swimlane-task-tooltip__title">Rank ${task.start}—${task.end}</div>
+                <div class="pto-swimlane-task-tooltip__row"><span class="pto-swimlane-task-tooltip__key">cards</span><span class="pto-swimlane-task-tooltip__value">${task.count}</span></div>
+                <div class="pto-swimlane-task-tooltip__row"><span class="pto-swimlane-task-tooltip__key">p50</span><span class="pto-swimlane-task-tooltip__value">${task.p50} ms</span></div>
+                <div class="pto-swimlane-task-tooltip__row"><span class="pto-swimlane-task-tooltip__key">p95</span><span class="pto-swimlane-task-tooltip__value">${task.p95} ms</span></div>
+                <div class="pto-swimlane-task-tooltip__row"><span class="pto-swimlane-task-tooltip__key">anomaly</span><span class="pto-swimlane-task-tooltip__value${
+                  task.anomalies ? " is-bad" : " is-ok"
+                }">${task.anomalies}</span></div>`;
+            },
+          });
+
+          const hottest = buckets.reduce(
+            (best, bucket, index) => {
+              const score = bucket.anomalies * 1000 + bucket.p95;
+              return score > best.score ? { index, score } : best;
+            },
+            { index: 0, score: -1 },
+          );
+          selectBucket(hottest.index);
+          setBudget(`${state.size.toLocaleString()} 卡仅渲染 ${buckets.length} 个热力单元`);
+        }
+
+        /* TOP 1 的 Inspector：指标 + 洞察 + 异常清单 + 自适应策略 */
+        function renderInspectorTop1() {
+          const summary = summarize(state.data);
+          const nodes = Math.ceil(state.size / 8);
+          const anomalies = state.data.filter((item) => item.hot).sort((a, b) => b.total - a.total);
+          const fallback = [...state.data].sort((a, b) => b.total - a.total).slice(0, Math.min(5, state.size));
+          const listed = (anomalies.length ? anomalies : fallback).slice(0, 6);
+          const worst = anomalies[0] || null;
+          const healthy = state.data.filter((item) => !item.hot);
+          const avgWaiting = healthy.length
+            ? healthy.reduce((sum, item) => sum + item.waiting, 0) / healthy.length
+            : 0;
+          const extra = worst ? worst.total - summary.p50 : 0;
+          const share = worst && extra > 0 ? clamp(Math.round(((worst.waiting - avgWaiting) / extra) * 100), 0, 100) : 0;
+
+          const metrics = [
+            ["设备规模", state.size.toLocaleString(), "卡", false],
+            ["节点 / 机架", nodes.toLocaleString(), `/ ${Math.ceil(nodes / 32)} rack`, false],
+            ["stepTime P50", summary.p50, "ms", false],
+            ["stepTime P95", summary.p95, "ms", false],
+            [
+              "异常 Rank",
+              summary.anomalies,
+              `占 ${((summary.anomalies / state.size) * 100).toFixed(state.size > 100 ? 2 : 1)}%`,
+              summary.anomalies > 0,
+            ],
+          ];
+
+          const insight = worst
+            ? {
+                tone: "is-danger",
+                title: "瓶颈落在等待段",
+                copy: `Rank ${worst.rank} 比集群 P50 多出 ${extra} ms，其中等待段贡献约 ${share}%。优先检查 stage 同步与上游负载不均。`,
+              }
+            : {
+                tone: "is-info",
+                title: "当前范围内没有异常卡",
+                copy: "所有 Rank 的 stepTime 都落在健康区间。先看条形总长定位慢卡，再看颜色定位主因段。",
+              };
+
+          $("#inspectorTop1").innerHTML = `
+            <section class="inspector-section">
+              <div class="inspector-section-head">
+                <h3 class="inspector-section-title">关键指标</h3>
+                <span class="inspector-section-kicker">scale ${state.size.toLocaleString()}</span>
+              </div>
+              <div class="rp-metric-rows">
+                ${metrics
+                  .map(
+                    ([label, value, note, alert]) =>
+                      `<div class="rp-metric-row${alert ? " is-alert" : ""}"><span class="rp-metric-label">${label}</span><span class="rp-metric-value">${value}<span class="rp-metric-note">${note}</span></span></div>`,
+                  )
+                  .join("")}
+              </div>
+            </section>
+
+            <section class="inspector-section">
+              <div class="inspector-section-head">
+                <h3 class="inspector-section-title">自动洞察</h3>
+                <span class="inspector-section-kicker">insight</span>
+              </div>
+              <div class="inspector-soft-card ${insight.tone}">
+                <span class="inspector-soft-card-title">${insight.title}</span>
+                <p class="inspector-soft-card-copy">${escapeHtml(insight.copy)}</p>
+              </div>
+            </section>
+
+            <section class="inspector-section">
+              <div class="inspector-section-head">
+                <h3 class="inspector-section-title">精确异常清单</h3>
+                <span class="inspector-section-kicker">${anomalies.length ? `${anomalies.length} 异常` : "最慢 Top"}</span>
+              </div>
+              <p class="inspector-soft-card-copy">无论聚合到哪一层，异常 Rank 都单独索引，不会被 P50 与 P95 吞掉。</p>
+              <table class="rp-table">
+                <thead><tr><th>Rank</th><th>拓扑</th><th>stepTime</th><th>偏离</th><th></th></tr></thead>
+                <tbody>
+                  ${listed
+                    .map(
+                      (item) => `<tr>
+                        <td class="${item.hot ? "is-danger" : ""}">R${item.rank}</td>
+                        <td>r${item.rack} / n${item.node}</td>
+                        <td class="${item.hot ? "is-danger" : ""}">${item.total} ms</td>
+                        <td>+${item.total - summary.p50}</td>
+                        <td class="rp-table-action"><button class="btn btn-ghost btn-sm" type="button" data-locate="${item.rank}">定位</button></td>
+                      </tr>`,
+                    )
+                    .join("")}
+                </tbody>
+              </table>
+            </section>
+
+            <section class="inspector-section">
+              <div class="inspector-section-head">
+                <h3 class="inspector-section-title">自适应策略</h3>
+                <span class="inspector-section-kicker">auto lod</span>
+              </div>
+              <div class="rp-strategy">
+                <span class="rp-strategy-range">1–16 卡</span>
+                <div>
+                  <span class="rp-strategy-name">逐卡堆叠条</span>
+                  <p class="rp-strategy-copy">全部 Rank 同屏，直接比较时间构成。</p>
+                </div>
+              </div>
+              <div class="rp-strategy">
+                <span class="rp-strategy-range">17–256</span>
+                <div>
+                  <span class="rp-strategy-name">节点聚合</span>
+                  <p class="rp-strategy-copy">P50 / P95 与异常数先分类，点击节点再展开卡级明细。</p>
+                </div>
+              </div>
+              <div class="rp-strategy">
+                <span class="rp-strategy-range">257+</span>
+                <div>
+                  <span class="rp-strategy-name">机架热力 + 分布</span>
+                  <p class="rp-strategy-copy">最多约 400 个聚合单元，支持范围下钻与 Rank 精确定位，页面 DOM 不随卡数线性增长。</p>
+                </div>
+              </div>
+            </section>`;
+
+          $$("[data-locate]").forEach((button) =>
+            button.addEventListener("click", () => locateRank(Number(button.dataset.locate))),
+          );
+        }
+
+        function renderTop1() {
+          state.focusRank = null;
+          state.bucket = null;
+          state.group = null;
+          if (state.size <= 16) renderDetail();
+          else if (state.size <= 256) renderGroups();
+          else renderFleet();
+          renderInspectorTop1();
+        }
+
+        function locateRank(rank) {
+          if (!Number.isInteger(rank) || rank < 0 || rank >= state.size) {
+            const input = $("#rankSearch");
+            input.value = "";
+            input.placeholder = `请输入 0—${state.size - 1}`;
+            input.focus();
+            return;
+          }
+          const item = state.data[rank];
+          state.focusRank = rank;
+          renderDetail([item], `Rank ${rank} · 精确诊断`, summarize(state.data).p50);
+          setMode(
+            "R",
+            `Rank ${rank} 精确定位`,
+            `来自 rack ${item.rack} / node ${item.node} / stage ${item.stage}。保留完整时间构成，并与全局集群 P50 对齐；点击「恢复全局」返回自适应总览。`,
+          );
+          setBudget(`已从 ${state.size.toLocaleString()} 卡索引中定位 1 条记录`);
+        }
+
+        function setScale(size) {
+          state.size = size;
+          state.data = Array.from({ length: size }, (_, rank) => makeRank(rank, size));
+          $$("[data-scale]").forEach((button) =>
+            button.classList.toggle("is-selected", Number(button.dataset.scale) === size),
+          );
+          $("#rankSearch").value = "";
+          $("#statusScale").textContent = `${size.toLocaleString()} 卡`;
+          renderTop1();
+        }
+
+        /* ==================================================================
+         * TOP 2 · 计算-通信重叠率（swimlane-task-bar）
+         * ================================================================ */
+        const OVERLAP_WINDOW = 800;
+        const OVERLAP_TASKS = {
+          compute: [
+            { label: "FWD", opName: "Forward", start: 16, duration: 144, status: "accounted" },
+            { label: "MatMul", opName: "MatMul", start: 176, duration: 136, status: "accounted" },
+            { label: "BWD", opName: "Backward", start: 328, duration: 136, status: "accounted" },
+            { label: "Optimizer", opName: "Optimizer step", start: 576, duration: 184, status: "accounted" },
+          ],
+          communication: [
+            { label: "AllReduce", opName: "AllReduce · gradients", start: 464, duration: 128, status: "wait" },
+          ],
+        };
+
+        function renderOverlap() {
+          const lanes = $("#overlapLanes");
+          if (!lanes) return;
+          lanes.querySelectorAll(".rp-task, .rp-exposed").forEach((node) => node.remove());
+
+          Object.entries(OVERLAP_TASKS).forEach(([lane, tasks]) => {
+            const track = lanes.querySelector(`[data-lane="${lane}"]`);
+            if (!track) return;
+            tasks.forEach((task) => {
+              const canvas = document.createElement("canvas");
+              canvas.className = "rp-task";
+              canvas.style.left = `${((task.start / OVERLAP_WINDOW) * 100).toFixed(2)}%`;
+              canvas.style.width = `${((task.duration / OVERLAP_WINDOW) * 100).toFixed(2)}%`;
+              const payload = {
+                ...task,
+                colorKey: lane,
+                laneKind: lane === "compute" ? "AIC" : "HCCL",
+                laneId: lane === "compute" ? "aic-3" : "hccl-3",
+                totalCycle: task.duration,
+              };
+              canvas.__ptoSwimlaneTask = payload;
+              track.appendChild(canvas);
+              paintTaskBar(canvas, payload, taskColor(payload, VIZ.compute), {
+                isEmphasized: task.status === "wait",
+              });
+            });
+          });
+
+          /* DATA-VIZ：标出完全暴露的通信区间 */
+          const comm = OVERLAP_TASKS.communication[0];
+          const marker = document.createElement("div");
+          marker.className = "rp-exposed";
+          marker.style.left = `calc(116px + var(--space-3) + (100% - 116px - var(--space-3)) * ${(comm.start / OVERLAP_WINDOW).toFixed(4)})`;
+          marker.style.width = `calc((100% - 116px - var(--space-3)) * ${(comm.duration / OVERLAP_WINDOW).toFixed(4)})`;
+          marker.innerHTML = `<span class="rp-exposed-tag">${comm.duration} ms 完全暴露</span>`;
+          lanes.appendChild(marker);
+        }
+
+        /* ==================================================================
+         * TOP 3 · PP 流水线 Bubble（swimlane-task-bar）
+         * ================================================================ */
+        const PIPELINE = [
+          { stage: 0, ranks: "R0–7", cells: ["F0", "F1", "F2", "F3", "B0", "F4", "B1", "F5", "B2", "B3", "-", "-!"] },
+          { stage: 1, ranks: "R8–15", cells: ["-", "F0", "F1", "F2", "B0", "F3", "B1", "F4", "B2", "B3", "B4", "-!"] },
+          { stage: 2, ranks: "R16–23", cells: ["-", "-", "F0", "F1", "B0", "F2", "B1", "F3", "B2", "B3", "B4", "B5"] },
+          { stage: 3, ranks: "R24–31", cells: ["-", "-", "-", "F0", "B0", "F1", "B1", "F2", "B2", "F3", "B3", "B4"] },
+        ];
+
+        function pipelineCellTask(cell, stage, slot) {
+          const isBubble = cell.startsWith("-");
+          const hot = cell.includes("!");
+          if (isBubble) {
+            return {
+              /* label 用空白字符：pattern 的 segment spec 在 label 为空串时
+                 会回落到 "compute" 文案，空泡格不应出现文字。 */
+              label: " ",
+              colorKey: "unknown",
+              hot,
+              opName: hot ? "尾部排空空泡" : "空泡",
+              laneKind: "PP",
+              laneId: `stage-${stage}`,
+              status: "wait",
+              totalCycle: 1,
+              slot,
+            };
+          }
+          const forward = cell.startsWith("F");
+          return {
+            label: cell,
+            colorKey: forward ? "forward" : "backward",
+            hot: false,
+            opName: `${forward ? "Forward" : "Backward"} · micro-batch ${cell.slice(1)}`,
+            laneKind: "PP",
+            laneId: `stage-${stage}`,
+            status: "accounted",
+            totalCycle: 1,
+            slot,
+          };
+        }
+
+        function renderPipeline() {
+          const host = $("#pipelineRows");
+          if (!host) return;
+          host.innerHTML = PIPELINE.map(
+            (row) => `<div class="rp-pipe-row">
+              <span class="rp-pipe-stage">Stage ${row.stage}<span class="rp-pipe-ranks">${row.ranks}</span></span>
+              ${row.cells.map((_cell, slot) => `<canvas class="rp-pipe-cell" data-stage="${row.stage}" data-slot="${slot}"></canvas>`).join("")}
+            </div>`,
+          ).join("");
+
+          $$(".rp-pipe-cell").forEach((canvas) => {
+            const stage = Number(canvas.dataset.stage);
+            const slot = Number(canvas.dataset.slot);
+            const task = pipelineCellTask(PIPELINE[stage].cells[slot], stage, slot + 1);
+            canvas.__ptoSwimlaneTask = task;
+            /* 热点空泡改用 warning：这是诊断结论，不是任务类别 */
+            const color = task.hot ? VIZ.warning : taskColor(task, NEUTRAL);
+            paintTaskBar(canvas, task, color, { isEmphasized: task.hot });
+          });
+
+          const dot = $("#bubbleLegendDot");
+          if (dot) dot.style.background = NEUTRAL;
+        }
+
+        /* ==================================================================
+         * TOP 4 · 带宽 vs 理论值
+         * ================================================================ */
+        const LINKS = [
+          { mark: "H1", name: "HCCS-1", detail: "node0 · card 2→3", actual: 17.4, theory: 30, unit: "GB/s" },
+          { mark: "H2", name: "HCCS-2", detail: "node1 · card 0→1", actual: 18.5, theory: 30, unit: "GB/s" },
+          { mark: "RD", name: "RDMA", detail: "node0 → node1", actual: 24.3, theory: 25, unit: "GB/s" },
+          { mark: "PC", name: "PCIe", detail: "host → device", actual: 27.9, theory: 32, unit: "GB/s" },
+          { mark: "HB", name: "HBM", detail: "device local read", actual: 780, theory: 820, unit: "GB/s" },
+        ];
+
+        function renderBandwidth() {
+          const host = $("#bandwidthRows");
+          if (!host) return;
+          host.innerHTML = LINKS.map((link, index) => {
+            const rate = Math.round((link.actual / link.theory) * 100);
+            const status = rate < 60 ? "danger" : rate <= 85 ? "warn" : "good";
+            const color = status === "danger" ? "var(--danger)" : status === "warn" ? "var(--warning)" : "var(--success)";
+            return `<div class="rp-bw-row">
+              <div class="rp-bw-label">
+                <span class="rp-bw-mark">${link.mark}</span>
+                <span>
+                  <span class="rp-bw-name">${link.name}</span>
+                  <span class="rp-bw-detail">${link.detail}</span>
+                </span>
+              </div>
+              <div class="rp-bw-track">
+                <div class="rp-bw-fill" style="--rp-bw-width:${Math.min(rate, 100)}%;--rp-bw-color:${color};animation-delay:${index * 70}ms"></div>
+                <i class="rp-bw-threshold rp-bw-threshold--60"></i>
+                <i class="rp-bw-threshold rp-bw-threshold--85"></i>
+                <i class="rp-bw-theory"></i>
+              </div>
+              <div class="rp-bw-value rp-num">
+                <span>
+                  <span class="rp-bw-measured">${link.actual}</span>
+                  <span class="rp-bw-theory-text">/ ${link.theory} ${link.unit}</span>
+                </span>
+                <span class="stat-chip rp-chip--${status === "danger" ? "danger" : status}">${rate}%</span>
+              </div>
+            </div>`;
+          }).join("");
+        }
+
+        /* ==================================================================
+         * 模块切换 / pane 命令 / cursor 追踪
+         * ================================================================ */
+        const MODULES = {
+          top1: {
+            title: "Rank 级横向对比",
+            status: "统一时间基线",
+            tone: "",
+            crumbs: "top1 / rank-comparison",
+            label: "TOP 1 · V15",
+            budget: null,
+          },
+          top2: {
+            title: "计算-通信重叠率",
+            status: "未发生有效重叠",
+            tone: "rp-chip--danger",
+            crumbs: "top2 / overlap",
+            label: "TOP 2 · V16",
+            budget: "2 条泳道 · 5 个共享任务条",
+          },
+          top3: {
+            title: "PP 流水线 Bubble",
+            status: "尾部排空过长",
+            tone: "rp-chip--warn",
+            crumbs: "top3 / pp-bubble",
+            label: "TOP 3 · V17",
+            budget: "4 stages × 12 slots · 48 个共享任务条",
+          },
+          top4: {
+            title: "带宽 vs 理论值",
+            status: "2 条链路未达健康线",
+            tone: "rp-chip--warn",
+            crumbs: "top4 / bandwidth",
+            label: "TOP 4 · V18",
+            budget: "5 条链路达标率",
+          },
+        };
+
+        let current = "top1";
+
+        function selectModule(id) {
+          if (!MODULES[id]) return;
+          current = id;
+          const meta = MODULES[id];
+
+          $$(".rp-module").forEach((node) => {
+            node.hidden = node.dataset.module !== id;
+          });
+          $$(".inspector-rail").forEach((node) => {
+            node.hidden = node.dataset.inspector !== id;
+          });
+          $$("[data-module-select]").forEach((node) => {
+            const active = node.dataset.moduleSelect === id;
+            node.classList.toggle("is-selected", active);
+            if (node.hasAttribute("aria-selected")) node.setAttribute("aria-selected", String(active));
+          });
+
+          $("#viewTitle").textContent = meta.title;
+          const status = $("#viewStatus");
+          status.className = `stat-chip ${meta.tone}`.trim();
+          status.textContent = meta.status;
+          $("#crumbs").textContent = meta.crumbs;
+          $("#inspectorMeta").textContent = id;
+          $("#statusModule").textContent = meta.label;
+          $("#statusScale").hidden = id !== "top1";
+
+          if (id === "top2") renderOverlap();
+          if (id === "top3") renderPipeline();
+          if (id === "top4") renderBandwidth();
+          $("#statusBudget").textContent = meta.budget ?? state.budget;
+        }
+
+        $$("[data-module-select]").forEach((node) =>
+          node.addEventListener("click", () => selectModule(node.dataset.moduleSelect)),
+        );
+
+        $$("[data-scale]").forEach((button) =>
+          button.addEventListener("click", () => setScale(Number(button.dataset.scale))),
+        );
+
+        const locateFromInput = () => {
+          const value = $("#rankSearch").value.trim();
+          locateRank(value === "" ? Number.NaN : Number(value));
+        };
+        $("#locateBtn").addEventListener("click", locateFromInput);
+        $("#rankSearch").addEventListener("keydown", (event) => {
+          if (event.key === "Enter") locateFromInput();
+        });
+        $("#resetBtn").addEventListener("click", renderTop1);
+
+        $("#replayBtn").addEventListener("click", () => {
+          if (current === "top1") {
+            if (state.focusRank === null) renderTop1();
+            else locateRank(state.focusRank);
+            return;
+          }
+          if (current === "top2") renderOverlap();
+          if (current === "top3") renderPipeline();
+          if (current === "top4") renderBandwidth();
+        });
+
+        /* Inspector 是真 toggle：可反复开关，pane 与 gutter 一起收起 */
+        const inspectorToggle = $("#inspectorToggle");
+        const inspectorPane = $("#report-inspector-pane");
+        let inspectorOpen = true;
+
+        function setInspectorOpen(open) {
+          inspectorOpen = open;
+          frame.dataset.inspectorOpen = String(open);
+          inspectorPane.hidden = !open;
+          inspectorPane.setAttribute("aria-hidden", String(!open));
+          const gutter = inspectorPane.previousElementSibling;
+          if (gutter?.classList?.contains("pto-workbench-shell__split-gutter")) gutter.hidden = !open;
+          inspectorToggle.classList.toggle("is-selected", open);
+          inspectorToggle.setAttribute("aria-expanded", String(open));
+          inspectorToggle.setAttribute("aria-pressed", String(open));
+          window.requestAnimationFrame(() => {
+            window.ptoReportFrame?.refresh?.();
+            repaintVisible();
+          });
+        }
+
+        inspectorToggle.addEventListener("click", () => setInspectorOpen(!inspectorOpen));
+
+        /* cursor 追踪：共享点阵密度不改，只更新坐标与 alpha */
+        frame.addEventListener("pointermove", (event) => {
+          const rect = frame.getBoundingClientRect();
+          if (!rect.width || !rect.height) return;
+          frame.style.setProperty("--ide-cursor-x", `${clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100).toFixed(2)}%`);
+          frame.style.setProperty("--ide-cursor-y", `${clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100).toFixed(2)}%`);
+          frame.style.setProperty("--ide-cursor-alpha", "0.10");
+          frame.style.setProperty("--ide-dot-opacity", "0.34");
+        });
+
+        frame.addEventListener("pointerleave", () => {
+          frame.style.setProperty("--ide-cursor-alpha", "0");
+          frame.style.setProperty("--ide-dot-opacity", "0");
+        });
+
+        /* canvas 需要在尺寸变化后重绘 */
+        function repaintVisible() {
+          if (current === "top2") renderOverlap();
+          if (current === "top3") renderPipeline();
+        }
+
+        let resizeTimer = 0;
+        window.addEventListener("resize", () => {
+          window.clearTimeout(resizeTimer);
+          resizeTimer = window.setTimeout(repaintVisible, 120);
+        });
+
+        /* 拖拽 split 后同样需要重绘 canvas */
+        if ("ResizeObserver" in window) {
+          const observer = new ResizeObserver(() => {
+            window.clearTimeout(resizeTimer);
+            resizeTimer = window.setTimeout(repaintVisible, 90);
+          });
+          observer.observe($('[data-ide-pane="editor-preview"]'));
+        }
+
+        /* --- 启动 -------------------------------------------------------
+         * ide-frame 的 pattern.js 会在 DOMContentLoaded 上自动 initAll()。
+         * 这里在解析阶段同步 init 一次，先拿到 controller（后续折叠
+         * Inspector 时需要 refresh()），自动 initAll 会因 ideFrameReady
+         * 跳过这个 frame，不会重复初始化。 */
+        window.ptoReportFrame = window.PtoIdeFrame?.init?.(frame) || null;
+
+        function boot() {
+          /* T2 任务条与 T3 流水线格的 hover 明细，复用共享 tooltip */
+          swimlane?.initHoverTooltip?.({
+            root: $("#overlapLanes"),
+            targets: ".rp-task",
+            appendTo: $("#overlapLanes"),
+            durationUnit: "ms",
+          });
+          swimlane?.initHoverTooltip?.({
+            root: $("#pipelineLanes"),
+            targets: ".rp-pipe-cell",
+            appendTo: $("#pipelineLanes"),
+            durationUnit: "slot",
+          });
+
+          const query = new URLSearchParams(window.location.search);
+          const size = Number(query.get("size"));
+          setScale([1, 8, 64, 1024, 10000].includes(size) ? size : 8);
+
+          const requestedModule = query.get("module");
+          selectModule(MODULES[requestedModule] ? requestedModule : "top1");
+
+          const rank = Number(query.get("rank"));
+          if (query.has("rank") && Number.isInteger(rank)) locateRank(rank);
+        }
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", boot, { once: true });
+        } else {
+          boot();
+        }
+      })();
+    </script>
+  </body>
+</html>

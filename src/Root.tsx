@@ -13,6 +13,7 @@ import { Shot5Reasoning } from "./scenes/Shot5Reasoning";
 import { Shot6Backflow } from "./scenes/Shot6Backflow";
 import { Shot7Partner } from "./scenes/Shot7Partner";
 import { Shot8Finale } from "./scenes/Shot8Finale";
+import { V15RankComparisonDemo } from "./scenes/V15RankComparisonDemo";
 
 const SHOT_COMPONENTS: React.FC[] = [
   Shot1Dilemma,
@@ -61,6 +62,16 @@ export const RemotionRoot: React.FC = () => {
         component={HelloScene}
         durationInFrames={90}
         fps={FPS}
+        width={1920}
+        height={1080}
+      />
+
+      {/* 报告可视化模块清单 Top 1：V15 Rank 级横向对比示意 */}
+      <Composition
+        id="V15-Rank-Comparison"
+        component={V15RankComparisonDemo}
+        durationInFrames={210}
+        fps={30}
         width={1920}
         height={1080}
       />

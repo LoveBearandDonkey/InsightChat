@@ -5,3 +5,6 @@ dist
 
 # Ignore the output video from Git but not videos you import into src/.
 out
+
+# 目录联接：指向 D:Projectspto-design-system-wzh（PTO 设计系统），不入库
+vendor
