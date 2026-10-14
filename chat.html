@@ -4826,6 +4826,32 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       transform: translateX(0);
       pointer-events: auto;
     }
+    /* 回答里的「信息可视化」展开后，对话栏从普通 flex 列切成覆盖在工作区之上的双栏。
+       左栏宽度在点击时按展开前实测值写回 --wzh-chat-w；右栏占新增的另一半。 */
+    .wzh-chat-panel.is-open.is-visualizing {
+      position: fixed;
+      top: var(--wzh-viz-top, 48px);
+      right: var(--wzh-viz-right, 8px);
+      bottom: var(--wzh-viz-bottom, 8px);
+      left: auto;
+      z-index: 1950;
+      width: min(calc(var(--wzh-chat-w, 480px) * 2), calc(100vw - 16px));
+      max-width: calc(100vw - 16px);
+      flex: 0 0 auto;
+      display: grid;
+      grid-template-columns: minmax(320px, var(--wzh-chat-w, 480px)) minmax(320px, 1fr);
+      grid-template-rows: auto auto minmax(0, 1fr);
+      overflow: hidden;
+      opacity: 1;
+      transform: none;
+      box-shadow: var(--wzh-chat-shadow);
+      transition: width var(--duration-base) var(--easing-default),
+                  box-shadow var(--duration-base) var(--easing-default);
+    }
+    .wzh-chat-panel.is-visualizing > .wzh-chat-head { grid-column: 1; grid-row: 1; }
+    .wzh-chat-panel.is-visualizing > .wzh-chat-session { grid-column: 1; grid-row: 2; }
+    .wzh-chat-panel.is-visualizing > .wzh-chat-body { grid-column: 1; grid-row: 3; min-width: 0; }
+    .wzh-chat-panel.is-visualizing #trainChatFloatBtn { display: none; }
     /* 标题栏下不加分割线——右上角只留"设置 Key(齿轮) + 关闭"两个图标按钮,
        原来的上下文行/Key 状态行/额度行都收进了这一个齿轮按钮里(见 #trainChatKeyBtn)。 */
     .wzh-chat-head {
@@ -5879,6 +5905,117 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
        七八个蓝字反而比不标还乱。底色留着,标识符的边界还是要划出来。 */
     .wzh-chat-answer code { color: var(--foreground); }
 
+    /* 回答中的横向可视化入口：它是正文证据的延伸，不使用欢迎页大卡片的视觉重量。 */
+    .wzh-chat-viz-card {
+      width: 100%; min-width: 0; box-sizing: border-box;
+      display: grid; grid-template-columns: 34px minmax(0, 1fr) 20px;
+      align-items: center; gap: 10px;
+      margin: 10px 0 12px; padding: 11px 12px;
+      border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+      border-radius: 10px;
+      background: var(--surface-1);
+      box-shadow: none;
+      color: var(--foreground); text-align: left; cursor: pointer;
+      transition: border-color var(--duration-fast) var(--easing-default),
+                  background var(--duration-fast) var(--easing-default);
+    }
+    .wzh-chat-viz-card:hover {
+      border-color: color-mix(in srgb, var(--foreground) 22%, transparent);
+      background: linear-gradient(100deg,
+        color-mix(in srgb, var(--foreground) 6%, var(--surface-1)) 0%,
+        var(--surface-1) 100%);
+    }
+    .wzh-chat-viz-card:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--foreground) 28%, transparent);
+      outline-offset: 2px;
+    }
+    .wzh-chat-viz-card.is-active {
+      border-color: color-mix(in srgb, var(--foreground) 24%, transparent);
+      background: linear-gradient(100deg,
+        color-mix(in srgb, var(--foreground) 7%, var(--surface-1)) 0%,
+        var(--surface-1) 100%);
+    }
+    .wzh-chat-viz-card-icon {
+      width: 34px; height: 34px; display: grid; place-items: center;
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--brand-accent) 14%, var(--surface-1));
+      color: var(--brand-accent);
+    }
+    .wzh-chat-viz-card-icon svg,
+    .wzh-chat-viz-card-arrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .wzh-chat-viz-card-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .wzh-chat-viz-card-title { font-size: 13px; line-height: 1.45; font-weight: 600; color: var(--foreground); }
+    .wzh-chat-viz-card-desc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 1.5; color: var(--foreground-secondary); }
+    .wzh-chat-viz-card-arrow { display: grid; place-items: center; color: var(--foreground-muted); }
+
+    /* 展开后的右栏：标题与图表来源留在宿主侧，iframe 只承载 v15 原页面的图表模块。 */
+    .wzh-chat-viz-pane {
+      grid-column: 2; grid-row: 1 / 4;
+      min-width: 0; min-height: 0;
+      display: flex; flex-direction: column;
+      border-left: 1px solid var(--border-default);
+      background: var(--surface-1);
+    }
+    .wzh-chat-viz-pane[hidden] { display: none; }
+    .wzh-chat-viz-head {
+      min-height: 55px; box-sizing: border-box;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 8px 12px 7px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .wzh-chat-viz-tabs {
+      min-width: 0; flex: 1 1 auto;
+      display: flex; align-items: center; gap: 4px;
+      overflow-x: auto; overflow-y: hidden;
+      scrollbar-width: none;
+    }
+    .wzh-chat-viz-tabs::-webkit-scrollbar { display: none; }
+    .wzh-chat-viz-tab {
+      min-width: 112px; max-width: 196px; flex: 0 1 196px;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 6px 6px 10px;
+      border: 0; border-radius: 7px;
+      background: transparent; color: var(--foreground-secondary);
+      cursor: pointer; outline: none;
+      transition: background var(--duration-fast) var(--easing-default),
+                  color var(--duration-fast) var(--easing-default);
+    }
+    .wzh-chat-viz-tab:hover { background: var(--state-hover); color: var(--foreground); }
+    .wzh-chat-viz-tab[aria-selected="true"] {
+      background: color-mix(in srgb, var(--brand-accent) var(--brand-tint), transparent);
+      color: var(--brand-accent);
+    }
+    .wzh-chat-viz-tab:focus-visible { box-shadow: 0 0 0 2px var(--focus-ring); }
+    .wzh-chat-viz-tab-title {
+      min-width: 0; flex: 1 1 auto;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-size: 12px; line-height: 1.4; font-weight: 500;
+    }
+    .wzh-chat-viz-tab-close {
+      width: 20px; height: 20px; flex: 0 0 auto; padding: 0;
+      display: grid; place-items: center;
+      border: 0; border-radius: 5px; background: transparent;
+      color: var(--foreground-muted); cursor: pointer;
+    }
+    .wzh-chat-viz-tab-close:hover { background: color-mix(in srgb, var(--foreground) 9%, transparent); color: var(--foreground); }
+    .wzh-chat-viz-tab-close svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+    .wzh-chat-viz-close {
+      width: 28px; height: 28px; flex: 0 0 auto; padding: 0;
+      display: grid; place-items: center;
+      border: 0; border-radius: 7px; background: transparent; color: var(--foreground); cursor: pointer;
+    }
+    .wzh-chat-viz-close:hover { background: var(--state-hover); }
+    .wzh-chat-viz-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+    .wzh-chat-viz-viewport { min-width: 0; min-height: 0; flex: 1 1 auto; background: var(--background); }
+    .wzh-chat-viz-frame { display: block; width: 100%; height: 100%; border: 0; background: var(--background); }
+    .wzh-chat-viz-frame[hidden] { display: none; }
+    .wzh-chat-viz-foot {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 7px 12px; border-top: 1px solid var(--border-subtle);
+      font-size: 10px; line-height: 1.4; color: var(--foreground-muted);
+    }
+    .wzh-chat-viz-source { font-family: var(--font-mono); }
+
     /* 定位锚点:点一下让左边泳道图跳到对应那一行(见 boot 里的委托 + window.WZH_LOCATE_LANE)。
        右键「置入智能对话」是图 → 对话,这个锚点是对话 → 图,一来一回才算协作。
        外观直接对齐输入框里的 # 上下文标签(.wzh-chat-input-chip):同样的 --mi-brand-blue 12%
@@ -6169,6 +6306,22 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   font-weight: 500;
 }
 .msi-side-btn--primary:hover { background: color-mix(in srgb, var(--mi-brand-blue) 84%, #000); }
+.msi-compare-back {
+  width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0;
+  border: 0; border-radius: var(--radius-md, 8px);
+  background: transparent; color: var(--foreground);
+  cursor: pointer;
+}
+.msi-compare-back:hover { background: var(--state-hover); }
+.msi-compare-back svg {
+  width: 18px; height: 18px;
+  fill: none; stroke: currentColor; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.msi-compare-heading { color: var(--foreground); font-size: 13px; font-weight: 600; }
+.msi-compare-back[hidden], .msi-compare-heading[hidden], .msi-side-normal-action[hidden] { display: none; }
 /* 设置 / 收起靠右贴边,和「导入」「对比」拉开 */
 .msi-side-icon:nth-of-type(3) { margin-left: auto; }
 .msi-side-icon {
@@ -6209,31 +6362,62 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   font-size: 13px;
   text-align: left;
   cursor: pointer;
+  overflow: hidden;
 }
 .msi-tree-row:hover { background: color-mix(in srgb, var(--foreground) 5%, transparent); }
-/* 选中的落盘文件:浅蓝底 + 主色字,内容区标题跟着它走 */
+/* 内容页挂在一级任务目录上：选中任务用浅蓝底 + 主色字。 */
 .msi-tree-row.is-selected {
   background: color-mix(in srgb, var(--msi-accent) var(--brand-tint), transparent);
   color: var(--msi-accent);
 }
+.msi-tree-check {
+  width: 15px; height: 15px; flex: 0 0 15px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border-strong); border-radius: 3px;
+  background: var(--surface-1); color: #fff;
+  font-size: 11px; font-weight: 700; line-height: 1;
+}
+.msi-tree-check[aria-checked="true"] {
+  border-color: var(--msi-accent);
+  background: var(--msi-accent);
+}
+.msi-tree-check[aria-disabled="true"] { opacity: .38; cursor: not-allowed; }
 .msi-tree-caret {
   width: 14px; height: 14px; flex-shrink: 0;
   fill: none; stroke: var(--foreground); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
   transition: transform var(--duration-fast, 120ms) var(--easing-default, ease);
 }
 .msi-tree-row[aria-expanded="true"] .msi-tree-caret { transform: rotate(90deg); }
-/* 文件夹图标 folder.svg;文件行不带图标,靠 padding 对齐 */
+/* rank 行没有展开箭头，用同宽占位保持图标对齐。 */
+.msi-tree-caret--placeholder { visibility: hidden; }
 .msi-tree-mark { width: 15px; height: 15px; flex-shrink: 0; display: block; }
-/* 文件名放不下时中间省略,不是尾部省略:后缀名和末尾的 device/序号才是这一行的识别位,
-   砍掉它整行就分不出是哪个文件了。做法同 profileCompare.html 的路径省略——拆成
-   「可压缩的头」+「不参与压缩的尾」两段,省略号因此只会落在中间。 */
-.msi-tree-label { min-width: 0; display: flex; align-items: center; overflow: hidden; }
-.msi-tree-label-head { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.msi-tree-label-tail { flex: 0 0 auto; white-space: nowrap; }
-/* 三级缩进:采集根目录(profile_dir) → rank 目录 → 落盘文件。一级 16px,
-   文件行再补齐 caret+图标那 39px,让文件名和上一级的文件夹名左边对齐。 */
-.msi-tree-row--d1 { padding-left: 22px; }
-.msi-tree-row--file { padding-left: 61px; }
+.msi-tree-file-icon {
+  width: 15px; height: 15px; flex-shrink: 0;
+  fill: none; stroke: currentColor; stroke-width: 1.7;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+/* 目录名称直接使用单层文本节点，在可用宽度内尾部省略。 */
+.msi-tree-name { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msi-tree-compare-role {
+  height: 18px; flex: 0 0 auto;
+  display: inline-flex; align-items: center;
+  margin-left: auto; padding: 0 5px;
+  border-radius: 4px;
+  font-size: 10.5px; font-weight: 500; line-height: 1;
+  cursor: pointer;
+}
+.msi-tree-compare-role--baseline {
+  background: color-mix(in srgb, var(--msi-accent) 10%, var(--surface-1));
+  color: var(--msi-accent);
+}
+.msi-tree-compare-role--compare {
+  background: color-mix(in srgb, var(--warning) 13%, var(--surface-1));
+  color: var(--warning);
+}
+.msi-tree-compare-role[aria-disabled="true"] { cursor: default; }
+/* 二级 rank：普通模式轻缩进；对比模式为一级任务的勾选框补齐占位。 */
+.msi-tree-row--d1 { padding-left: 5px; }
+.msi-tree.is-compare-mode .msi-tree-row--d1 { padding-left: 26px; }
 
 /* ══ 内容区:标题 / 页签 / 工具条 / 泳道 / 底部页签 ══════════════════ */
 .msi-content {
@@ -6256,10 +6440,89 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 16px;
   font-weight: 600;
   color: var(--foreground);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  position: relative;
+  overflow: visible; white-space: nowrap;
+}
+.msi-content-title-label { flex: 0 0 auto; }
+.msi-title-picker-toggle {
+  min-width: 0; max-width: min(420px, 55vw); height: 28px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 5px 0 2px;
+  border: 0; border-radius: 6px;
+  background: transparent; color: inherit;
+  font: inherit; cursor: pointer;
+}
+.msi-title-picker-toggle:hover { background: var(--state-hover); }
+.msi-title-picker-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.msi-title-picker-caret {
+  width: 15px; height: 15px; flex: 0 0 15px;
+  fill: none; stroke: currentColor; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round;
+  transition: transform var(--duration-fast, 120ms) var(--easing-default, ease);
+}
+.msi-title-picker-toggle[aria-expanded="true"] .msi-title-picker-caret { transform: rotate(180deg); }
+.msi-title-picker-menu {
+  position: absolute; z-index: 30;
+  top: calc(100% + 5px); left: 0;
+  width: min(300px, calc(100vw - 48px)); max-height: 280px;
+  padding: 5px;
+  overflow: auto;
+  border: 1px solid var(--border-default); border-radius: 8px;
+  background: var(--background-elevated);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .16);
+}
+.msi-title-picker-menu[hidden] { display: none; }
+.msi-title-picker-option {
+  width: 100%; min-height: 30px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px;
+  border: 0; border-radius: 6px;
+  background: transparent; color: var(--foreground);
+  font-size: 13px; text-align: left; cursor: pointer;
+}
+.msi-title-picker-option:hover { background: var(--state-hover); }
+.msi-title-picker-option.is-current { color: var(--msi-accent); background: color-mix(in srgb, var(--msi-accent) 9%, transparent); }
+.msi-title-picker-option-name { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msi-title-picker-option-check { flex: 0 0 auto; font-size: 13px; }
+.msi-compare-title-items { min-width: 0; display: flex; align-items: center; gap: 7px; overflow: hidden; }
+.msi-compare-tag {
+  min-width: 0; max-width: 220px; height: 20px;
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 0 3px 0 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--foreground-secondary); font-size: 11px; font-weight: 400;
+}
+.msi-compare-tag-name {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  color: var(--foreground);
+}
+.msi-compare-tag-close {
+  width: 14px; height: 14px; flex: 0 0 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; border: 0; border-radius: 4px;
+  background: transparent; color: var(--foreground-muted);
+  font: inherit; font-size: 13px; line-height: 1; cursor: pointer;
+}
+.msi-compare-tag-close:hover { background: var(--state-hover); color: var(--foreground); }
+.msi-compare-swap {
+  width: 24px; height: 20px; flex: 0 0 24px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; border: 0; border-radius: 4px;
+  background: transparent; color: var(--foreground-muted); cursor: pointer;
+}
+.msi-compare-swap:hover { background: var(--state-hover); color: var(--foreground); }
+.msi-compare-swap svg {
+  width: 18px; height: 14px;
+  fill: none; stroke: currentColor; stroke-width: 1.6;
+  stroke-linecap: round; stroke-linejoin: round;
 }
 .msi-content-head-actions { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; }
 .msi-more-btn {
@@ -6285,6 +6548,7 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   cursor: pointer;
 }
 .msi-tab:hover { color: var(--foreground-secondary); }
+.msi-tab[hidden] { display: none; }
 .msi-tab.is-active { color: var(--msi-accent); font-weight: 500; }
 .msi-tab.is-active::after {
   content: "";
@@ -6923,38 +7187,41 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
     </header>
 
     <div class="pto-ide-frame__body">
-      <!-- 左树:导入的性能落盘目录。工具条(导入/对比/设置/收起) + 采集根目录→rank 目录→落盘文件三级树。
-           树的数据源是页尾 msi-workbench 脚本里的 PROF_ROOT/PROF_FOLDERS,同一份数据也喂给对话输入框的 # 引用列表,
-           所以左树里点得到的文件,# 里一定引用得到。 -->
+      <!-- 左树:导入的性能任务目录。工具条(导入/对比/设置/收起) + 任务→rank 两级树；
+           一级任务负责切换内容页，二级 rank 只展示该任务包含的采集项。 -->
       <aside class="msi-sidebar pto-ide-frame__standalone-chrome" id="msiSidebar" data-ide-slot="explorer" aria-label="性能数据">
-        <div class="msi-side-toolbar">
-          <button class="msi-side-btn msi-side-btn--primary" type="button" title="导入性能数据">
+        <div class="msi-side-toolbar" id="msiSideToolbar">
+          <button class="msi-side-btn msi-side-btn--primary msi-side-normal-action" type="button" title="导入性能数据">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg>
             <span>导入</span>
           </button>
-          <button class="msi-side-btn" type="button" title="对比两次采集">
+          <button class="msi-side-btn msi-side-normal-action" id="msiCompareBtn" type="button" title="对比两次采集">
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="7" height="16" rx="1.5"></rect><path d="M14 4h7v16h-7z"></path><path d="M14 9h7M14 15h7"></path></svg>
             <span>对比</span>
           </button>
-          <button class="msi-side-icon" type="button" title="设置" aria-label="设置">
+          <button class="msi-side-icon msi-side-normal-action" type="button" title="设置" aria-label="设置">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
           </button>
-          <button class="msi-side-icon" type="button" title="收起侧栏" aria-label="收起侧栏">
+          <button class="msi-side-icon msi-side-normal-action" type="button" title="收起侧栏" aria-label="收起侧栏">
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path></svg>
           </button>
+          <button class="msi-compare-back" id="msiCompareBack" type="button" title="退出对比" aria-label="退出对比" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path></svg>
+          </button>
+          <span class="msi-compare-heading" id="msiCompareHeading" hidden>对比</span>
         </div>
-        <div class="msi-tree" id="msiTree" role="tree" aria-label="性能落盘文件"></div>
+        <div class="msi-tree" id="msiTree" role="tree" aria-label="性能任务"></div>
       </aside>
 
       <div class="pto-ide-frame__workarea chat-shell-workarea">
         <section class="pto-ide-frame__pane chat-shell-pane" data-ide-pane="main-content" aria-label="内容区">
-          <!-- 内容区:一份采集结果的分析视图。标题跟着左树选中的文件走,主体是「泳道树 + 泳道」
+          <!-- 内容区:一份任务目录的分析视图。标题下拉与左树选中的一级任务保持同步,主体是「泳道树 + 泳道」
                (结构对齐 profileCompare.html 的 sl-train-tl-* :左侧固定宽的树列 + 右侧时间轴画布,
                每行等高、树列 sticky 在左边,所以横向不错位)。泳道内容由页尾脚本按行类型生成:
                group→密集事件条、stream→算子任务条、hbm→带宽面积图。 -->
           <section class="pto-ide-frame__pane-body chat-shell-body msi-content" id="contentCard">
             <header class="msi-content-head">
-              <h1 class="msi-content-title" id="msiContentTitle">rank6 / kernel_details.csv</h1>
+              <h1 class="msi-content-title" id="msiContentTitle">profile_dir</h1>
               <div class="msi-content-head-actions">
                 <button class="msi-more-btn" type="button" title="更多" aria-label="更多">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg>
@@ -6963,12 +7230,13 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
             </header>
 
             <nav class="msi-tabs" role="tablist" aria-label="分析视图">
-              <button class="msi-tab" type="button" role="tab" aria-selected="false">概览</button>
-              <button class="msi-tab is-active" type="button" role="tab" aria-selected="true">时间线</button>
-              <button class="msi-tab" type="button" role="tab" aria-selected="false">内存</button>
-              <button class="msi-tab" type="button" role="tab" aria-selected="false">通信</button>
-              <button class="msi-tab" type="button" role="tab" aria-selected="false">计算图</button>
-              <button class="msi-tab" type="button" role="tab" aria-selected="false">耗时统计</button>
+              <button class="msi-tab msi-tab--normal-only" type="button" role="tab" aria-selected="false">概览</button>
+              <button class="msi-tab is-active" data-analysis-tab="timeline" type="button" role="tab" aria-selected="true">时间线</button>
+              <button class="msi-tab" data-analysis-tab="memory" type="button" role="tab" aria-selected="false">内存</button>
+              <button class="msi-tab msi-tab--normal-only" type="button" role="tab" aria-selected="false">通信</button>
+              <button class="msi-tab msi-tab--normal-only" type="button" role="tab" aria-selected="false">计算图</button>
+              <button class="msi-tab msi-tab--normal-only" type="button" role="tab" aria-selected="false">耗时统计</button>
+              <button class="msi-tab msi-tab--compare-only" data-analysis-tab="operator" type="button" role="tab" aria-selected="false" hidden>算子</button>
             </nav>
 
             <div class="msi-toolbar">
@@ -7235,6 +7503,19 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
             </div>
           </div>
         </div>
+        <section class="wzh-chat-viz-pane" id="trainChatVizPane" aria-label="回答信息可视化" hidden>
+          <header class="wzh-chat-viz-head">
+            <div class="wzh-chat-viz-tabs" id="trainChatVizTabs" role="tablist" aria-label="已打开的信息可视化"></div>
+            <button class="wzh-chat-viz-close" id="trainChatVizCloseBtn" type="button" aria-label="关闭全部信息可视化" title="关闭全部信息可视化">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+            </button>
+          </header>
+          <div class="wzh-chat-viz-viewport" id="trainChatVizViewport"></div>
+          <footer class="wzh-chat-viz-foot">
+            <span>图表与回答共享同一份示意数据</span>
+            <span class="wzh-chat-viz-source">v15-report-modules-pto.html</span>
+          </footer>
+        </section>
       </aside>
       </div>
     </div>
@@ -7276,26 +7557,15 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 
   <!-- ── MindStudio Insight 工作台:左树(采集目录) + 内容区(泳道树 + 泳道) ── -->
   <script>
-// 这个文件只负责「壳」的两块内容:左边的性能落盘文件树、右边的泳道视图。
-// 一份 PROF_ROOT/PROF_FOLDERS 同时喂给这两处和对话框的 # 引用列表(window.MSI_CTX_FILES),
-// 所以左树里能点到的文件,输入 # 一定引用得到,反之亦然——两边不会对不上。
+// 这个文件只负责「壳」的两块内容:左边的性能任务树、右边的泳道视图。
+// 左树只展示「任务 → rank」两级；具体落盘文件仍可由对话框的 # 引用列表访问。
 // 泳道的结构对齐 profileCompare.html 的训练级 Timeline(Ascend Hardware ▸ Stream N /
 // Communication / Overlap Analysis / HBM ...)。rank0/trace_view.json 使用从真实 trace 抽取的
 // 任务与 flow，其余文件仍按文件名种子确定性生成；数据直接内嵌，页面保持单文件可离线打开。
 (function () {
   'use strict';
 
-  /* ══ 1. 采集目录:profile_dir → 各卡采集目录 → 落盘文件 ══════════════ */
-  // 树的形状对齐右侧对话里那次诊断的数据源:一次 2 节点 × 4 卡的训练,导入的是整个
-  // profile_dir/,里面每张卡各出一个 {任意名}_ascend_pt 目录,真正的交付件在它下面的
-  // ASCEND_PROFILER_OUTPUT/ 里(Text 模式);8 卡数据再经 msprof-analyze 汇总成
-  // cluster_analysis_output/。所以是「采集根目录 → rank 目录 → 落盘文件」三级。
-  //   · ref  —— # 引用时的 rank 限定前缀。8 张卡的文件名完全一样(trace_view.json 每个 rank 都有),
-  //             只有带上 rank 才指得准某一个,这也是真实排查时的说法:「rank6 的 kernel_details」。
-  //   · dir  —— 该目录在采集结果里的相对路径,# 列表右边和行 title 显示的就是它。
-  //   · node/host/pid —— 目录名里的节点名与进程号。rank 写在名字最前面不是 Ascend 的规定
-  //             ({任意名}_ascend_pt 本来就随便取),而是这棵树只有 220px 宽,中间省略后
-  //             `ubuntu122_1…_ascend_pt` 四张卡长得一模一样,把 rank 提到最前才认得出谁是谁。
+  /* ══ 1. 性能任务目录:data 下的任务 → 各任务的 rank 目录 ════════════ */
   const RANK_FILES = [
     'trace_view.json',            // Timeline 主件,Text 模式必出
     'kernel_details.csv',         // 算子级明细(cube 利用率、MFU 都从它算,带 Input/Output Shapes 列)
@@ -7305,69 +7575,86 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
     'communication.json',
     'communication_matrix.json',
   ];
-  // 本次采集 profile_memory=false,所以 memory_record.csv / operator_memory.csv /
-  // npu_module_mem.csv 三个内存件根本没落盘——诊断报告里内存子项记 N/A 就是这个原因,
-  // 树里也不该凭空多出这三行。
-  const RANK_HOSTS = [
-    { rank: 0, host: 'ubuntu122', pid: 14296, stage: 's0' },
-    { rank: 1, host: 'ubuntu122', pid: 14297, stage: 's0' },
-    { rank: 2, host: 'ubuntu122', pid: 14298, stage: 's1' },
-    { rank: 3, host: 'ubuntu122', pid: 14299, stage: 's1' },
-    { rank: 4, host: 'localhost', pid: 10699, stage: 's2' },
-    { rank: 5, host: 'localhost', pid: 10700, stage: 's2' },
-    { rank: 6, host: 'localhost', pid: 10701, stage: 's3' },
-    { rank: 7, host: 'localhost', pid: 10702, stage: 's3' },
+  // 名称取自 D:/Projects/msagent/data。顶层目录代表一次任务，不再代表某张卡；
+  // 子项才是 rank。时间戳保留在真实路径里，展示名去掉时间戳并把 rank 放在最前，
+  // 避免窄侧栏里同一节点的多个采集目录无法区分。
+  const TASK_CAPTURE_SOURCES = [
+    ['eta_eager_l1', [
+      '1640123b27bd_12093_20260110074326034_ascend_pt',
+    ]],
+    ['level2', [
+      'rank_0_ascend_pt', 'rank_1_ascend_pt', 'rank_2_ascend_pt', 'rank_3_ascend_pt',
+    ]],
+    ['MultiProfLevel2MemoryUB_db', [
+      'node1_2166651_20240619060505060_ascend_pt',
+      'node1_2166652_20240619060505059_ascend_pt',
+      'node1_2166653_20240619060505061_ascend_pt',
+      'node1_2166654_20240619060505060_ascend_pt',
+      'node1_2166655_20240619060505059_ascend_pt',
+      'node1_2166656_20240619060505059_ascend_pt',
+      'node1_2166657_20240619060505060_ascend_pt',
+      'node1_2166658_20240619060505060_ascend_pt',
+      'ubuntu2204_1660963_20240619060440181_ascend_pt',
+      'ubuntu2204_1660964_20240619060440179_ascend_pt',
+      'ubuntu2204_1660965_20240619060440181_ascend_pt',
+      'ubuntu2204_1660966_20240619060440181_ascend_pt',
+      'ubuntu2204_1660970_20240619060440179_ascend_pt',
+      'ubuntu2204_1660971_20240619060440180_ascend_pt',
+      'ubuntu2204_1660972_20240619060440181_ascend_pt',
+      'ubuntu2204_1660973_20240619060440181_ascend_pt',
+    ]],
+    ['operator', []],
+    ['profile_dir', [
+      'ubuntu122_14296_20260120112328147_ascend_pt',
+      'ubuntu122_14297_20260120112328150_ascend_pt',
+      'ubuntu122_14298_20260120112328150_ascend_pt',
+      'ubuntu122_14299_20260120112328147_ascend_pt',
+      'localhost.localdomain_10699_20260120112415091_ascend_pt',
+      'localhost.localdomain_10700_20260120112415091_ascend_pt',
+      'localhost.localdomain_10701_20260120112415091_ascend_pt',
+      'localhost.localdomain_10702_20260120112415090_ascend_pt',
+    ]],
+    ['verl', [
+      '1/e2e/localhost.localdomain_214483_20260116064439460_ascend_pt',
+    ]],
   ];
-  const PROF_FOLDERS = RANK_HOSTS.map((r) => {
-    const name = 'rank' + r.rank + '_' + r.host + '_' + r.pid + '_ascend_pt';
-    return {
-      name,
-      ref: 'rank' + r.rank,
-      dir: 'profile_dir / ' + name + ' / ASCEND_PROFILER_OUTPUT',
-      rootDir: 'profile_dir / ' + name,   // profiler_info / profiler_metadata 在 ascend_pt 根下
-      open: r.rank === 0,                 // 默认文件是 rank0/trace_view.json，父目录必须同步展开
-      // profiler_info_{rank}.json 校验采集是否正常 stop,profiler_metadata.json 里是并行配置
-      // 和 ENV_VARIABLES——诊断报告第 3 条(环境变量没设)就是从它看出来的。两个都在根下,不在 OUTPUT 里。
-      files: RANK_FILES.concat(['profiler_info_' + r.rank + '.json', 'profiler_metadata.json']),
-    };
-  }).concat([{
-    name: 'cluster_analysis_output',
-    ref: 'cluster',
-    dir: 'profile_dir / cluster_analysis_output',
-    rootDir: 'profile_dir / cluster_analysis_output',
-    open: false,
-    // msprof-analyze 每个 mode 都要单独 -o 到自己的子目录,落盘出来其实是
-    // cluster_analysis_output/{mode}/cluster_analysis.db。树里按 mode 平铺成一行一个 .db:
-    // 真名八个文件全叫 cluster_analysis.db,中间省略之后八行长得一模一样,没法点。
-    files: [
-      'cluster_time_summary.db',
-      'compute_op_sum.db',
-      'hccl_sum.db',
-      'communication_time_sum.db',
-      'communication_matrix_sum.db',
-      'freq_analysis.db',
-      'free_analysis.db',
-      'cann_api_sum.db',
-      'mstt_advisor_20260618.html',
-    ],
-  }]);
 
-  // 采集根目录:导入的就是它,所以它是树的第一行,也是对话里 #profile_dir 指的那个目录。
-  const PROF_ROOT = {
-    name: 'profile_dir',
-    ref: 'profile_dir',
-    dir: 'profile_dir',
-    open: true,
-    folders: PROF_FOLDERS,
-  };
+  function rankDisplayName(rank, source) {
+    const leaf = source.split('/').pop();
+    if (/^rank_\d+_ascend_pt$/.test(leaf)) return leaf.replace(/^rank_(\d+)/, 'rank$1');
+    const compact = leaf
+      .replace(/_\d{17}_ascend_pt$/, '_ascend_pt')
+      .replace(/^localhost\.localdomain_/, 'localhost_');
+    return 'rank' + rank + '_' + compact;
+  }
+
+  function makeRank(taskName, source, rank) {
+    const rootDir = taskName + ' / ' + source.replace(/\//g, ' / ');
+    return {
+      name: rankDisplayName(rank, source),
+      ref: 'rank' + rank,
+      dir: rootDir + ' / ASCEND_PROFILER_OUTPUT',
+      rootDir,
+      files: RANK_FILES.concat(['profiler_info_' + rank + '.json', 'profiler_metadata.json']),
+    };
+  }
+
+  const PROF_TASKS = TASK_CAPTURE_SOURCES.map(([name, sources]) => ({
+    name,
+    dir: name,
+    open: name === 'profile_dir',
+    ranks: sources.map((source, rank) => makeRank(name, source, rank)),
+  }));
+  const selectedTask = PROF_TASKS.find((task) => task.name === 'profile_dir');
+  const PROF_FOLDERS = selectedTask.ranks;
+  const PROF_ROOT = { name: 'data', dir: 'data', tasks: PROF_TASKS };
 
   // 该文件在采集结果里的完整路径:profiler_info / profiler_metadata 落在 *_ascend_pt 根下,
   // 其余交付件都在 ASCEND_PROFILER_OUTPUT/ 里,两者的路径不一样,tooltip 和 # 列表都按这个给。
   const filePath = (folder, file) =>
     (/^profiler_(info|metadata)/.test(file) ? folder.rootDir : folder.dir) + ' / ' + file;
 
-  // 对话框输入 # 时可引用的上下文 = 采集根目录 + 树里所有叶子文件,引用名带 rank 限定
-  // (rank6/kernel_details.csv)。不带前缀的话 8 个 rank 的同名文件互相打架,# 指不准是哪一张卡的。
+  // 对话框输入 # 时仍可引用当前 profile_dir 任务下的具体文件；文件不再占用左树层级。
   window.MSI_PROF_TREE = PROF_ROOT;
   window.MSI_CTX_FILES = PROF_FOLDERS.reduce((acc, folder) => {
     folder.files.forEach((file) => acc.push({
@@ -7375,12 +7662,13 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
       path: filePath(folder, file),
     }));
     return acc;
-  }, [{ name: PROF_ROOT.name, path: PROF_ROOT.dir + '（整个采集目录，8 卡）' }]);
+  }, [{ name: selectedTask.name, path: selectedTask.dir + '（整个采集目录，8 卡）' }]);
 
-  // 默认打开 rank0 的真实 trace 窗口：这份样例内嵌了从 trace_view.json 抽取的
-  // Python → Device 与 CANN → Device flow，点击任务即可查看跨泳道下发关系。
-  let selected = { folder: PROF_FOLDERS[0], file: 'trace_view.json' };
-  window.MSI_ANCHOR_NAME = selected.folder.name;
+  // 内容页挂在一级任务目录；二级 rank 仅展示采集构成，不再各自维护页面。
+  let selected = { task: selectedTask };
+  let compareMode = false;
+  let compareTasks = [];
+  window.MSI_ANCHOR_NAME = selected.task.name;
 
   /* ══ 2. 确定性随机:同一个文件名永远画出同一张泳道图 ══════════════ */
   function hashSeed(str) {
@@ -7404,70 +7692,62 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
   ));
 
-  // 把名字拆成「可压缩的头」+「必须留住的尾」,配合 .msi-tree-label-* 实现中间省略。
-  // 尾巴取「后缀名 + 它前面两个下划线段」:ubuntu11774_47797_0_0.json 里真正区分文件的是
-  // 末尾的 device 号和序号,尾部省略会把它们连同 .json 一起吃掉。尾巴超过 TAIL_MAX 就退
-  // 一档(一个下划线段 → 只留后缀名),免得头被挤成两三个字。
-  const TAIL_MAX = 12;
-  function splitLabel(name) {
-    const dot = name.lastIndexOf('.');
-    const base = dot > 0 ? name.slice(0, dot) : name;   // 无后缀名(文件夹)时整名参与切分
-    const ext = dot > 0 ? name.slice(dot) : '';
-    // 从后往前退最多两个下划线段,取第一个长度还在预算内的切点
-    const cuts = [];
-    let at = base.length;
-    for (let k = 0; k < 2; k++) {
-      at = base.lastIndexOf('_', at - 1);
-      if (at <= 0) break;
-      cuts.push(at);
-    }
-    for (let i = cuts.length - 1; i >= 0; i--) {
-      const cut = cuts[i];
-      if (name.length - cut <= TAIL_MAX) return [name.slice(0, cut), name.slice(cut)];
-    }
-    return ext ? [base, ext] : [name, ''];
-  }
-  const labelHtml = (name) => {
-    const [head, tail] = splitLabel(name);
-    return '<span class="msi-tree-label">' +
-             '<span class="msi-tree-label-head">' + esc(head) + '</span>' +
-             (tail ? '<span class="msi-tree-label-tail">' + esc(tail) + '</span>' : '') +
-           '</span>';
-  };
+  const nameHtml = (name) => '<span class="msi-tree-name">' + esc(name) + '</span>';
 
   /* ══ 3. 左树渲染 ═════════════════════════════════════════════════ */
   const CARET = '<svg class="msi-tree-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>';
+  const FILE_ICON = '<svg class="msi-tree-file-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"></path><path d="M14 3v5h4"></path></svg>';
 
   function renderTree() {
     const host = document.getElementById('msiTree');
     if (!host) return;
+    host.classList.toggle('is-compare-mode', compareMode);
     const rows = [];
-    const folderRow = (node, depth, dataAttr) =>
-      '<button class="msi-tree-row msi-tree-row--folder msi-tree-row--d' + depth + '" type="button" role="treeitem"' +
-      ' ' + dataAttr + ' aria-expanded="' + (node.open ? 'true' : 'false') + '"' +
-      ' title="' + esc(node.dir) + '">' +
-        CARET +
-        '<img class="msi-tree-mark" src="src/pic/icon/folder.svg" alt="">' +
-        labelHtml(node.name) +
+    const taskRow = (task, taskIndex) => {
+      const checked = compareTasks.includes(task);
+      const disabled = compareMode && !checked && compareTasks.length >= 2;
+      const on = selected.task === task;
+      const roleIndex = compareTasks.indexOf(task);
+      const roleName = roleIndex === 0 ? '基线' : (roleIndex === 1 ? '对比' : '');
+      const check = compareMode
+        ? '<span class="msi-tree-check" data-compare-check="1" role="checkbox"' +
+            ' aria-checked="' + (checked ? 'true' : 'false') + '"' +
+            ' aria-disabled="' + (disabled ? 'true' : 'false') + '"' +
+            ' title="' + (disabled ? '最多选择 2 个任务' : (checked ? '取消选择' : '选择任务')) + '">' +
+            (checked ? '✓' : '') +
+          '</span>'
+        : '';
+      const role = compareMode && roleName
+        ? '<span class="msi-tree-compare-role msi-tree-compare-role--' + (roleIndex === 0 ? 'baseline' : 'compare') + '"' +
+            ' data-compare-swap="1" aria-disabled="' + (compareTasks.length < 2 ? 'true' : 'false') + '"' +
+            ' title="' + (compareTasks.length < 2 ? roleName : '点击互换基线和对比') + '">' + roleName + '</span>'
+        : '';
+      return '<button class="msi-tree-row msi-tree-row--folder' + (on ? ' is-selected' : '') + '" type="button" role="treeitem"' +
+        ' data-task="' + taskIndex + '" aria-expanded="' + (task.open ? 'true' : 'false') + '"' +
+        ' aria-selected="' + (on ? 'true' : 'false') + '"' +
+        ' title="' + esc(task.dir) + '">' +
+          check + CARET +
+          '<img class="msi-tree-mark" src="src/pic/icon/folder.svg" alt="">' +
+          nameHtml(task.name) + role +
+        '</button>';
+    };
+    const rankRow = (rank, taskIndex, rankIndex) =>
+      '<button class="msi-tree-row msi-tree-row--folder msi-tree-row--d1" type="button" role="treeitem"' +
+      ' data-task="' + taskIndex + '" data-rank="' + rankIndex + '"' +
+      ' aria-selected="false"' +
+      ' title="' + esc(rank.rootDir) + '">' +
+        CARET.replace('msi-tree-caret', 'msi-tree-caret msi-tree-caret--placeholder') +
+        FILE_ICON +
+        nameHtml(rank.name) +
       '</button>';
 
-    rows.push(folderRow(PROF_ROOT, 0, 'data-root="1"'));
-    if (PROF_ROOT.open) {
-      PROF_FOLDERS.forEach((folder, fi) => {
-        rows.push(folderRow(folder, 1, 'data-folder="' + fi + '"'));
-        if (!folder.open) return;
-        folder.files.forEach((name) => {
-          const on = selected.folder === folder && selected.file === name;
-          rows.push(
-            '<button class="msi-tree-row msi-tree-row--file' + (on ? ' is-selected' : '') + '"' +
-            ' type="button" role="treeitem" data-folder="' + fi + '" data-file="' + esc(name) + '"' +
-            ' title="' + esc(filePath(folder, name)) + '">' +
-              labelHtml(name) +
-            '</button>'
-          );
-        });
+    PROF_TASKS.forEach((task, ti) => {
+      rows.push(taskRow(task, ti));
+      if (!task.open) return;
+      task.ranks.forEach((rank, ri) => {
+        rows.push(rankRow(rank, ti, ri));
       });
-    }
+    });
     host.innerHTML = rows.join('');
   }
 
@@ -7477,44 +7757,171 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
     host.addEventListener('click', (e) => {
       const row = e.target.closest('.msi-tree-row');
       if (!row) return;
-      if (row.dataset.root) { PROF_ROOT.open = !PROF_ROOT.open; renderTree(); return; }
-      const folder = PROF_FOLDERS[Number(row.dataset.folder)];
-      if (!folder) return;
-      if (row.dataset.file) {
-        selected = { folder, file: row.dataset.file };
-        renderTree();
-        applySelection();
-      } else {
-        folder.open = !folder.open;
-        renderTree();
+      const task = PROF_TASKS[Number(row.dataset.task)];
+      if (!task) return;
+      const role = e.target.closest('.msi-tree-compare-role');
+      if (role) {
+        if (role.getAttribute('aria-disabled') !== 'true') swapCompareRoles();
+        return;
       }
+      const check = e.target.closest('.msi-tree-check');
+      if (check) {
+        if (check.getAttribute('aria-disabled') !== 'true') toggleCompareTask(task);
+        return;
+      }
+      if (row.dataset.rank === undefined) {
+        if (compareMode || e.target.closest('.msi-tree-caret')) {
+          task.open = !task.open;
+          renderTree();
+        } else {
+          selectTask(task);
+        }
+        return;
+      }
+      // 二级 rank 只展示任务包含的采集项，不再切换内容页面。
     });
     renderTree();
   }
 
-  // 选中文件变了:内容区标题跟着换；rank0 trace 显示真实窗口，其余文件按名称种子重算。
-  // 对话框那条「已锚定」chip 跟着选中文件所属的二级目录(rankN_xxx_ascend_pt / cluster_analysis_output)走,
-  // 树里换到另一张卡的文件,chip 上的目录名同步换掉。
-  function applySelection() {
-    // 无论选择来自左树、默认值还是后续程序化定位，都先展开它的完整父路径。
-    // 这样标题、选中高亮和树中的实际位置永远不会脱节。
-    PROF_ROOT.open = true;
-    selected.folder.open = true;
-    renderTree();
+  function selectTask(task) {
+    if (!task) return;
+    selected = { task };
+    task.open = true;
+    applySelection();
+  }
+
+  function renderContentTitle() {
     const title = document.getElementById('msiContentTitle');
-    // 带上 rank 前缀:8 张卡的 trace_view.json 同名,只写文件名看不出在看哪一张
-    if (title) title.textContent = selected.folder.ref + ' / ' + selected.file;
-    // 同步给对话脚本(initAnchorChip 初始化时读 window.MSI_ANCHOR_NAME),两边永远指同一个目录
-    window.MSI_ANCHOR_NAME = selected.folder.name;
+    if (!title) return;
+    if (!compareMode) {
+      const options = PROF_TASKS.map((task, taskIndex) => {
+        const current = task === selected.task;
+        return '<button class="msi-title-picker-option' + (current ? ' is-current' : '') + '" type="button"' +
+          ' role="option" aria-selected="' + (current ? 'true' : 'false') + '" data-title-task="' + taskIndex + '">' +
+          '<span class="msi-title-picker-option-name">' + esc(task.name) + '</span>' +
+          (current ? '<span class="msi-title-picker-option-check" aria-hidden="true">✓</span>' : '') +
+        '</button>';
+      }).join('');
+      title.innerHTML = '<button class="msi-title-picker-toggle" type="button" aria-haspopup="listbox" aria-expanded="false">' +
+          '<span class="msi-title-picker-name">' + esc(selected.task.name) + '</span>' +
+          '<svg class="msi-title-picker-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5"></path></svg>' +
+        '</button>' +
+        '<div class="msi-title-picker-menu" role="listbox" aria-label="切换任务目录" hidden>' + options + '</div>';
+      return;
+    }
+    const tagItems = compareTasks.map((task, roleIndex) => {
+      const taskIndex = PROF_TASKS.indexOf(task);
+      const roleName = roleIndex === 0 ? '基线' : '对比';
+      return '<span class="msi-compare-tag" title="' + esc(task.name) + '">' +
+        '<span class="msi-compare-tag-name">' + esc(task.name + '（' + roleName + '）') + '</span>' +
+        '<button class="msi-compare-tag-close" type="button" data-compare-remove="' + taskIndex + '"' +
+        ' aria-label="取消选择 ' + esc(task.name) + '" title="取消选择">×</button>' +
+      '</span>';
+    });
+    const swap = '<button class="msi-compare-swap" type="button" data-compare-swap="1"' +
+      ' aria-label="互换基线和对比" title="互换基线和对比">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12"></path><path d="m15 4 3 3-3 3"></path>' +
+      '<path d="M18 17H6"></path><path d="m9 14-3 3 3 3"></path></svg></button>';
+    const tags = tagItems.length === 2 ? tagItems.join(swap) : tagItems.join('');
+    title.innerHTML = '<span class="msi-content-title-label">任务对比</span>' +
+      (tags ? '<span class="msi-compare-title-items">' + tags + '</span>' : '');
+  }
+
+  function toggleCompareTask(task) {
+    if (!compareMode) return;
+    const index = compareTasks.indexOf(task);
+    if (index >= 0) compareTasks.splice(index, 1);
+    else if (compareTasks.length < 2) compareTasks.push(task);
+    renderTree();
+    renderContentTitle();
+  }
+
+  function swapCompareRoles() {
+    if (!compareMode || compareTasks.length < 2) return;
+    compareTasks = [compareTasks[1], compareTasks[0]];
+    renderTree();
+    renderContentTitle();
+  }
+
+  function setCompareMode(active) {
+    compareMode = active;
+    compareTasks = active ? [selected.task] : [];
+    document.querySelectorAll('.msi-side-normal-action').forEach((el) => { el.hidden = active; });
+    document.querySelectorAll('.msi-tab--normal-only').forEach((el) => { el.hidden = active; });
+    document.querySelectorAll('.msi-tab--compare-only').forEach((el) => { el.hidden = !active; });
+    const visibleActiveTab = document.querySelector('.msi-tab.is-active:not([hidden])');
+    if (!visibleActiveTab) {
+      document.querySelectorAll('.msi-tab').forEach((el) => {
+        const on = el.dataset.analysisTab === 'timeline';
+        el.classList.toggle('is-active', on);
+        el.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+    }
+    const back = document.getElementById('msiCompareBack');
+    if (back) back.hidden = !active;
+    const heading = document.getElementById('msiCompareHeading');
+    if (heading) heading.hidden = !active;
+    renderTree();
+    renderContentTitle();
+  }
+
+  function closeTitlePicker() {
+    const title = document.getElementById('msiContentTitle');
+    const toggle = title?.querySelector('.msi-title-picker-toggle');
+    const menu = title?.querySelector('.msi-title-picker-menu');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+    if (menu) menu.hidden = true;
+  }
+
+  function initCompareMode() {
+    document.getElementById('msiCompareBtn')?.addEventListener('click', () => setCompareMode(true));
+    document.getElementById('msiCompareBack')?.addEventListener('click', () => setCompareMode(false));
+    document.getElementById('msiContentTitle')?.addEventListener('click', (e) => {
+      const swap = e.target.closest('.msi-compare-swap');
+      if (swap) {
+        swapCompareRoles();
+        return;
+      }
+      const close = e.target.closest('.msi-compare-tag-close');
+      if (close) {
+        const task = PROF_TASKS[Number(close.dataset.compareRemove)];
+        if (task) toggleCompareTask(task);
+        return;
+      }
+      const option = e.target.closest('.msi-title-picker-option');
+      if (option) {
+        closeTitlePicker();
+        selectTask(PROF_TASKS[Number(option.dataset.titleTask)]);
+        return;
+      }
+      const toggle = e.target.closest('.msi-title-picker-toggle');
+      if (!toggle) return;
+      const menu = toggle.parentElement.querySelector('.msi-title-picker-menu');
+      const open = menu?.hidden !== false;
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (menu) menu.hidden = !open;
+    });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#msiContentTitle')) closeTitlePicker();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeTitlePicker(); });
+  }
+
+  // 选中一级任务后，内容区、标题下拉与对话锚点统一挂到该任务目录。
+  function applySelection() {
+    selected.task.open = true;
+    renderTree();
+    renderContentTitle();
+    window.MSI_ANCHOR_NAME = selected.task.name;
     const chipName = document.getElementById('trainChatAnchorName');
-    if (chipName) chipName.textContent = selected.folder.name;
+    if (chipName) chipName.textContent = selected.task.name;
     selectedTraceTaskId = null;
     clearTraceTaskFocus();
     renderSwimlanes();
     syncTimelineControls();
     requestAnimationFrame(() => {
       const host = document.getElementById('msiTree');
-      const row = host?.querySelector('.msi-tree-row--file.is-selected');
+      const row = host?.querySelector('.msi-tree-row.is-selected');
       if (!host || !row) return;
       const hostRect = host.getBoundingClientRect();
       const rowRect = row.getBoundingClientRect();
@@ -7793,7 +8200,7 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   }
   addInferredTraceEdges();
   const REAL_TRACE_TASK_BY_ID = Object.fromEntries(REAL_TRACE_TASKS.map((t) => [t.id, t]));
-  const isRealTraceSelection = () => selected.folder.ref === 'rank0' && selected.file === 'trace_view.json';
+  const isRealTraceSelection = () => selected.task.name === 'profile_dir';
 
   // 算子任务条的配色:浅底 + 同色系深字,浅色/深色主题下都读得出来。
   const BAR_COLORS = [
@@ -8482,8 +8889,8 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   function renderSwimlanes() {
     const body = document.getElementById('msiSwimBody');
     if (!body) return;
-    // 种子取当前选中的文件名:换一个文件,泳道整体换一副样子,但同一个文件永远一致。
-    const rnd = mulberry32(hashSeed(selected.folder.ref + '/' + selected.file));
+    // 页面按一级任务目录区分，二级 rank 不再拥有各自独立的视图。
+    const rnd = mulberry32(hashSeed(selected.task.name));
     const out = [];
     const appendLane = (lane, depth) => {
       out.push(laneRow(lane, depth, rnd));
@@ -8585,7 +8992,7 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   function runMenuAct(act) {
     if (!menuCtx) return;
     const { op, dur, lane } = menuCtx;
-    const ref = (window.WZH_CHIP_HASH || '# ') + selected.folder.ref + '/' + selected.file;
+    const ref = (window.WZH_CHIP_HASH || '# ') + selected.task.name;
     const gap = window.WZH_CHIP_GAP || '   ';   // 和输入框里 # 标签同一份留白
     if (act === 'chat') {
       sendToChat(ref + gap + lane + ' 上的 ' + op + '(' + dur + 'ms) ');
@@ -8803,6 +9210,7 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   /* ══ 7. 启动 ═══════════════════════════════════════════════════ */
   function boot() {
     initTree();
+    initCompareMode();
     initZoom();
     initSwimlanes();
     initBarMenu();
@@ -9809,6 +10217,233 @@ ${issuesText || '（暂无）'}
     });
   }
 
+  // 固定诊断回答与 v15 报告模块之间的语义映射。卡片只负责打开现有图表，
+  // 数据和绘制逻辑仍全部来自 v15-report-modules-pto.html。
+  const ANSWER_VISUALIZATIONS = {
+    top1: {
+      title: 'Rank 级横向对比信息可视化',
+      desc: '对齐 8 张卡的计算、通信、等待与 Free 时间构成',
+    },
+    top2: {
+      title: '计算-通信重叠率信息可视化',
+      desc: '在同一时间轴上查看计算区间与暴露通信',
+    },
+    top3: {
+      title: 'PP 流水线 Bubble 信息可视化',
+      desc: '查看 4 个 stage 的 1F1B 调度窗口与空泡分布',
+    },
+  };
+  const ANSWER_VIZ_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="M4 19V9M10 19V5M16 19v-7M3 21h18"></path></svg>';
+  const ANSWER_VIZ_ARROW = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="m9 6 6 6-6 6"></path></svg>';
+  let chatVizState = null;
+
+  function createAnswerVisualizationCard(moduleId) {
+    const meta = ANSWER_VISUALIZATIONS[moduleId];
+    if (!meta) return null;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'wzh-chat-viz-card';
+    button.dataset.vizModule = moduleId;
+    button.dataset.vizTitle = meta.title;
+    button.setAttribute('aria-label', '打开' + meta.title);
+    button.innerHTML =
+      '<span class="wzh-chat-viz-card-icon">' + ANSWER_VIZ_ICON + '</span>' +
+      '<span class="wzh-chat-viz-card-copy">' +
+        '<span class="wzh-chat-viz-card-title">' + meta.title + '</span>' +
+        '<span class="wzh-chat-viz-card-desc">' + meta.desc + '</span>' +
+      '</span>' +
+      '<span class="wzh-chat-viz-card-arrow">' + ANSWER_VIZ_ARROW + '</span>';
+    return button;
+  }
+
+  function nextAnswerBlock(start, wantedTag) {
+    let node = start?.nextElementSibling || null;
+    while (node && !/^H[23]$/.test(node.tagName)) {
+      if (node.tagName === wantedTag) return node;
+      node = node.nextElementSibling;
+    }
+    return null;
+  }
+
+  function addProfilingVisualizationCards(answer) {
+    if (!answer || answer.querySelector('.wzh-chat-viz-card')) return;
+    const nodes = Array.from(answer.querySelectorAll('h3, li'));
+    const bubblePoint = nodes.find((node) => node.tagName === 'LI' && node.textContent.includes('真正的瓶颈是流水线末级过载'));
+    const rankHeading = nodes.find((node) => node.tagName === 'H3' && node.textContent.includes('PP 末级计算过载'));
+    const overlapHeading = nodes.find((node) => node.tagName === 'H3' && node.textContent.includes('计算-通信零重叠'));
+    const placements = [
+      { moduleId: 'top3', target: bubblePoint?.closest('ul') },
+      { moduleId: 'top1', target: nextAnswerBlock(rankHeading, 'TABLE') || rankHeading },
+      { moduleId: 'top2', target: nextAnswerBlock(overlapHeading, 'UL') || overlapHeading },
+    ];
+    placements.forEach(({ moduleId, target }) => {
+      const card = createAnswerVisualizationCard(moduleId);
+      if (target && card) target.insertAdjacentElement('afterend', card);
+    });
+  }
+
+  function visualizationFrameSrc(moduleId) {
+    const theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    return 'v15-report-modules-pto.html?embed=chart&module=' + encodeURIComponent(moduleId) + '&size=8&theme=' + theme;
+  }
+
+  function activateChatVisualizationTab(moduleId, trigger) {
+    const tabs = $('trainChatVizTabs');
+    const viewport = $('trainChatVizViewport');
+    if (!tabs || !viewport || !chatVizState) return;
+    const tab = tabs.querySelector('.wzh-chat-viz-tab[data-viz-module="' + moduleId + '"]');
+    const frame = viewport.querySelector('.wzh-chat-viz-frame[data-viz-module="' + moduleId + '"]');
+    if (!tab || !frame) return;
+
+    if (trigger) chatVizState.triggers.set(moduleId, trigger);
+    chatVizState.activeModuleId = moduleId;
+    chatVizState.trigger = chatVizState.triggers.get(moduleId) || null;
+    tabs.querySelectorAll('.wzh-chat-viz-tab').forEach((item) => {
+      const active = item === tab;
+      item.setAttribute('aria-selected', String(active));
+      item.tabIndex = active ? 0 : -1;
+    });
+    viewport.querySelectorAll('.wzh-chat-viz-frame').forEach((item) => { item.hidden = item !== frame; });
+    document.querySelectorAll('.wzh-chat-viz-card.is-active').forEach((card) => card.classList.remove('is-active'));
+    chatVizState.trigger?.classList.add('is-active');
+    tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    scheduleFadeUpdate();
+  }
+
+  function createChatVisualizationTab(moduleId, title) {
+    const tabs = $('trainChatVizTabs');
+    const viewport = $('trainChatVizViewport');
+    const meta = ANSWER_VISUALIZATIONS[moduleId];
+    if (!tabs || !viewport || !meta) return;
+
+    const tab = document.createElement('div');
+    tab.className = 'wzh-chat-viz-tab';
+    tab.dataset.vizModule = moduleId;
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-selected', 'false');
+    tab.tabIndex = -1;
+    tab.innerHTML =
+      '<span class="wzh-chat-viz-tab-title"></span>' +
+      '<button class="wzh-chat-viz-tab-close" type="button" aria-label="关闭此可视化" title="关闭此可视化">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>' +
+      '</button>';
+    tab.querySelector('.wzh-chat-viz-tab-title').textContent = title || meta.title;
+    tab.addEventListener('click', (event) => {
+      if (event.target.closest('.wzh-chat-viz-tab-close')) return;
+      activateChatVisualizationTab(moduleId);
+    });
+    tab.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        activateChatVisualizationTab(moduleId);
+        return;
+      }
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      event.preventDefault();
+      const items = Array.from(tabs.querySelectorAll('.wzh-chat-viz-tab'));
+      const index = items.indexOf(tab);
+      const step = event.key === 'ArrowRight' ? 1 : -1;
+      const next = items[(index + step + items.length) % items.length];
+      if (next) {
+        activateChatVisualizationTab(next.dataset.vizModule);
+        next.focus();
+      }
+    });
+    tab.querySelector('.wzh-chat-viz-tab-close').addEventListener('click', (event) => {
+      event.stopPropagation();
+      closeChatVisualizationTab(moduleId);
+    });
+    tabs.appendChild(tab);
+
+    const frame = document.createElement('iframe');
+    frame.className = 'wzh-chat-viz-frame';
+    frame.dataset.vizModule = moduleId;
+    frame.title = title || meta.title;
+    frame.loading = 'lazy';
+    frame.hidden = true;
+    frame.src = visualizationFrameSrc(moduleId);
+    viewport.appendChild(frame);
+  }
+
+  function openChatVisualization(moduleId, title, trigger) {
+    const panel = $('trainChatPanel');
+    const pane = $('trainChatVizPane');
+    const tabs = $('trainChatVizTabs');
+    if (!panel || !pane || !tabs || !ANSWER_VISUALIZATIONS[moduleId]) return;
+
+    if (!panel.classList.contains('is-visualizing')) {
+      const rect = panel.getBoundingClientRect();
+      chatVizState = {
+        widthValue: panel.style.getPropertyValue('--wzh-chat-w'),
+        trigger: trigger || null,
+        activeModuleId: null,
+        triggers: new Map(),
+      };
+      panel.style.setProperty('--wzh-chat-w', Math.round(rect.width) + 'px');
+      panel.style.setProperty('--wzh-viz-top', Math.max(8, Math.round(rect.top)) + 'px');
+      panel.style.setProperty('--wzh-viz-right', Math.max(8, Math.round(window.innerWidth - rect.right)) + 'px');
+      panel.style.setProperty('--wzh-viz-bottom', Math.max(8, Math.round(window.innerHeight - rect.bottom)) + 'px');
+      panel.classList.add('is-visualizing');
+      pane.hidden = false;
+    }
+
+    if (!tabs.querySelector('.wzh-chat-viz-tab[data-viz-module="' + moduleId + '"]')) {
+      createChatVisualizationTab(moduleId, title);
+    }
+    activateChatVisualizationTab(moduleId, trigger);
+  }
+
+  function closeChatVisualizationTab(moduleId) {
+    const tabs = $('trainChatVizTabs');
+    const viewport = $('trainChatVizViewport');
+    if (!tabs || !viewport || !chatVizState) return;
+    const tab = tabs.querySelector('.wzh-chat-viz-tab[data-viz-module="' + moduleId + '"]');
+    const frame = viewport.querySelector('.wzh-chat-viz-frame[data-viz-module="' + moduleId + '"]');
+    if (!tab) return;
+    const items = Array.from(tabs.querySelectorAll('.wzh-chat-viz-tab'));
+    const index = items.indexOf(tab);
+    const wasActive = chatVizState.activeModuleId === moduleId;
+    const trigger = chatVizState.triggers.get(moduleId) || null;
+    tab.remove();
+    frame?.remove();
+    chatVizState.triggers.delete(moduleId);
+
+    const remaining = Array.from(tabs.querySelectorAll('.wzh-chat-viz-tab'));
+    if (!remaining.length) {
+      chatVizState.trigger = trigger;
+      closeChatVisualization();
+      return;
+    }
+    if (wasActive) {
+      const next = remaining[Math.min(index, remaining.length - 1)];
+      activateChatVisualizationTab(next.dataset.vizModule);
+      next.focus();
+    }
+  }
+
+  function closeChatVisualization(opts) {
+    const panel = $('trainChatPanel');
+    const pane = $('trainChatVizPane');
+    if (!panel || !panel.classList.contains('is-visualizing')) return false;
+    const trigger = chatVizState?.trigger;
+    panel.classList.remove('is-visualizing');
+    panel.style.removeProperty('--wzh-viz-top');
+    panel.style.removeProperty('--wzh-viz-right');
+    panel.style.removeProperty('--wzh-viz-bottom');
+    if (chatVizState?.widthValue) panel.style.setProperty('--wzh-chat-w', chatVizState.widthValue);
+    else panel.style.removeProperty('--wzh-chat-w');
+    if (pane) pane.hidden = true;
+    $('trainChatVizTabs')?.replaceChildren();
+    $('trainChatVizViewport')?.replaceChildren();
+    document.querySelectorAll('.wzh-chat-viz-card.is-active').forEach((card) => card.classList.remove('is-active'));
+    chatVizState = null;
+    scheduleFadeUpdate();
+    if (opts?.restoreFocus !== false && trigger?.isConnected) trigger.focus();
+    return true;
+  }
+
   // 回答尾部的操作栏。赞/踩互斥,重试和复制在这个演示里只做视觉反馈。
   function buildAnswerActions() {
     const bar = document.createElement('div');
@@ -10246,7 +10881,7 @@ ${issuesText || '（暂无）'}
   // 输入框里敲什么都只用来触发。演示的是"把一次落盘 profiling 整个交给 Agent 自己查完"这件事:
   // 思考过程按真实排查节奏走「确认数据形态 → 定分析路线 → 跑集群分析 → 交叉验证 → 证伪假设 →
   // 实算指标」,回答则是一份完整的 markdown 诊断报告(结论速览 / 行动清单 / 问题详情 /
-  // 已确认无问题 / 数据与方法),不再插任何卡片——报告本来就该是能整段复制走的纯文本。──
+  // 已确认无问题 / 数据与方法)。其中三个关键证据点补轻量可视化入口，正文仍可整段复制。──
   const CHAT_TASK_NAME = 'openPanGu2.0flash预训练_v1';
   const PROFILING_DATA_DIR = 'profile_dir'; // 问题卡片锚点:这次要诊断的落盘目录
 
@@ -10672,7 +11307,7 @@ ${issuesText || '（暂无）'}
       }
       think.finish(); // 正式回答开始 → 思考过程自动收起
 
-      // 一份诊断报告比闲聊长一个量级,打字机按 6 字/tick 走(≈2.7ms/字):再慢下去,
+      // 一份诊断报告比闲聊长一个量级,打字机按 12 字/tick 走(≈1.3ms/字):再慢下去,
       // 等它吐完就成了折磨,而不是"看着它在生成"。
       const answer = document.createElement('div');
       answer.className = 'wzh-chat-answer';
@@ -10687,12 +11322,13 @@ ${issuesText || '（暂无）'}
       for (const md of sections) {
         const seg = document.createElement('div');
         answer.appendChild(seg);
-        await typeMarkdownInto(seg, md, 16, 6);
+        await typeMarkdownInto(seg, md, 16, 12);
         if (epoch !== chatEpoch) return;                            // 这轮已被「新建对话」丢弃
         if (chatStopped) return finalizeStoppedRound(think, bodyEl);
       }
 
       if (epoch !== chatEpoch) return; // 这轮已被「新建对话」丢弃
+      addProfilingVisualizationCards(answer);
       answer.appendChild(buildAnswerActions());
       chatHistory.push({ role: 'assistant', content: sections.join('\n') });
 
@@ -10737,7 +11373,7 @@ ${issuesText || '（暂无）'}
       answer.className = 'wzh-chat-answer';
       bodyEl.appendChild(answer);
       const markdown = buildKnowledgeAnswerMarkdown();
-      await typeMarkdownInto(answer, markdown, 11, 6);
+      await typeMarkdownInto(answer, markdown, 11, 12);
       if (epoch !== chatEpoch) return;
       if (chatStopped) return finalizeStoppedRound(think, bodyEl);
 
@@ -10784,7 +11420,7 @@ ${issuesText || '（暂无）'}
       answer.className = 'wzh-chat-answer';
       bodyEl.appendChild(answer);
       const markdown = buildModuleStatisticReadyAnswerMarkdown();
-      await typeMarkdownInto(answer, markdown, 11, 6);
+      await typeMarkdownInto(answer, markdown, 11, 12);
       if (epoch !== chatEpoch) return;
       if (chatStopped) return finalizeStoppedRound(think, bodyEl);
 
@@ -10905,6 +11541,7 @@ ${issuesText || '（暂无）'}
     if (!toggle || !panel) return;
 
     function setOpen(open) {
+      if (!open) closeChatVisualization({ restoreFocus: false });
       panel.classList.toggle('is-open', open);
       panel.setAttribute('aria-hidden', String(!open));
       toggle.classList.toggle('is-active', open);
@@ -10925,7 +11562,10 @@ ${issuesText || '（暂无）'}
     toggle.addEventListener('click', () => setOpen(!panel.classList.contains('is-open')));
     closeBtn?.addEventListener('click', () => setOpen(false));
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && panel.classList.contains('is-open')) setOpen(false);
+      if (e.key !== 'Escape' || !panel.classList.contains('is-open')) return;
+      // 可视化栏是独立的持久工作区：展开时 Esc 只交给内部弹层处理，
+      // 不关闭可视化栏或整个智能对话。关闭入口只保留两处：整体关闭键与可视化栏自己的 ×。
+      if (!panel.classList.contains('is-visualizing')) setOpen(false);
     });
 
     setOpen(true); // 默认展开(挤入式,直接把内容区挤窄)
@@ -11218,7 +11858,7 @@ ${issuesText || '（暂无）'}
       if (ticket !== demoInputEpoch) return false;
       input.value += ch;
       dispatchRecordingInput(input);
-      await recordingWait(ch === '\n' ? 150 : 42);
+      await recordingWait(ch === '\n' ? 75 : 21);
     }
     return ticket === demoInputEpoch;
   }
@@ -11933,6 +12573,12 @@ ${issuesText || '（暂无）'}
       syncSendState();
       focusChatInput();
     });
+    // 回答里的信息可视化卡片 → 面板覆盖展开为双栏，右栏加载 v15 对应模块。
+    $('trainChatMessages')?.addEventListener('click', (e) => {
+      const card = e.target.closest && e.target.closest('.wzh-chat-viz-card[data-viz-module]');
+      if (!card) return;
+      openChatVisualization(card.dataset.vizModule, card.dataset.vizTitle, card);
+    });
     // 回答里的定位锚点 → 泳道图跳到对应那一行。同样用事件委托:回答是打字机逐段插进来的,
     // 锚点渲染出来的时候这里早就绑好了。
     $('trainChatMessages')?.addEventListener('click', (e) => {
@@ -11966,6 +12612,7 @@ ${issuesText || '（暂无）'}
     });
     $('trainChatKeyBtn')?.addEventListener('click', () => window.promptTrainChatApiKey());
     $('trainChatNewBtn')?.addEventListener('click', resetConversation);
+    $('trainChatVizCloseBtn')?.addEventListener('click', () => closeChatVisualization());
     initSessionTitle();
   }
 
@@ -12085,7 +12732,8 @@ ${issuesText || '（暂无）'}
 
     /* ── 2. 内容区 ↔ 智能对话面板 ──────────────────────────────── */
     // 悬浮窗形态下面板不占列宽,拖了也没意义,所以只在「挤入式且展开」时露出分隔条
-    const chatInline = () => !!chat && chat.classList.contains('is-open') && !chat.classList.contains('is-floating');
+    const chatInline = () => !!chat && chat.classList.contains('is-open') &&
+      !chat.classList.contains('is-floating') && !chat.classList.contains('is-visualizing');
     const chatMax = () => workarea.clientWidth * MAX_RATIO;
     const chatRead = () => chat.getBoundingClientRect().width || CHAT_DEFAULT;
     function chatApply(px) {

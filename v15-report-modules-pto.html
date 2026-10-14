@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rank Performance Report</title>
     <link rel="icon" href="data:," />
+    <script>
+      (() => {
+        const query = new URLSearchParams(window.location.search);
+        if (query.get("embed") === "chart") document.documentElement.dataset.embedChart = "true";
+        const theme = query.get("theme");
+        if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+      })();
+    </script>
 
     <!--
       资源依赖：./vendor/pto-design-system 是指向 PTO 设计系统仓库的目录联接

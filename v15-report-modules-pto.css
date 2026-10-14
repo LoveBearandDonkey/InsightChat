@@ -50,6 +50,87 @@ body {
   box-sizing: border-box;
 }
 
+/* 对话侧栏里的图表嵌入态：仍复用本页原始模块与交互，只收起 IDE 外壳。
+   通过 ?embed=chart&module=topN 打开，不影响本文件独立浏览时的完整三栏工作台。 */
+html[data-embed-chart="true"] .pto-ide-frame__topbar,
+html[data-embed-chart="true"] .pto-ide-frame__activity-rail,
+html[data-embed-chart="true"] .pto-ide-frame__explorer,
+html[data-embed-chart="true"] [data-ide-pane="inspector"],
+html[data-embed-chart="true"] .pto-ide-frame__tabstrip,
+html[data-embed-chart="true"] .pto-ide-frame__pane-header,
+html[data-embed-chart="true"] .pto-ide-frame__status-strip,
+html[data-embed-chart="true"] .pto-workbench-shell__split-gutter {
+  display: none !important;
+}
+
+html[data-embed-chart="true"] .pto-ide-frame__split {
+  width: 100%;
+  padding: 0;
+}
+
+html[data-embed-chart="true"] [data-ide-pane="editor-preview"] {
+  width: 100% !important;
+  flex: 1 1 auto !important;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+html[data-embed-chart="true"] .rp-view {
+  padding: var(--space-3);
+  gap: var(--space-3);
+}
+
+/* 右侧可视化栏约为原对话栏宽度。嵌入态把固定三列和 12 槽流水线压成
+   窄栏可读版；数据、阈值、Canvas 绘制与独立页面保持同源。 */
+html[data-embed-chart="true"] .rp-chart-head,
+html[data-embed-chart="true"] .rp-rank-row {
+  grid-template-columns: 76px minmax(140px, 1fr) 104px;
+  gap: var(--space-2);
+}
+
+html[data-embed-chart="true"] .rp-baseline {
+  left: calc(
+    var(--space-3) + 76px + var(--space-2) +
+      (100% - var(--space-3) * 2 - 76px - var(--space-2) * 2 - 104px) * var(--rp-baseline, 0)
+  );
+}
+
+html[data-embed-chart="true"] .rp-rank-name,
+html[data-embed-chart="true"] .rp-rank-topo,
+html[data-embed-chart="true"] .rp-chart-head-right {
+  font-size: var(--font-size-label-xs);
+}
+
+html[data-embed-chart="true"] .rp-rank-badge {
+  min-width: 34px;
+}
+
+html[data-embed-chart="true"] .rp-time-axis,
+html[data-embed-chart="true"] .rp-lane {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
+html[data-embed-chart="true"] .rp-pipe-axis,
+html[data-embed-chart="true"] .rp-pipe-row {
+  grid-template-columns: 62px repeat(12, minmax(20px, 1fr));
+  gap: 2px;
+}
+
+html[data-embed-chart="true"] .rp-pipe-cell {
+  height: 26px;
+}
+
+html[data-embed-chart="true"] .rp-ring {
+  width: 108px;
+  height: 108px;
+}
+
+html[data-embed-chart="true"] .rp-ring::after {
+  width: 78px;
+  height: 78px;
+}
+
 /* 全屏 standalone 宿主窗口。参照设计系统内的 pto-typical-ide-frame.html：
    产品页占满视口时取消 4:3 预览比例，其余 skin 全部继承 ide-frame。 */
 .rp-frame {
