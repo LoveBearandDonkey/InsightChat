@@ -15,28 +15,21 @@
     </script>
 
     <!--
-      资源依赖：./vendor/pto-design-system 是指向 PTO 设计系统仓库的目录联接
-      （D:\Projects\pto-design-system-wzh），已在 .gitignore 中排除。
-
-      路径必须落在页面所在目录之内：Live Server 之类的静态服务以工作区为根，
-      `../` 会逃出服务根被规范化掉，导致 token 链 404 —— 表现是外框画得出来、
-      文字却因 --foreground 未定义退回黑色，压在近黑背景上等于隐形。
-
-      换机器或重新克隆后需重建联接：
-        mklink /J "<repo>\vendor\pto-design-system" "<设计系统目录>"
+      GitHub Pages 不能访问本地 vendor Junction。此页所需的最小设计系统依赖已固定到
+      ./assets/pto-design-system/，随仓库一同发布；本地预览与线上 iframe 使用同一套资源。
     -->
 
     <!-- PTO 设计系统：token 链 -->
-    <link rel="stylesheet" href="./vendor/pto-design-system/tokens/foundation.css" />
-    <link rel="stylesheet" href="./vendor/pto-design-system/tokens/semantic.css" />
-    <link rel="stylesheet" href="./vendor/pto-design-system/tokens/components.css" />
-    <link rel="stylesheet" href="./vendor/pto-design-system/css/style.css" />
+    <link rel="stylesheet" href="./assets/pto-design-system/tokens/foundation.css" />
+    <link rel="stylesheet" href="./assets/pto-design-system/tokens/semantic.css" />
+    <link rel="stylesheet" href="./assets/pto-design-system/tokens/components.css" />
+    <link rel="stylesheet" href="./assets/pto-design-system/css/style.css" />
 
     <!-- pattern：ide-frame（页面 shell）+ workbench-shell（拖拽 kernel）
          + swimlane-task（任务条 / hover tooltip） -->
-    <link rel="stylesheet" href="./vendor/pto-design-system/patterns/workbench-shell/pattern.css" />
-    <link rel="stylesheet" href="./vendor/pto-design-system/patterns/ide-frame/pattern.css" />
-    <link rel="stylesheet" href="./vendor/pto-design-system/patterns/swimlane-task/pattern.css" />
+    <link rel="stylesheet" href="./assets/pto-design-system/patterns/workbench-shell/pattern.css" />
+    <link rel="stylesheet" href="./assets/pto-design-system/patterns/ide-frame/pattern.css" />
+    <link rel="stylesheet" href="./assets/pto-design-system/patterns/swimlane-task/pattern.css" />
 
     <!-- 本页局部 layout / data-viz -->
     <link rel="stylesheet" href="./v15-report-modules-pto.css" />
@@ -466,9 +459,9 @@
       </div>
     </section>
 
-    <script src="./vendor/pto-design-system/patterns/workbench-shell/pattern.js"></script>
-    <script src="./vendor/pto-design-system/patterns/swimlane-task/pattern.js"></script>
-    <script src="./vendor/pto-design-system/patterns/ide-frame/pattern.js"></script>
+    <script src="./assets/pto-design-system/patterns/workbench-shell/pattern.js"></script>
+    <script src="./assets/pto-design-system/patterns/swimlane-task/pattern.js"></script>
+    <script src="./assets/pto-design-system/patterns/ide-frame/pattern.js"></script>
     <script>
       /* ======================================================================
        * 页面只负责：domain data、pane content、commands、glue code。
