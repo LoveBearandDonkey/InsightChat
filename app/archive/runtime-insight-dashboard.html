@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>专家建议仪表盘装饰归档</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --msi-accent: #1677ff;
+      --surface-1: #fff;
+      --border-subtle: #dbe3ef;
+      font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      background: #f4f7fb;
+      color: #172033;
+    }
+    main { width: min(520px, calc(100vw - 32px)); }
+    .archive-label {
+      margin: 0 0 8px;
+      color: #60708a;
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1 { margin: 0; font-size: 18px; }
+    .archive-note { margin: 8px 0 18px; color: #60708a; font-size: 12px; line-height: 1.6; }
+    .archive-preview {
+      min-height: 190px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border: 1px solid color-mix(in srgb, var(--msi-accent) 22%, var(--border-subtle));
+      border-radius: 14px;
+      background: linear-gradient(135deg,
+        color-mix(in srgb, var(--msi-accent) 8%, var(--surface-1)) 0%,
+        color-mix(in srgb, var(--msi-accent) 5%, var(--surface-1)) 58%,
+        color-mix(in srgb, #7c5ce3 6%, var(--surface-1)) 100%);
+    }
+    .msi-ov-runtime-insight-dashboard {
+      width: 360px;
+      max-width: 80%;
+      height: auto;
+      overflow: visible;
+      filter: drop-shadow(0 12px 14px color-mix(in srgb, var(--msi-accent) 16%, transparent));
+    }
+    .dashboard-back {
+      fill: color-mix(in srgb, var(--surface-1) 84%, var(--msi-accent));
+      stroke: color-mix(in srgb, var(--msi-accent) 42%, var(--border-subtle));
+      stroke-width: 1.15;
+      filter: drop-shadow(1px 6px 8px color-mix(in srgb, var(--msi-accent) 20%, transparent));
+    }
+    .dashboard-grid { fill: none; stroke: color-mix(in srgb, var(--msi-accent) 14%, transparent); stroke-width: .8; }
+    .dashboard-bar { fill: color-mix(in srgb, var(--msi-accent) 50%, transparent); }
+    .dashboard-line {
+      fill: none;
+      stroke: #7c5ce3;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .msi-ov-runtime-insight-dashboard circle { fill: var(--surface-1); stroke: #7c5ce3; stroke-width: 1.4; }
+    .dashboard-bars-layer,
+    .dashboard-line-layer {
+      transform-box: fill-box;
+      transform-origin: center;
+      transition: transform 520ms cubic-bezier(.22, .78, .22, 1);
+    }
+    .dashboard-bars-layer { animation: dashboard-bars-enter 900ms cubic-bezier(.22, .78, .22, 1) 180ms backwards; }
+    .dashboard-line-layer { animation: dashboard-line-enter 900ms cubic-bezier(.22, .78, .22, 1) 180ms backwards; }
+    .archive-preview:hover .dashboard-bars-layer { transform: translateY(4px); }
+    .archive-preview:hover .dashboard-line-layer { transform: translateY(-5px); }
+    @keyframes dashboard-bars-enter {
+      0% { transform: translateY(5px); opacity: .25; }
+      58% { transform: translateY(-1.5px); opacity: 1; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes dashboard-line-enter {
+      0% { transform: translateY(-5px); opacity: .2; }
+      58% { transform: translateY(1.5px); opacity: 1; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .dashboard-bars-layer,
+      .dashboard-line-layer { animation: none; transition: none; transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="archive-label">Archived component</p>
+    <h1>专家建议 · 仪表盘装饰</h1>
+    <p class="archive-note">从概览页专家建议卡片中移出的 SVG 方案。悬浮预览可查看原有的柱状图与折线分离动效。</p>
+    <div class="archive-preview">
+      <svg class="msi-ov-runtime-insight-dashboard" viewBox="0 0 180 76" role="img" aria-label="蓝色柱状图和紫色折线组成的仪表盘装饰">
+        <g class="dashboard-bars-layer">
+          <path class="dashboard-back" d="M25 8 169 18 153 68 9 58Z"></path>
+          <path class="dashboard-grid" d="m21 20 139 9M18 31l139 9M15 42l139 9M12 53l139 9M51 10 36 54M91 13l-17 49M131 16l-17 49"></path>
+          <path class="dashboard-bar" d="m31 49 13 1 6-20-13-1Zm31 2 13 1 9-31-13-1Zm31 2 13 1 5-18-13-1Zm31 2 13 1 11-36-13-1Z"></path>
+        </g>
+        <g class="dashboard-line-layer">
+          <path class="dashboard-line" d="m37 25 31 9 31-12 31 9 24-8"></path>
+          <circle cx="37" cy="25" r="2"></circle>
+          <circle cx="68" cy="34" r="2"></circle>
+          <circle cx="99" cy="22" r="2"></circle>
+          <circle cx="130" cy="31" r="2"></circle>
+          <circle cx="154" cy="23" r="2"></circle>
+        </g>
+      </svg>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,253 @@
+/* Shared timeline swimlane structure for the main timeline and report embeds. */
+/* ── 泳道:头部时间尺 + 主体(左树列 + 右轨道),每行等高所以两列天然对齐 ── */
+.msi-swim {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex; flex-direction: column;
+  margin: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  overflow: hidden;
+}
+.msi-timeline-swims { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; margin: 0 16px; }
+.msi-timeline-swims.is-compare { gap: 8px; }
+.msi-timeline-swims .msi-swim[hidden] { display: none; }
+.msi-timeline-swims.is-compare #msiSwim { border-left: 4px solid color-mix(in srgb, var(--msi-accent) 35%, var(--surface-1)); }
+.msi-timeline-swims.is-compare #msiSwimCompare { border-left: 4px solid color-mix(in srgb, var(--warning) 35%, var(--surface-1)); }
+.msi-timeline-panel { position: relative; }
+.msi-mouse-tools {
+  position: absolute; z-index: 12; top: 86px; right: 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  box-sizing: border-box; width: 32px; padding: 2px;
+  border: 1px solid var(--border-subtle); border-radius: 7px;
+  background: var(--surface-1); color: var(--foreground-secondary);
+  box-shadow: 0 5px 12px color-mix(in srgb, #253d66 15%, transparent);
+}
+.msi-mouse-tools-main { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.msi-mouse-tool {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 28px; padding: 2px;
+  border: 0; border-radius: 5px; background: transparent;
+  color: var(--foreground-secondary); cursor: pointer;
+}
+.msi-mouse-tool:hover { background: var(--state-hover); }
+.msi-mouse-tool.is-active { background: color-mix(in srgb, var(--msi-accent) 30%, var(--surface-1)); color: var(--msi-accent); }
+.msi-mouse-tool:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.msi-mouse-tool svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.msi-mouse-tool-separator { display: block; width: 18px; height: 1px; margin: 1px 0; background: var(--border-default); }
+.msi-mouse-tools.is-collapsed { width: 32px; padding: 2px; }
+.msi-mouse-tools.is-collapsed .msi-mouse-tools-main,
+.msi-mouse-tools.is-collapsed > .msi-mouse-tool-separator,
+.msi-mouse-tools.is-collapsed #msiMouseHelpToggle { display: none; }
+.msi-mouse-tools.is-collapsed .msi-mouse-tool-collapse svg { transform: rotate(180deg); }
+.msi-mouse-help {
+  position: absolute; top: 0; right: calc(100% + 8px);
+  width: max-content; max-width: 220px; padding: 10px 12px;
+  border: 1px solid var(--border-subtle); border-radius: 8px;
+  background: var(--surface-1); box-shadow: 0 8px 24px color-mix(in srgb, #253d66 14%, transparent);
+  color: var(--foreground); font-size: 12px; line-height: 1.9;
+}
+.msi-mouse-help[hidden] { display: none; }
+.msi-mouse-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.msi-timeline-swims[data-mouse-mode="pan"] .msi-swim-body { cursor: grab; }
+.msi-timeline-swims[data-mouse-mode="pan"] .msi-swim-body.is-mouse-dragging { cursor: grabbing; }
+.msi-timeline-swims[data-mouse-mode="height"] .msi-lane-track { cursor: ns-resize; }
+.msi-timeline-swims[data-mouse-mode="box"] .msi-lane-track { cursor: crosshair; }
+.msi-mouse-selection { position: absolute; z-index: 8; pointer-events: none; border: 1px solid var(--msi-accent); background: color-mix(in srgb, var(--msi-accent) 17%, transparent); }
+.msi-bar.is-box-selected { outline: 2px solid var(--msi-accent); outline-offset: 1px; z-index: 3; }
+@media (max-width: 820px) { .msi-mouse-tools { top: 76px; right: 16px; } }
+.msi-swim-title { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px 12px; border-bottom: 1px solid var(--border-subtle); color: var(--foreground); font-size: 12px; font-weight: 600; }
+.msi-swim-title[hidden] { display: none; }
+.msi-swim-title .msi-tree-compare-role { margin-left: 0; cursor: default; }
+.msi-swim-title-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msi-swim-empty { padding: 24px 12px; color: var(--foreground-muted); font-size: 12px; text-align: center; }
+.msi-swim-head { flex: 0 0 auto; display: flex; height: 30px; border-bottom: 1px solid var(--border-subtle); }
+.msi-swim-head[hidden] { display: none; }
+.msi-swim-corner { width: var(--msi-lane-w, 220px); flex: 0 0 var(--msi-lane-w, 220px); border-right: 1px solid var(--border-subtle); }
+.msi-swim-ruler { position: relative; flex: 1 1 auto; min-width: 0; border-right: 8px solid transparent; }
+/* 末格 1000ms 的标签往左收,否则会被 .msi-swim 的 overflow:hidden 切掉 */
+.msi-ruler-tick--end { padding: 0 6px 0 0; text-align: right; border-left: 0; border-right: 1px solid var(--border-subtle); transform: translateX(-100%); }
+.msi-ruler-tick {
+  position: absolute; top: 0; bottom: 0;
+  padding-left: 6px;
+  border-left: 1px solid var(--border-subtle);
+  color: var(--foreground-muted);
+  font-size: 11px; line-height: 30px;
+  white-space: nowrap; pointer-events: none;
+}
+
+.msi-swim-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) transparent;
+}
+.msi-swim-body::-webkit-scrollbar { width: 8px; height: 8px; }
+.msi-swim-body::-webkit-scrollbar-track { background: transparent; }
+.msi-swim-body::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 4px; }
+.msi-swim-body::-webkit-scrollbar-thumb:hover { background: var(--foreground-muted); }
+
+/* 同名置顶是两张 msi-swim 之前的独立卡片。 */
+.msi-pinned-card {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-left: 4px solid color-mix(in srgb, var(--success) 45%, var(--surface-1));
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+}
+.msi-pinned-card[hidden] { display: none; }
+.msi-pinned-card-title {
+  flex: 0 0 auto;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 4px 8px 4px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 700;
+}
+/* 置顶区的两条同名泳道共用一条时间尺；较短的任务轨道按时间比例收窄。 */
+.msi-pinned-domain { position: absolute; inset: 0 auto 0 0; }
+.msi-pinned-body { flex: 0 0 auto; max-height: min(34vh, 280px); overflow: auto; scrollbar-gutter: auto; }
+.msi-pinned-body > .msi-link-layer { width: 100%; height: 100%; }
+.msi-pinned-pair { border-top: 1px solid var(--border-subtle); }
+.msi-pinned-remove {
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+.msi-pinned-remove img { width: 16px; height: 16px; }
+:root[data-theme="dark"] .msi-pinned-remove img { filter: invert(1); }
+.msi-pinned-remove:hover { background: var(--state-hover); }
+.msi-pinned-remove:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.msi-pinned-card .msi-lane-label { padding-left: 12px; color: var(--foreground-muted); font-size: 12px; }
+.msi-pinned-card .msi-lane-caret-slot { display: none; }
+.msi-pinned-card .msi-tree-compare-role { margin-left: 0; cursor: default; }
+
+.msi-lane-row { cursor: pointer; display: flex; align-items: stretch; border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 60%, transparent); }
+.msi-lane-row:last-child { border-bottom: 0; }
+/* 选中的泳道整行浅蓝底,和还原稿里的 Ascend Hardware 一致 */
+.msi-lane-row.is-selected { background: color-mix(in srgb, var(--msi-accent) var(--brand-tint), transparent); }
+.msi-lane-row.is-selected .msi-lane-label { color: var(--msi-accent); }
+/* 被对话里的锚点定位到:整行闪两下描边。用 inset box-shadow 而不是改 background,
+   才不会和 .is-selected 的浅蓝底打架——闪完还得看得出这行是选中态。 */
+.msi-lane-row.is-locate-flash { animation: msi-locate-flash 1.5s ease-out; }
+@keyframes msi-locate-flash {
+  0%   { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--msi-accent) 85%, transparent); }
+  30%  { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--msi-accent) 0%, transparent); }
+  55%  { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--msi-accent) 85%, transparent); }
+  100% { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--msi-accent) 0%, transparent); }
+}
+
+.msi-lane-label {
+  width: var(--msi-lane-w, 220px);
+  flex: 0 0 var(--msi-lane-w, 220px);
+  display: flex; align-items: center; gap: 5px;
+  padding: 0 10px 0 12px;
+  border: 0; border-right: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--foreground);
+  font-size: 13px; text-align: left;
+}
+.msi-lane-row:hover { background: color-mix(in srgb, var(--foreground) 4%, transparent); }
+.msi-lane-row:hover.is-selected { background: color-mix(in srgb, var(--msi-accent) var(--brand-tint-strong), transparent); }
+/* 箭头是行内独立按钮:点它只折叠,不改选中行 */
+.msi-lane-caret-btn {
+  width: 16px; height: 16px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; border: 0; border-radius: 3px; background: transparent; cursor: pointer;
+}
+.msi-lane-caret-btn:hover { background: color-mix(in srgb, var(--foreground) 10%, transparent); }
+.msi-lane-caret {
+  width: 14px; height: 14px; flex-shrink: 0;
+  fill: none; stroke: var(--foreground); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  transition: transform var(--duration-fast, 120ms) var(--easing-default, ease);
+}
+.msi-lane-caret-btn[aria-expanded="true"] .msi-lane-caret { transform: rotate(90deg); }
+.msi-lane-caret-slot { width: 14px; flex-shrink: 0; }
+.msi-lane-caret-static {
+  width: 14px; height: 14px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.msi-lane-caret-static .msi-lane-caret { width: 14px; height: 14px; }
+.msi-lane-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 末端极窄任务条可能越过时间窗右缘，裁剪在轨道内以免撑出泳道横向滚动。 */
+.msi-lane-track { flex: 1 1 auto; min-width: 0; position: relative; overflow: hidden; }
+.msi-lane-track svg { display: block; width: 100%; height: 100%; }
+
+
+/* Shared operator palette and task-bar geometry. */
+:root {
+  --msi-trace-task-fg: #293347;
+  --msi-trace-01-bg: oklch(82% .095 4);
+  --msi-trace-02-bg: oklch(82% .095 155);
+  --msi-trace-03-bg: oklch(82% .095 285);
+  --msi-trace-04-bg: oklch(82% .095 46);
+  --msi-trace-05-bg: oklch(82% .095 212);
+  --msi-trace-06-bg: oklch(82% .095 342);
+  --msi-trace-07-bg: oklch(82% .095 125);
+  --msi-trace-08-bg: oklch(82% .095 265);
+  --msi-trace-09-bg: oklch(82% .095 32);
+  --msi-trace-10-bg: oklch(82% .095 198);
+  --msi-trace-11-bg: oklch(82% .095 325);
+  --msi-trace-12-bg: oklch(82% .095 88);
+  --msi-trace-13-bg: oklch(82% .095 245);
+  --msi-trace-14-bg: oklch(82% .095 18);
+  --msi-trace-15-bg: oklch(82% .095 185);
+  --msi-trace-16-bg: oklch(82% .095 305);
+  --msi-trace-17-bg: oklch(82% .095 58);
+  --msi-trace-18-bg: oklch(82% .095 228);
+}
+:root[data-theme="dark"] {
+  --msi-trace-task-fg: #f5f7fb;
+  --msi-trace-01-bg: oklch(42% .085 4);
+  --msi-trace-02-bg: oklch(42% .085 155);
+  --msi-trace-03-bg: oklch(42% .085 285);
+  --msi-trace-04-bg: oklch(42% .085 46);
+  --msi-trace-05-bg: oklch(42% .085 212);
+  --msi-trace-06-bg: oklch(42% .085 342);
+  --msi-trace-07-bg: oklch(42% .085 125);
+  --msi-trace-08-bg: oklch(42% .085 265);
+  --msi-trace-09-bg: oklch(42% .085 32);
+  --msi-trace-10-bg: oklch(42% .085 198);
+  --msi-trace-11-bg: oklch(42% .085 325);
+  --msi-trace-12-bg: oklch(42% .085 88);
+  --msi-trace-13-bg: oklch(42% .085 245);
+  --msi-trace-14-bg: oklch(42% .085 18);
+  --msi-trace-15-bg: oklch(42% .085 185);
+  --msi-trace-16-bg: oklch(42% .085 305);
+  --msi-trace-17-bg: oklch(42% .085 58);
+  --msi-trace-18-bg: oklch(42% .085 228);
+}
+/* 算子任务条:用 HTML 绝对定位而不是 SVG,条上的算子名才不会被横向拉伸变形 */
+.msi-bar {
+  position: absolute;
+  top: 4px; bottom: 4px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 4px;
+  border-radius: 2px;
+  font-size: 10.5px;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+}
+/* 细条太窄,留内边距会把它挤没 */
+.msi-bar--tick { padding: 0; border-radius: 1px; }

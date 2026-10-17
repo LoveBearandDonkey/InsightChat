@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<!-- Generated from app/shell.html by npm run build:chat. Edit app/ sources. -->
+<html lang="zh-CN" data-entry-view="__ENTRY_VIEW__" data-theme="light" data-theme-id="calc" data-brand="calc">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能对话 · 空白工作台</title>
+  <script>
+    /* 三套主题皮肤,数组顺序即右上角按钮的切换顺序,第一项就是默认主题:
+       计算(浅) → 新无限(浅) → 追光(深) → 回到计算。
+       mode 决定明暗基座(data-theme),brand 决定品牌色皮肤(data-brand)。 */
+    window.MI_THEMES = [
+      { id: 'calc',     label: '计算',   mode: 'light', brand: 'calc' },
+      { id: 'infinite', label: '新无限', mode: 'light', brand: ''     },
+      { id: 'chase',    label: '追光',   mode: 'dark',  brand: ''     },
+    ];
+    // 主题深链:?theme=calc|infinite|chase,兼容旧写法 ?theme=light|dark。
+    // 旧的 light 指向当前的默认浅色主题(计算),要 新无限 得显式写 ?theme=infinite。
+    (() => {
+      const raw = new URLSearchParams(window.location.search).get("theme");
+      const alias = { light: 'calc', dark: 'chase' };
+      const id = alias[raw] || raw;
+      const t = window.MI_THEMES.find(x => x.id === id);
+      if (!t) return;
+      const el = document.documentElement;
+      el.dataset.themeId = t.id;
+      el.dataset.theme = t.mode;
+      if (t.brand) el.dataset.brand = t.brand; else delete el.dataset.brand;
+    })();
+  </script>
+  <!-- 公共页面外壳。样式与脚本在 app/ 中；单文件交付版由 npm run build:standalone 生成。 -->
+  <link rel="stylesheet" href="../chat.css">
+  <link rel="stylesheet" href="../timeline-swim.css">
+</head>
+<body class="chat-shell-page" data-theme="light" data-theme-id="calc" data-brand="calc">
+  <section class="pto-ide-frame" data-host="standalone" aria-label="智能对话工作台">
+    <header class="pto-ide-frame__topbar pto-ide-frame__standalone-chrome">
+      <div class="pto-ide-frame__topbar-left">
+        <a class="msi-brand" data-ide-slot="host-chip" href="chat.html" aria-label="返回概览页" title="返回概览页">
+          <img class="msi-brand-logo" src="../../src/pic/icon/MSInsight.ico" alt="">
+          <span class="msi-brand-name">MindStudio Insight</span>
+        </a>
+      </div>
+      <div class="pto-ide-frame__topbar-center"></div>
+      <div class="pto-ide-frame__topbar-right">
+        <div class="pto-ide-frame__window-actions" data-ide-slot="window-controls" aria-label="Window controls">
+          <!-- 主题切换:单一图标按钮(月亮/太阳互换) -->
+          <button class="pto-ide-frame__window-action" id="themeToggle" type="button" aria-pressed="false" title="切换主题" aria-label="切换主题">
+            <svg class="pto-ide-frame__window-icon" id="themeToggleIcon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3a6.5 6.5 0 0 0 7.8 8.8A8 8 0 1 1 12 3z"></path>
+            </svg>
+          </button>
+          <span class="pto-ide-frame__window-separator" aria-hidden="true"></span>
+          <!-- 智能对话:AI 入口,默认收起,面板与逻辑见页尾内联的 training-chat-panel 脚本 -->
+          <button class="pto-ide-frame__window-action" id="trainChatToggle" type="button" aria-controls="trainChatPanel" aria-expanded="false" aria-pressed="false" title="打开智能对话" aria-label="打开智能对话">
+            <img class="pto-ide-frame__window-icon pto-ide-frame__window-icon--image" src="../../src/pic/icon/msinsightbotAvatar.png" alt="">
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="pto-ide-frame__body">
+      <!-- 左树:导入的性能任务目录。工具条(导入/对比/设置/收起) + 任务→rank 两级树；
+           一级任务负责切换内容页，二级 rank 只展示该任务包含的采集项。 -->
+      <aside class="msi-sidebar pto-ide-frame__standalone-chrome" id="msiSidebar" data-ide-slot="explorer" aria-label="性能数据">
+        <div class="msi-side-toolbar" id="msiSideToolbar">
+          <button class="msi-side-btn msi-side-btn--primary msi-side-normal-action" type="button" title="导入性能数据">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg>
+            <span>导入</span>
+          </button>
+          <button class="msi-side-btn msi-side-normal-action" id="msiCompareBtn" type="button" title="对比两次采集">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="7" height="16" rx="1.5"></rect><path d="M14 4h7v16h-7z"></path><path d="M14 9h7M14 15h7"></path></svg>
+            <span>对比</span>
+          </button>
+          <button class="msi-side-icon msi-side-normal-action" type="button" title="设置" aria-label="设置">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+          </button>
+          <button class="msi-side-icon msi-side-normal-action" type="button" title="收起侧栏" aria-label="收起侧栏">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path></svg>
+          </button>
+          <button class="msi-compare-back" id="msiCompareBack" type="button" title="退出对比" aria-label="退出对比" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path></svg>
+          </button>
+          <span class="msi-compare-heading" id="msiCompareHeading" hidden>对比</span>
+        </div>
+        <div class="msi-tree" id="msiTree" role="tree" aria-label="性能任务"></div>
+      </aside>
+
+      <div class="pto-ide-frame__workarea chat-shell-workarea">
+        <section class="pto-ide-frame__pane chat-shell-pane" data-ide-pane="main-content" aria-label="内容区">
+          <!-- 内容区:一份任务目录的分析视图。标题下拉与左树选中的一级任务保持同步,主体是「泳道树 + 泳道」
+               (结构对齐 profileCompare.html 的 sl-train-tl-* :左侧固定宽的树列 + 右侧时间轴画布,
+               每行等高、树列 sticky 在左边,所以横向不错位)。泳道内容由页尾脚本按行类型生成:
+               group→密集事件条、stream→算子任务条、hbm→带宽面积图。 -->
+          <section class="pto-ide-frame__pane-body chat-shell-body msi-content" id="contentCard">
+            <header class="msi-content-head">
+              <h1 class="msi-content-title" id="msiContentTitle">profile_dir</h1>
+              <div class="msi-content-head-actions">
+                <button class="msi-more-btn" type="button" title="更多" aria-label="更多">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg>
+                </button>
+              </div>
+            </header>
+
+            <nav class="msi-tabs" role="tablist" aria-label="分析视图">
+              <button class="msi-tab msi-tab--normal-only is-active" data-analysis-tab="overview" type="button" role="tab" aria-selected="true" aria-controls="msiOverviewPanel">概览</button>
+              <button class="msi-tab" data-analysis-tab="timeline" type="button" role="tab" aria-selected="false" aria-controls="msiTimelinePanel">时间线</button>
+              <button class="msi-tab" data-analysis-tab="memory" type="button" role="tab" aria-selected="false" aria-controls="msiMemoryPanel">内存</button>
+              <button class="msi-tab msi-tab--normal-only" type="button" role="tab" aria-selected="false">通信</button>
+              <button class="msi-tab msi-tab--normal-only" type="button" role="tab" aria-selected="false">计算图</button>
+              <button class="msi-tab msi-tab--normal-only" type="button" role="tab" aria-selected="false">耗时统计</button>
+              <button class="msi-tab msi-tab--compare-only" data-analysis-tab="operator" type="button" role="tab" aria-selected="false" hidden>算子</button>
+            </nav>
+
+            <!-- @include pages/overview.html -->
+
+            <!-- @include pages/timeline-view.html -->
+
+            <!-- @include pages/memory.html -->
+          </section>
+        </section>
+      <!-- 内容区 ↔ 智能对话面板 的分隔条:往左拖把对话面板拉宽、往右拖收窄,双击回到 480px。
+           面板收起或切成悬浮窗时这条一起隐藏(见 initPaneResizers)。 -->
+      <div class="msi-resizer msi-resizer--v" id="chatShellResizer" role="separator"
+           aria-orientation="vertical" aria-label="调整智能对话面板宽度" tabindex="0" hidden></div>
+
+      <!-- 智能对话:默认「挤入式」——作为 workarea 的第二列,和左边内容区形成左右关系,展开时把内容区
+               挤窄而不是盖在上面;点右上角悬浮窗图标(#trainChatFloatBtn)切成浮动抽屉(.is-floating)。
+               开关入口是右上角 #trainChatToggle,默认展开。逻辑见页尾内联脚本(原 js/training-chat-panel.js)。 -->
+      <aside class="wzh-chat-panel" id="trainChatPanel" aria-label="智能对话" aria-hidden="true">
+        <header class="wzh-chat-head">
+          <!-- 左上角品牌区同时是「切换 Agent」的入口(还原稿 src/pic/切换.png):
+               整行是一个按钮,点开在下方落一张 Agent 列表,选中项打勾并浮浅蓝底。 -->
+          <div class="wzh-chat-head-brand">
+            <button class="wzh-chat-head-title-row" id="trainChatAgentBtn" type="button"
+                    aria-haspopup="listbox" aria-expanded="false" title="切换 Agent">
+              <img class="wzh-chat-head-logo" id="trainChatAgentLogo" src="../../src/pic/icon/msinsightbotAvatar.png" data-icon="msinsightbotAvatar.png" alt="">
+              <span class="wzh-chat-head-title" id="trainChatAgentName">MS Insight Native</span>
+              <img class="wzh-chat-head-caret" src="../../src/pic/icon/select.svg" alt="">
+            </button>
+            <div class="wzh-chat-agent-pop" id="trainChatAgentPop" hidden>
+              <p class="wzh-chat-agent-pop-title">切换 Agent</p>
+              <div class="wzh-chat-agent-list" id="trainChatAgentList" role="listbox" aria-label="切换 Agent"></div>
+              <div class="wzh-chat-agent-pop-foot">
+                <button class="wzh-chat-agent-foot-btn" id="trainChatAgentAddBtn" type="button">添加 Agent</button>
+                <button class="wzh-chat-agent-foot-btn" id="trainChatAgentRefreshBtn" type="button">刷新</button>
+              </div>
+            </div>
+          </div>
+          <div class="wzh-chat-head-actions">
+            <button class="wzh-chat-head-btn" id="trainChatNewBtn" type="button" aria-label="新建对话" title="新建对话">
+              <img src="../../src/pic/icon/newchat.svg" alt="">
+            </button>
+            <div class="wzh-chat-head-menu" id="trainChatHistoryWrap">
+              <button class="wzh-chat-head-btn" id="trainChatHistoryBtn" type="button" aria-label="历史对话" title="历史对话"
+                      aria-haspopup="menu" aria-expanded="false" aria-controls="trainChatHistoryPop">
+                <img src="../../src/pic/icon/history.svg" alt="">
+              </button>
+              <div class="wzh-chat-history-pop" id="trainChatHistoryPop" role="menu" aria-label="历史对话" hidden>
+                <p class="wzh-chat-history-pop-title">历史对话</p>
+                <button class="wzh-chat-history-item" id="trainChatHistoryProfileBtn" type="button" role="menuitem"
+                        title="profile_dir 单机多卡性能分析">
+                  <img src="../../src/pic/icon/history.svg" alt="">
+                  <span class="wzh-chat-history-item-text">profile_dir 单机多卡性能分析</span>
+                </button>
+              </div>
+            </div>
+            <button class="wzh-chat-head-btn" id="trainChatKeyBtn" type="button" aria-label="设置 DeepSeek API Key（未配置）" title="设置 DeepSeek API Key（未配置）">
+              <img class="wzh-chat-key-icon" src="../../src/pic/icon/setting.svg" alt="">
+            </button>
+            <button class="wzh-chat-head-btn" id="trainChatFloatBtn" type="button" aria-label="悬浮窗口" title="悬浮窗口">
+              <img src="../../src/pic/icon/floatingwindow.svg" alt="">
+            </button>
+            <button class="wzh-chat-head-btn" id="trainChatCloseBtn" type="button" aria-label="关闭智能对话" title="关闭">
+              <img src="../../src/pic/icon/close.svg" alt="">
+            </button>
+          </div>
+        </header>
+
+        <!-- 会话主题行:发出第一个问题后才出现,钉在标题栏与消息区之间(不随消息滚动)。
+             一次会话往往要问好几轮,置顶问题卡片只记得住"最近这一问",而"这次会话在解决什么"
+             需要一直挂在最上面;悬浮时整行浮出底色和铅笔,点一下就地改名(见 initSessionTitle)。 -->
+        <div class="wzh-chat-session" id="trainChatSession" hidden>
+          <button class="wzh-chat-session-btn" id="trainChatSessionBtn" type="button" title="重命名会话主题">
+            <span class="wzh-chat-session-text" id="trainChatSessionText"></span>
+            <img class="wzh-chat-session-pen" src="../../src/pic/icon/edit.svg" alt="">
+          </button>
+          <input class="wzh-chat-session-input" id="trainChatSessionInput" type="text" maxlength="40"
+                 aria-label="会话主题" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" hidden>
+        </div>
+
+        <div class="wzh-chat-body">
+          <div class="wzh-chat-messages" id="trainChatMessages">
+            <div class="wzh-chat-welcome">
+              <div class="wzh-chat-welcome-hero">
+                <canvas class="wzh-chat-welcome-dots" aria-hidden="true"></canvas>
+                <img class="wzh-chat-welcome-logo" src="../../src/pic/icon/msinsightbotAvatar.png" alt="">
+                <div class="wzh-chat-welcome-text">你好，我是性能分析助手</div>
+              </div>
+              <div class="wzh-chat-guide-list">
+                <button class="wzh-chat-guide-card" type="button" data-scenario="module-statistic-ready" data-prompt="帮我统计拆分模型每一层的耗时，MoE模块每个算子耗时，所有层平均下来MoE模块耗时多少">
+                  <img class="wzh-chat-guide-icon" src="../../src/pic/icon/guidecard1.png" alt="">
+                  <span class="wzh-chat-guide-text">
+                    <span class="wzh-chat-guide-title">内存优化诊断分析</span>
+                    <span class="wzh-chat-guide-sub">
+                      <span class="wzh-chat-guide-tag"><img src="../../src/pic/icon/quote.svg" alt="">Profiling数据</span>
+                      <span class="wzh-chat-guide-desc">智能分析复用策略与分块方案</span>
+                    </span>
+                  </span>
+                </button>
+                <button class="wzh-chat-guide-card" type="button" data-prompt="快慢卡诊断分析：对比通信/计算差异并帮我定位慢卡">
+                  <img class="wzh-chat-guide-icon" src="../../src/pic/icon/guidecard2.png" alt="">
+                  <span class="wzh-chat-guide-text">
+                    <span class="wzh-chat-guide-title">快慢卡诊断分析</span>
+                    <span class="wzh-chat-guide-sub">
+                      <span class="wzh-chat-guide-tag"><img src="../../src/pic/icon/quote.svg" alt="">快慢卡</span>
+                      <span class="wzh-chat-guide-desc">快速对比通信/计算差异并定位慢卡</span>
+                    </span>
+                  </span>
+                </button>
+                <button class="wzh-chat-guide-card" type="button" data-scenario="knowledge" data-prompt="帮我统计拆分模型每一层的耗时，MoE模块每个算子耗时，所有层平均下来MoE模块耗时多少">
+                  <img class="wzh-chat-guide-icon" src="../../src/pic/icon/guidecard3.png" alt="">
+                  <span class="wzh-chat-guide-text">
+                    <span class="wzh-chat-guide-title">咨询领域知识，增强RAG的对话</span>
+                    <span class="wzh-chat-guide-sub">
+                      <span class="wzh-chat-guide-desc">输入问题，检索知识库并生成排查步骤</span>
+                    </span>
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- 回到底部:零高度容器,按钮浮在输入框正上方居中;思考中变成跳动的三个点 -->
+          <div class="wzh-chat-jump-wrap">
+            <button class="wzh-chat-jump-btn" id="trainChatJumpBtn" type="button" title="回到底部" aria-label="回到底部">
+              <svg class="wzh-chat-jump-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M19 12l-7 7-7-7"></path></svg>
+              <span class="wzh-chat-jump-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            </button>
+          </div>
+          <!-- 排队消息:回答期间继续发问不打断当前这轮,新问题排在这里,答完一条自动接上一条 -->
+          <div class="wzh-chat-queue" id="trainChatQueue" hidden>
+            <div class="wzh-chat-queue-card">
+              <div class="wzh-chat-queue-head">
+                <button class="wzh-chat-queue-toggle" id="trainChatQueueToggle" type="button" aria-expanded="true" title="收起排队消息">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+                  <span class="wzh-chat-queue-title" id="trainChatQueueTitle">0 条排队消息</span>
+                </button>
+                <button class="wzh-chat-queue-clear" id="trainChatQueueClear" type="button">全部清除</button>
+              </div>
+              <div class="wzh-chat-queue-listwrap">
+                <ul class="wzh-chat-queue-list" id="trainChatQueueList"></ul>
+              </div>
+            </div>
+          </div>
+          <div class="wzh-chat-input-bar">
+            <!-- 描边流光,回答期间由 .is-flowing 点亮,见 syncInputFlow。
+                 rx=23.5 = 输入栏的 24px 圆角减去描边中心线那 0.5px 内移。 -->
+            <svg class="wzh-chat-input-glow" aria-hidden="true" focusable="false">
+              <rect class="wzh-chat-input-glow-halo" width="100%" height="100%" rx="23.5" pathLength="100"></rect>
+              <rect class="wzh-chat-input-glow-core" width="100%" height="100%" rx="23.5" pathLength="100"></rect>
+            </svg>
+            <div class="wzh-chat-anchor-chip" id="trainChatAnchorChip" title="当前对话已锚定到该任务，提问无需再报任务名" aria-hidden="true">
+              <img src="../../src/pic/icon/folder.svg" alt="">
+              <span id="trainChatAnchorName"></span>
+              <button class="wzh-chat-anchor-close" id="trainChatAnchorCloseBtn" type="button" title="取消锚定" aria-label="取消锚定">
+                <img src="../../src/pic/icon/close.svg" alt="">
+              </button>
+            </div>
+            <!-- 高亮层浮在 textarea 之上(见 .wzh-chat-input-hl):textarea 自己的文字设为透明,
+                 真正看到的字由高亮层画,# 开头的上下文才能包成蓝色标签。两层字体度量必须完全一致。 -->
+            <div class="wzh-chat-input-wrap">
+              <!-- autocomplete=off:刷新时别让浏览器把上一次的草稿恢复回来。textarea 的字是透明的
+                   (真正看到的字由高亮层画),恢复进来的内容看不见,却会把输入框撑高 -->
+              <textarea class="wzh-chat-input" id="trainChatInput" placeholder="输入 # 添加上下文，输入 / 使用指令" rows="2" autocomplete="off"></textarea>
+              <div class="wzh-chat-input-hl" id="trainChatInputHl" aria-hidden="true"></div>
+            </div>
+            <!-- 输入 # 弹出的上下文选择框,内容由 initCtxPicker 按 CTX_FILES 渲染 -->
+            <div class="wzh-chat-ctx-pop" id="trainChatCtxPop" role="listbox" aria-label="选择性能落盘数据"></div>
+            <!-- 输入 / 弹出的指令选择框,交互与 # 上下文选择框一致 -->
+            <div class="wzh-chat-ctx-pop" id="trainChatCommandPop" role="listbox" aria-label="选择指令"></div>
+            <div class="wzh-chat-composer-toolbar">
+              <!-- 模式选择:交互与模型选择一致,默认 Build,可切换为 Plan -->
+              <div class="wzh-chat-model-wrap">
+                <button class="wzh-chat-tool" id="trainChatModeBtn" type="button" title="切换模式（当前 Build）"
+                        aria-haspopup="listbox" aria-expanded="false">
+                  <img src="../../src/pic/icon/Agent.svg" alt=""><span id="trainChatModeName">Build</span>
+                </button>
+                <div class="wzh-chat-model-pop" id="trainChatModePop" hidden>
+                  <p class="wzh-chat-agent-pop-title">切换模式</p>
+                  <div class="wzh-chat-agent-list" id="trainChatModeList" role="listbox" aria-label="切换模式"></div>
+                </div>
+              </div>
+              <!-- 模型选择:弹层往上开(输入框已经贴着面板底了),内容由 initModelSwitch
+                   按当前 Agent 的 models 渲染,所以每次打开都是这个 Agent 自己的型号 -->
+              <div class="wzh-chat-model-wrap">
+                <button class="wzh-chat-tool" id="trainChatModelBtn" type="button" title="切换模型"
+                        aria-haspopup="listbox" aria-expanded="false">
+                  <img src="../../src/pic/icon/model.svg" alt="">MS Insight Native-v4
+                </button>
+                <div class="wzh-chat-model-pop" id="trainChatModelPop" hidden>
+                  <p class="wzh-chat-agent-pop-title">切换模型</p>
+                  <div class="wzh-chat-agent-list" id="trainChatModelList" role="listbox" aria-label="切换模型"></div>
+                </div>
+              </div>
+              <div class="wzh-chat-composer-actions">
+                <button class="wzh-chat-clean-btn" id="trainChatCleanBtn" type="button" title="清空输入" aria-label="清空输入" hidden>
+                  <span class="wzh-chat-clean-icon" aria-hidden="true"></span>
+                </button>
+                <span class="wzh-chat-clean-divider" id="trainChatCleanDivider" aria-hidden="true" hidden></span>
+                <button class="wzh-chat-mic-btn" type="button" title="语音输入" aria-label="语音输入">
+                  <img src="../../src/pic/icon/voice.svg" alt="">
+                </button>
+                <button class="wzh-chat-send-btn" id="trainChatSendBtn" type="button" title="发送" aria-label="发送">
+                  <img src="../../src/pic/icon/sent.svg" alt="">
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="msi-resizer msi-resizer--v wzh-chat-viz-resizer" id="trainChatVizResizer"
+             role="separator" aria-orientation="vertical" aria-label="调整对话与可视化宽度" tabindex="0" hidden></div>
+        <section class="wzh-chat-viz-pane" id="trainChatVizPane" aria-label="回答信息可视化" hidden>
+          <header class="wzh-chat-viz-head">
+            <div class="wzh-chat-viz-tabs" id="trainChatVizTabs" role="tablist" aria-label="已打开的信息可视化"></div>
+            <button class="wzh-chat-viz-close" id="trainChatVizCloseBtn" type="button" aria-label="关闭全部信息可视化" title="关闭全部信息可视化">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+            </button>
+          </header>
+          <div class="wzh-chat-viz-viewport" id="trainChatVizViewport"></div>
+        </section>
+      </aside>
+      </div>
+    </div>
+  </section>
+
+  <script defer src="../theme.js"></script>
+  <script defer src="../timeline-colors.js"></script>
+
+  <!-- ── MindStudio Insight 工作台:左树(采集目录) + 内容区(泳道树 + 泳道) ── -->
+  <!-- @overview-script -->
+  <script defer src="../workbench.js"></script>
+
+  <!-- ── 智能对话面板逻辑(原 js/training-chat-panel.js,已内联) ── -->
+  <script defer src="../assistant.js"></script>
+
+  <!-- ── 窗口控制:三条分隔条的拖动逻辑 ── -->
+  <script defer src="../resizers.js"></script>
+</body>
+</html>

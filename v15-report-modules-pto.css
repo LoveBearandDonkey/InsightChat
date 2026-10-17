@@ -131,6 +131,78 @@ html[data-embed-chart="true"] .rp-ring::after {
   height: 78px;
 }
 
+/* Shared timeline shell from app/timeline-swim.css; report-specific task data stays here. */
+.rp-view--timeline-embed .rp-section-head { flex-wrap: wrap; }
+.rp-embed-swim { flex: 0 0 auto; min-height: auto; }
+.rp-embed-swim .msi-swim-corner {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  color: var(--foreground-muted);
+  font: var(--type-label);
+}
+.rp-embed-swim .msi-swim-body { flex: 0 0 auto; overflow: visible; }
+.rp-embed-swim .msi-lane-row { min-height: 68px; cursor: default; }
+.rp-embed-swim .msi-lane-row:hover { background: var(--state-muted); }
+.rp-embed-swim .msi-lane-row.is-anomalous,
+.rp-embed-swim .msi-lane-row.is-anomalous:hover { background: var(--tone-critical-bg); }
+.rp-embed-swim .msi-lane-label {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-semibold);
+}
+.rp-embed-lane-meta {
+  color: var(--foreground-muted);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-label-xs);
+  font-weight: var(--font-weight-medium);
+}
+.rp-embed-swim .msi-lane-track {
+  background: repeating-linear-gradient(to right, transparent 0 calc(20% - 1px), var(--border-subtle) calc(20% - 1px) 20%);
+}
+.rp-embed-task {
+  position: absolute;
+  top: 12px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font: var(--type-label);
+  white-space: nowrap;
+  background: var(--rp-viz-compute);
+}
+.rp-embed-task--compute, .rp-embed-task--forward { background: var(--rp-viz-compute); }
+.rp-embed-task--communication, .rp-embed-task--backward { background: var(--rp-viz-communication); }
+.rp-embed-task--waiting, .rp-embed-task--problem { background: var(--rp-viz-waiting); }
+.rp-embed-task--free, .rp-embed-task--bubble { background: var(--rp-viz-free); color: var(--foreground); }
+.rp-embed-task.is-problem { outline: 2px solid var(--danger); outline-offset: -2px; }
+.rp-embed-issue {
+  position: absolute;
+  left: 8px;
+  bottom: 7px;
+  color: var(--danger);
+  font: var(--type-label);
+  white-space: nowrap;
+}
+.rp-embed-legend--compute, .rp-embed-legend--forward { background: var(--rp-viz-compute); }
+.rp-embed-legend--communication, .rp-embed-legend--backward { background: var(--rp-viz-communication); }
+.rp-embed-legend--waiting, .rp-embed-legend--problem { background: var(--rp-viz-waiting); }
+.rp-embed-legend--free, .rp-embed-legend--bubble { background: var(--rp-viz-free); }
+.rp-embed-note { margin: 0; color: var(--foreground-muted); font: var(--type-body-sm); }
+
+html[data-embed-chart="true"] .rp-view--timeline-embed { gap: var(--space-3); }
+html[data-embed-chart="true"] .rp-view--timeline-embed .rp-section-hint { font-size: var(--font-size-label-xs); }
+html[data-embed-chart="true"] .rp-embed-swim .msi-swim-body { overflow-x: auto; }
+html[data-embed-chart="true"] .rp-embed-swim .msi-lane-row { min-width: 420px; }
+html[data-embed-chart="true"] .rp-embed-issue { font-size: var(--font-size-label-xs); }
+
 /* 全屏 standalone 宿主窗口。参照设计系统内的 pto-typical-ide-frame.html：
    产品页占满视口时取消 4:3 预览比例，其余 skin 全部继承 ide-frame。 */
 .rp-frame {
@@ -1526,4 +1598,415 @@ html[data-embed-chart="true"] .rp-ring::after {
     animation-duration: 1ms !important;
     animation-delay: 0ms !important;
   }
+}
+
+/* 对话扩展屏中的 Rank 和 Bubble：轻量 inline 图表，避免工作台的高亮块视觉。 */
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) {
+  --rp-viz-compute: color-mix(in srgb, var(--primary) 32%, var(--surface-1));
+  --rp-viz-communication: color-mix(in srgb, var(--highlight-l0a-violet-source) 30%, var(--surface-1));
+  --rp-viz-waiting: color-mix(in srgb, var(--warning) 32%, var(--surface-1));
+  --rp-viz-free: color-mix(in srgb, var(--foreground) 9%, var(--surface-1));
+  max-width: 900px;
+  width: 100%;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: clamp(24px, 4vw, 46px) clamp(18px, 4vw, 46px) 36px;
+  gap: 0;
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-header {
+  padding-bottom: 22px;
+}
+
+html[data-embed-chart="true"] .rp-embed-eyebrow {
+  color: var(--foreground-muted);
+  font: 600 10px/1.3 var(--font-sans);
+  letter-spacing: .13em;
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-header h3 {
+  margin: 10px 0 5px;
+  color: var(--foreground);
+  font: 600 clamp(20px, 2.6vw, 26px)/1.3 var(--font-sans);
+  letter-spacing: -.025em;
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-header p {
+  margin: 0;
+  color: var(--foreground-secondary);
+  font: 12px/1.5 var(--font-sans);
+}
+
+html[data-embed-chart="true"] .rp-embed-stats {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin-bottom: 28px;
+}
+
+html[data-embed-chart="true"] .rp-embed-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 132px;
+  padding-right: 28px;
+}
+
+html[data-embed-chart="true"] .rp-embed-stat + .rp-embed-stat {
+  padding-left: 28px;
+  border-left: 1px solid var(--border-default);
+}
+
+html[data-embed-chart="true"] .rp-embed-stat strong {
+  color: var(--foreground);
+  font: 600 23px/1.15 var(--font-mono);
+  letter-spacing: -.04em;
+}
+
+html[data-embed-chart="true"] .rp-embed-stat span {
+  color: var(--foreground-muted);
+  font: 11px/1.35 var(--font-sans);
+}
+
+html[data-embed-chart="true"] .rp-embed-chart-shell {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  padding: 18px 18px 16px;
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  background: var(--surface-1);
+  box-shadow: 0 3px 14px color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+
+html[data-embed-chart="true"] .rp-embed-chart-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px 15px;
+}
+
+html[data-embed-chart="true"] .rp-embed-chart-title strong {
+  color: var(--foreground);
+  font: 600 12px/1.4 var(--font-sans);
+}
+
+html[data-embed-chart="true"] .rp-embed-chart-title span {
+  color: var(--foreground-muted);
+  font: 11px/1.4 var(--font-sans);
+  text-align: right;
+}
+
+html[data-embed-chart="true"] .rp-embed-chart-scroll {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) transparent;
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-swim {
+  min-width: 560px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed[data-module="top3"] .rp-embed-swim { min-width: 610px; }
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-swim .msi-swim-body { overflow: visible; }
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-swim .msi-swim-head {
+  height: 32px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-swim .msi-swim-corner {
+  padding-left: 10px;
+  border-right: 0;
+  color: var(--foreground-muted);
+  font: 10px/32px var(--font-sans);
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-swim .msi-swim-ruler {
+  border-right: 0;
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-swim .msi-ruler-tick {
+  padding-left: 3px;
+  border-left: 0;
+  color: var(--foreground-muted);
+  font: 10px/32px var(--font-mono);
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-swim .msi-ruler-tick--end {
+  border-right: 0;
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-swim .msi-lane-row {
+  min-width: 0;
+  min-height: 58px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: transparent;
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-swim .msi-lane-row:last-child { border-bottom: 0; }
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-swim .msi-lane-row:hover { background: var(--state-hover); }
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-swim .msi-lane-label {
+  padding-left: 10px;
+  border-right: 0;
+  font: 600 11px/1.3 var(--font-sans);
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-lane-meta {
+  font: 10px/1.3 var(--font-sans);
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-swim .msi-lane-track {
+  background: repeating-linear-gradient(to right, var(--border-subtle) 0 1px, transparent 1px 16.6667%);
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed[data-module="top3"] .rp-embed-swim .msi-lane-track {
+  background: repeating-linear-gradient(to right, var(--border-subtle) 0 1px, transparent 1px 8.3333%);
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-task {
+  top: 12px;
+  height: 24px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--foreground);
+  font: 600 10px/1 var(--font-sans);
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-task--compute,
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-task--forward {
+  border-color: color-mix(in srgb, var(--primary) 20%, transparent);
+  background: var(--rp-viz-compute);
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-task--communication,
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-task--backward {
+  border-color: color-mix(in srgb, var(--highlight-l0a-violet-source) 18%, transparent);
+  background: var(--rp-viz-communication);
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-task--waiting,
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-task--problem {
+  border-color: color-mix(in srgb, var(--warning) 25%, transparent);
+  background: var(--rp-viz-waiting);
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-task--free,
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-task--bubble {
+  border-color: var(--border-subtle);
+  background: var(--rp-viz-free);
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-task.is-problem {
+  outline: none;
+  border-color: color-mix(in srgb, var(--warning) 55%, transparent);
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-issue {
+  left: 3px;
+  bottom: 5px;
+  color: var(--foreground-muted);
+  font: 10px/1.2 var(--font-sans);
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-issue::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  margin: 0 5px 2px 0;
+  border-radius: 50%;
+  background: var(--warning);
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 18px;
+  margin: 14px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--foreground-secondary);
+  font: 11px/1.3 var(--font-sans);
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-legend .legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-note {
+  margin: 12px 2px 0;
+  color: var(--foreground-muted);
+  font: 11px/1.5 var(--font-sans);
+}
+
+@media (max-width: 560px) {
+  html[data-embed-chart="true"] .rp-embed-chart-shell { padding: 14px 12px; }
+  html[data-embed-chart="true"] .rp-embed-chart-title { display: block; }
+  html[data-embed-chart="true"] .rp-embed-chart-title span { display: block; margin-top: 3px; text-align: left; }
+  html[data-embed-chart="true"] .rp-embed-stat { min-width: 0; padding-right: 16px; }
+  html[data-embed-chart="true"] .rp-embed-stat + .rp-embed-stat { padding-left: 16px; }
+}
+
+/* The compact report embed uses the same full-width swimlane geometry in every tab. */
+html[data-embed-chart="true"] .rp-view.rp-view--timeline-embed {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: var(--space-3);
+  gap: var(--space-3);
+}
+html[data-embed-chart="true"] .rp-view--timeline-embed > .rp-section-head { display: flex; }
+html[data-embed-chart="true"] .rp-view--timeline-embed .rp-legend { margin-top: 0; }
+html[data-embed-chart="true"] .rp-view--timeline-embed .rp-embed-legend--problem {
+  border: 2px solid var(--danger);
+}
+
+/* Match the real timeline: 29px rows, 4px task insets, operator-name palette.
+   Diagnostic color is reserved for the exact interval, never the full lane. */
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-swim .msi-swim-head {
+  height: 30px;
+}
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-swim .msi-lane-row,
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-swim .msi-lane-row:hover {
+  height: 29px;
+  min-height: 29px;
+  background: transparent;
+}
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) .rp-embed-swim .msi-lane-label {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 8px;
+  border-right: 1px solid var(--border-subtle);
+  font: 11px/1.2 var(--font-sans);
+  white-space: nowrap;
+}
+html[data-embed-chart="true"] .rp-view--timeline-embed .rp-embed-lane-meta { display: none; }
+html[data-embed-chart="true"] .rp-view--timeline-embed .rp-embed-op {
+  top: 4px;
+  bottom: 4px;
+  height: auto;
+  border: 0;
+  border-radius: 2px;
+  font: 10.5px/1 var(--font-sans);
+  box-shadow: none;
+}
+html[data-embed-chart="true"] .rp-view--timeline-embed .rp-embed-op.is-problem {
+  z-index: 2;
+  box-shadow: inset 0 0 0 2px var(--danger);
+}
+.rp-embed-problem-range {
+  position: absolute;
+  z-index: 3;
+  bottom: 1px;
+  height: 3px;
+  border-bottom: 2px solid var(--danger);
+  border-left: 1px solid var(--danger);
+  border-right: 1px solid var(--danger);
+  pointer-events: none;
+}
+.rp-embed-annotation {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 8px 0 0;
+  color: var(--foreground);
+  font: 11px/1.5 var(--font-sans);
+}
+.rp-embed-annotation-mark {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  margin-top: 4px;
+  border: 2px solid var(--danger);
+  border-radius: 2px;
+}
+.rp-embed-key { margin: 8px 0 0; color: var(--foreground-muted); font: 10px/1.4 var(--font-sans); }
+html[data-embed-chart="true"] .rp-view--timeline-embed .rp-embed-note { margin-top: 8px; }
+
+/* The three embeds share a frame, while each chart keeps its own data encoding. */
+html[data-embed-chart="true"] .rp-view--timeline-embed:is([data-module="top1"], [data-module="top2"], [data-module="top3"]) {
+  --rp-viz-compute: var(--highlight-copy-blue-source);
+  --rp-viz-communication: var(--highlight-l0a-violet-source);
+  --rp-viz-waiting: var(--highlight-mte-amber-source);
+  --rp-viz-free: color-mix(in srgb, var(--foreground) 20%, var(--surface-1));
+}
+html[data-embed-chart="true"] .rp-view--timeline-embed .rp-embed-op--compute,
+html[data-embed-chart="true"] .rp-view--timeline-embed .rp-embed-op--forward {
+  background: var(--rp-viz-compute);
+  color: #fff;
+}
+html[data-embed-chart="true"] .rp-view--timeline-embed .rp-embed-op--communication,
+html[data-embed-chart="true"] .rp-view--timeline-embed .rp-embed-op--backward {
+  background: var(--rp-viz-communication);
+  color: #fff;
+}
+html[data-embed-chart="true"] .rp-view--timeline-embed .rp-embed-op--waiting {
+  background: var(--rp-viz-waiting);
+  color: #342c17;
+}
+html[data-embed-chart="true"] .rp-view--timeline-embed .rp-embed-op--free,
+html[data-embed-chart="true"] .rp-view--timeline-embed .rp-embed-op--bubble {
+  background: var(--rp-viz-free);
+  color: var(--foreground);
+}
+html[data-embed-chart="true"] .rp-view--timeline-embed .rp-embed-op--bubble-hot {
+  background: var(--rp-viz-waiting);
+  box-shadow: inset 0 0 0 1px var(--warning);
+}
+.rp-embed-focus {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+.rp-embed-focus--excess {
+  border-left: 1px dashed var(--danger);
+  background: color-mix(in srgb, var(--danger) 9%, transparent);
+}
+.rp-embed-focus--exposed {
+  border-left: 2px solid var(--danger);
+  border-right: 2px solid var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+.rp-embed-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--foreground-secondary);
+  font: 11px/1.4 var(--font-sans);
+}
+.rp-embed-legend-item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.rp-embed-legend-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 2px; }
+.rp-embed-legend-dot--compute, .rp-embed-legend-dot--forward { background: var(--rp-viz-compute); }
+.rp-embed-legend-dot--communication, .rp-embed-legend-dot--backward { background: var(--rp-viz-communication); }
+.rp-embed-legend-dot--waiting, .rp-embed-legend-dot--bubble-hot { background: var(--rp-viz-waiting); }
+.rp-embed-legend-dot--free, .rp-embed-legend-dot--bubble { background: var(--rp-viz-free); }
+.rp-embed-legend-dot--operator { background: var(--msi-trace-05-bg); }
+.rp-embed-legend-dot--excess { width: 9px; background: color-mix(in srgb, var(--danger) 22%, var(--surface-1)); border-left: 2px dashed var(--danger); }
+.rp-embed-legend-dot--exposed { width: 9px; background: color-mix(in srgb, var(--danger) 17%, var(--surface-1)); border-left: 2px solid var(--danger); border-right: 2px solid var(--danger); }
+.rp-embed-annotation-mark--top1 { width: 10px; border: 0; border-left: 2px dashed var(--danger); border-radius: 0; background: color-mix(in srgb, var(--danger) 18%, transparent); }
+.rp-embed-annotation-mark--top2 { width: 10px; border-left: 2px solid var(--danger); border-right: 2px solid var(--danger); border-top: 0; border-bottom: 0; border-radius: 0; background: color-mix(in srgb, var(--danger) 14%, transparent); }
+.rp-embed-annotation-mark--top3 { border: 0; background: var(--rp-viz-waiting); }
+html[data-embed-chart="true"] .rp-view--timeline-embed[data-module="top1"] .rp-embed-swim .msi-lane-row.rp-embed-row--reference,
+html[data-embed-chart="true"] .rp-view--timeline-embed[data-module="top1"] .rp-embed-swim .msi-lane-row.rp-embed-row--reference:hover {
+  background: var(--state-muted);
+}
+html[data-embed-chart="true"] .rp-view--timeline-embed[data-module="top1"] .rp-embed-row--reference .msi-lane-label {
+  color: var(--foreground-secondary);
+  font-weight: 600;
 }

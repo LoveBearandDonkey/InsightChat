@@ -1,0 +1,139 @@
+/* Local presentation layer for the pinned PyTorch MemoryViz bundle. */
+html, body {
+  width: 100%;
+  height: 100% !important;
+  margin: 0;
+  overflow: hidden !important;
+  background: var(--msi-viz-background, #fff);
+  color: var(--msi-viz-foreground, #24292f);
+  font: 12px/1.4 'Inter', 'Source Han Sans SC', 'PingFang SC', 'Noto Sans SC', sans-serif;
+}
+html[data-theme="dark"], html[data-theme="glass"] {
+  --msi-viz-background: #161616;
+  --msi-viz-foreground: #e6e6e6;
+  --msi-viz-summary: #414752;
+  --msi-viz-preview-opacity: .46;
+}
+svg text {
+  fill: currentColor;
+  font: 11px 'Inter', 'Source Han Sans SC', 'PingFang SC', 'Noto Sans SC', sans-serif;
+}
+svg .domain, svg .tick line { stroke: currentColor; }
+.msi-memory-selected-block {
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 2px var(--msi-viz-accent, #0077ff));
+}
+
+/* The parent page displays both views at once, so the native picker is redundant. */
+body > div:first-of-type,
+body > label,
+body > input[type="file"] { display: none !important; }
+
+/* The parent toolbar mirrors these controls outside the chart card. */
+.msi-memory-native-toolbar { display: none !important; }
+
+/* Keep PyTorch's plot and mini map; its detail text is shown in the parent footer. */
+div[style*="grid-template-rows: 10fr 1fr 8fr"] {
+  grid-template-rows: minmax(0, 1fr) 30px !important;
+  gap: 2px !important;
+}
+div[style*="grid-column: 1; grid-row: 3;"] { display: none !important; }
+
+/* The lower SVG is a navigation preview, with an always-visible range brush. */
+.msi-memory-minimap .msi-memory-preview {
+  fill: var(--msi-viz-accent, #0077ff);
+  fill-opacity: var(--msi-viz-preview-opacity, .32);
+}
+.msi-memory-minimap .selection {
+  fill: var(--msi-viz-accent, #0077ff);
+  fill-opacity: .14;
+  stroke: var(--msi-viz-accent, #0077ff);
+  stroke-width: 1;
+  cursor: grab;
+}
+.msi-memory-minimap .handle {
+  fill: var(--msi-viz-accent, #0077ff);
+  stroke: var(--msi-viz-background, #fff);
+  stroke-width: 1;
+  rx: 4.5px;
+  ry: 6px;
+  cursor: ew-resize;
+}
+
+.msi-memory-allocator-grid {
+  max-width: 100%;
+  min-width: 0;
+}
+.msi-memory-allocator-plot {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.msi-memory-events {
+  overflow-anchor: none;
+  scroll-behavior: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.msi-memory-events:hover {
+  scrollbar-color: var(--msi-viz-scrollbar-thumb, rgba(0, 0, 0, .12)) transparent;
+}
+.msi-memory-events::-webkit-scrollbar { width: 8px; height: 8px; }
+.msi-memory-events::-webkit-scrollbar-track { background: transparent; }
+.msi-memory-events::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: transparent;
+}
+.msi-memory-events:hover::-webkit-scrollbar-thumb {
+  background: var(--msi-viz-scrollbar-thumb, rgba(0, 0, 0, .12));
+}
+.msi-memory-events::-webkit-scrollbar-thumb:hover {
+  background: var(--msi-viz-scrollbar-thumb-hover, #777);
+}
+.msi-memory-event-row {
+  display: grid;
+  grid-template-columns: minmax(var(--msi-memory-action-width), 1fr) minmax(var(--msi-memory-address-width), 1fr) minmax(var(--msi-memory-size-width), 1fr) 16px;
+  column-gap: 8px;
+  box-sizing: border-box;
+  height: 35px;
+  width: 100%;
+  min-width: calc(var(--msi-memory-action-width) + var(--msi-memory-address-width) + var(--msi-memory-size-width) + 52px);
+  padding: 2px 6px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.msi-memory-event-row > span:first-child { align-self: center; }
+.msi-memory-event-address > span,
+.msi-memory-event-size > span { display: block; }
+.msi-memory-event-jump {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--msi-viz-foreground, #24292f);
+  font: 12px/1 sans-serif;
+  cursor: pointer;
+}
+.msi-memory-event-jump:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--msi-viz-accent, #0077ff) 12%, transparent);
+}
+.msi-memory-event-jump:focus-visible { outline: 2px solid var(--msi-viz-accent, #0077ff); }
+.msi-memory-event-jump:disabled { opacity: .35; cursor: default; }
+@media (max-width: 720px) {
+  .msi-memory-allocator-grid { grid-template-columns: minmax(0, 52%) minmax(0, 1fr) !important; }
+  .msi-memory-events { width: calc(100% - 24px) !important; }
+}
+.msi-memory-events pre.msi-memory-event-selected {
+  background: color-mix(in srgb, var(--msi-viz-accent, #0077ff) var(--msi-viz-tint, 8%), transparent);
+}
+.msi-memory-events pre {
+  font: 11px/1.4 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+}
+pre[style*="grid-column: 1 / 3; grid-row: 2"] { display: none !important; }

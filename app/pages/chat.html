@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<!-- Generated from app/shell.html by npm run build:chat. Edit app/ sources. -->
+<html lang="zh-CN" data-entry-view="overview" data-theme="light" data-theme-id="calc" data-brand="calc">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能对话 · 空白工作台</title>
+  <script>
+    /* 三套主题皮肤,数组顺序即右上角按钮的切换顺序,第一项就是默认主题:
+       计算(浅) → 新无限(浅) → 追光(深) → 回到计算。
+       mode 决定明暗基座(data-theme),brand 决定品牌色皮肤(data-brand)。 */
+    window.MI_THEMES = [
+      { id: 'calc',     label: '计算',   mode: 'light', brand: 'calc' },
+      { id: 'infinite', label: '新无限', mode: 'light', brand: ''     },
+      { id: 'chase',    label: '追光',   mode: 'dark',  brand: ''     },
+    ];
+    // 主题深链:?theme=calc|infinite|chase,兼容旧写法 ?theme=light|dark。
+    // 旧的 light 指向当前的默认浅色主题(计算),要 新无限 得显式写 ?theme=infinite。
+    (() => {
+      const raw = new URLSearchParams(window.location.search).get("theme");
+      const alias = { light: 'calc', dark: 'chase' };
+      const id = alias[raw] || raw;
+      const t = window.MI_THEMES.find(x => x.id === id);
+      if (!t) return;
+      const el = document.documentElement;
+      el.dataset.themeId = t.id;
+      el.dataset.theme = t.mode;
+      if (t.brand) el.dataset.brand = t.brand; else delete el.dataset.brand;
+    })();
+  </script>
+  <!-- 公共页面外壳。样式与脚本在 app/ 中；单文件交付版由 npm run build:standalone 生成。 -->
+  <link rel="stylesheet" href="../chat.css">
+  <link rel="stylesheet" href="../timeline-swim.css">
+</head>
+<body class="chat-shell-page" data-theme="light" data-theme-id="calc" data-brand="calc">
+  <section class="pto-ide-frame" data-host="standalone" aria-label="智能对话工作台">
+    <header class="pto-ide-frame__topbar pto-ide-frame__standalone-chrome">
+      <div class="pto-ide-frame__topbar-left">
+        <a class="msi-brand" data-ide-slot="host-chip" href="chat.html" aria-label="返回概览页" title="返回概览页">
+          <img class="msi-brand-logo" src="../../src/pic/icon/MSInsight.ico" alt="">
+          <span class="msi-brand-name">MindStudio Insight</span>
+        </a>
+      </div>
+      <div class="pto-ide-frame__topbar-center"></div>
+      <div class="pto-ide-frame__topbar-right">
+        <div class="pto-ide-frame__window-actions" data-ide-slot="window-controls" aria-label="Window controls">
+          <!-- 主题切换:单一图标按钮(月亮/太阳互换) -->
+          <button class="pto-ide-frame__window-action" id="themeToggle" type="button" aria-pressed="false" title="切换主题" aria-label="切换主题">
+            <svg class="pto-ide-frame__window-icon" id="themeToggleIcon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3a6.5 6.5 0 0 0 7.8 8.8A8 8 0 1 1 12 3z"></path>
+            </svg>
+          </button>
+          <span class="pto-ide-frame__window-separator" aria-hidden="true"></span>
+          <!-- 智能对话:AI 入口,默认收起,面板与逻辑见页尾内联的 training-chat-panel 脚本 -->
+          <button class="pto-ide-frame__window-action" id="trainChatToggle" type="button" aria-controls="trainChatPanel" aria-expanded="false" aria-pressed="false" title="打开智能对话" aria-label="打开智能对话">
+            <img class="pto-ide-frame__window-icon pto-ide-frame__window-icon--image" src="../../src/pic/icon/msinsightbotAvatar.png" alt="">
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="pto-ide-frame__body">
+      <!-- 左树:导入的性能任务目录。工具条(导入/对比/设置/收起) + 任务→rank 两级树；
+           一级任务负责切换内容页，二级 rank 只展示该任务包含的采集项。 -->
+      <aside class="msi-sidebar pto-ide-frame__standalone-chrome" id="msiSidebar" data-ide-slot="explorer" aria-label="性能数据">
+        <div class="msi-side-toolbar" id="msiSideToolbar">
+          <button class="msi-side-btn msi-side-btn--primary msi-side-normal-action" type="button" title="导入性能数据">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg>
+            <span>导入</span>
+          </button>
+          <button class="msi-side-btn msi-side-normal-action" id="msiCompareBtn" type="button" title="对比两次采集">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="7" height="16" rx="1.5"></rect><path d="M14 4h7v16h-7z"></path><path d="M14 9h7M14 15h7"></path></svg>
+            <span>对比</span>
+          </button>
+          <button class="msi-side-icon msi-side-normal-action" type="button" title="设置" aria-label="设置">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+          </button>
+          <button class="msi-side-icon msi-side-normal-action" type="button" title="收起侧栏" aria-label="收起侧栏">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path></svg>
+          </button>
+          <button class="msi-compare-back" id="msiCompareBack" type="button" title="退出对比" aria-label="退出对比" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path></svg>
+          </button>
+          <span class="msi-compare-heading" id="msiCompareHeading" hidden>对比</span>
+        </div>
+        <div class="msi-tree" id="msiTree" role="tree" aria-label="性能任务"></div>
+      </aside>
+
+      <div class="pto-ide-frame__workarea chat-shell-workarea">
+        <section class="pto-ide-frame__pane chat-shell-pane" data-ide-pane="main-content" aria-label="内容区">
+          <!-- 内容区:一份任务目录的分析视图。标题下拉与左树选中的一级任务保持同步,主体是「泳道树 + 泳道」
+               (结构对齐 profileCompare.html 的 sl-train-tl-* :左侧固定宽的树列 + 右侧时间轴画布,
+               每行等高、树列 sticky 在左边,所以横向不错位)。泳道内容由页尾脚本按行类型生成:
+               group→密集事件条、stream→算子任务条、hbm→带宽面积图。 -->
+          <section class="pto-ide-frame__pane-body chat-shell-body msi-content" id="contentCard">
+            <header class="msi-content-head">
+              <h1 class="msi-content-title" id="msiContentTitle">profile_dir</h1>
+              <div class="msi-content-head-actions">
+                <button class="msi-more-btn" type="button" title="更多" aria-label="更多">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg>
+                </button>
+              </div>
+            </header>
+
+            <nav class="msi-tabs" role="tablist" aria-label="分析视图">
+              <button class="msi-tab msi-tab--normal-only is-active" data-analysis-tab="overview" type="button" role="tab" aria-selected="true" aria-controls="msiOverviewPanel">概览</button>
+              <button class="msi-tab" data-analysis-tab="timeline" type="button" role="tab" aria-selected="false" aria-controls="msiTimelinePanel">时间线</button>
+              <button class="msi-tab" data-analysis-tab="memory" type="button" role="tab" aria-selected="false" aria-controls="msiMemoryPanel">内存</button>
+              <button class="msi-tab msi-tab--normal-only" type="button" role="tab" aria-selected="false">通信</button>
+              <button class="msi-tab msi-tab--normal-only" type="button" role="tab" aria-selected="false">计算图</button>
+              <button class="msi-tab msi-tab--normal-only" type="button" role="tab" aria-selected="false">耗时统计</button>
+              <button class="msi-tab msi-tab--compare-only" data-analysis-tab="operator" type="button" role="tab" aria-selected="false" hidden>算子</button>
+            </nav>
+
+            <main class="msi-analysis-stage msi-overview" id="msiOverviewPanel" role="tabpanel" aria-label="性能概览">
+              <div class="msi-ov-runtime-insight">
+                <div class="msi-ov-runtime-insight-main">
+                  <div class="msi-ov-runtime-insight-copy"><strong>专家建议</strong><span>Rank 6 / 7 的计算耗时比其余 Rank 高约 51%，各 Rank 最大计算差异为 <b id="msiOvRuntimeGap">3.11 s</b>；建议优先均衡末级负载，减少 Rank 0–5 每步约 3.77 s 的通信等待，并开启计算通信重叠。</span></div>
+                </div>
+
+                <div class="msi-ov-watch-grid">
+                  <article class="msi-ov-watch-tile msi-ov-watch-health">
+                    <div class="msi-ov-watch-rings" role="img" aria-label="性能健康度 75 分，计算 64，通信 93，调度 71">
+                      <i class="msi-ov-watch-ring msi-ov-watch-ring--outer"></i>
+                      <i class="msi-ov-watch-ring msi-ov-watch-ring--middle"></i>
+                      <i class="msi-ov-watch-ring msi-ov-watch-ring--inner"></i>
+                      <strong>75</strong>
+                    </div>
+                    <div class="msi-ov-watch-copy"><span>性能健康度</span><strong>A级</strong><small>优化后预计 85</small></div>
+                  </article>
+                  <article class="msi-ov-watch-tile msi-ov-watch-conclusion">
+                    <div class="msi-ov-watch-kicker">核心瓶颈</div>
+                    <div class="msi-ov-watch-conclusion-copy">stage3 计算约 9.26 s/step，是其余各级的 1.51×；其余 6 卡每步在 P2P recv 上空等约 3.77 s，流水线 bubble 占 step 约 35%。</div>
+                  </article>
+                </div>
+              </div>
+
+              <section class="msi-ov-section" aria-labelledby="msiOvMetricTitle">
+                <div class="msi-ov-section-title-row msi-ov-metric-head">
+                  <h3 class="msi-ov-section-title" id="msiOvMetricTitle">关键指标</h3>
+                  <button class="msi-ov-metric-edit-btn" id="msiOvMetricEditBtn" type="button" aria-label="编辑关键指标及其顺序" aria-controls="msiOvMetricEditor" aria-expanded="false" title="编辑关键指标及其顺序"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>编辑</span></button>
+                  <div class="msi-ov-metric-editor" id="msiOvMetricEditor" aria-label="关键指标编辑" hidden></div>
+                </div>
+                <div class="msi-ov-metrics" id="msiOvMetricBoard">
+                  <article class="msi-ov-card msi-ov-metric msi-ov-metric--ok" data-metric="op_utilization">
+                    <div class="msi-ov-metric-name">算子利用率</div>
+                    <button class="msi-ov-metric-help" type="button" aria-label="算子利用率说明：各卡 device 计算时间除以 step 均值；Cube 硬件利用率另达约 92%">?<span class="msi-ov-metric-help-pop" role="tooltip">各卡 device 计算时间 / step 均值；Cube 硬件利用率另达约 92%</span></button>
+                    <div class="msi-ov-metric-value">64<span class="msi-ov-metric-unit">%</span></div>
+                  </article>
+                  <article class="msi-ov-card msi-ov-metric msi-ov-metric--bad" data-metric="overlap_ratio">
+                    <div class="msi-ov-metric-name">计算-通信重叠率</div>
+                    <button class="msi-ov-metric-help" type="button" aria-label="计算通信重叠率说明：8 卡全部为 0，无任何通信被计算掩盖">?<span class="msi-ov-metric-help-pop" role="tooltip">8 卡全部为 0，无任何通信被计算掩盖</span></button>
+                    <div class="msi-ov-metric-value">0<span class="msi-ov-metric-unit">%</span></div>
+                  </article>
+                  <article class="msi-ov-card msi-ov-metric msi-ov-metric--bad" data-metric="max_lane_idle">
+                    <div class="msi-ov-metric-name">最空闲泳道空挡</div>
+                    <button class="msi-ov-metric-help" type="button" aria-label="最空闲泳道空挡说明：stage0 到 stage2 每步在 P2P recv 上空等约 3.77 秒">?<span class="msi-ov-metric-help-pop" role="tooltip">stage0–2 每步在 P2P recv 上空等约 3.77 s</span></button>
+                    <div class="msi-ov-metric-value">35<span class="msi-ov-metric-unit">%</span></div>
+                  </article>
+                  <article class="msi-ov-card msi-ov-metric msi-ov-metric--ok" data-metric="step_cv">
+                    <div class="msi-ov-metric-name">step 抖动（CV）</div>
+                    <button class="msi-ov-metric-help" type="button" aria-label="step 抖动说明：8 卡单步 10796.6 到 10800.6 毫秒，无掉队 rank">?<span class="msi-ov-metric-help-pop" role="tooltip">8 卡单步 10796.6–10800.6 ms，无掉队 rank</span></button>
+                    <div class="msi-ov-metric-value">0.012<span class="msi-ov-metric-unit">%</span></div>
+                  </article>
+                  <article class="msi-ov-card msi-ov-metric msi-ov-metric--warn" data-metric="mfu">
+                    <div class="msi-ov-metric-name">MFU（端到端）</div>
+                    <button class="msi-ov-metric-help" type="button" aria-label="MFU 说明：910B1 的 stage0 MatMul 达成约 301.7 TF每秒，bubble 与零重叠拉低端到端效率">?<span class="msi-ov-metric-help-pop" role="tooltip">910B1 · stage0 MatMul 达成约 301.7 TF/s，bubble 与零重叠拉低端到端效率</span></button>
+                    <div class="msi-ov-metric-value">40<span class="msi-ov-metric-unit">%</span></div>
+                  </article>
+                </div>
+              </section>
+
+              <section class="msi-ov-section msi-ov-runtime" aria-labelledby="msiOvRuntimeTitle">
+                <div class="msi-ov-section-title-row msi-ov-runtime-head">
+                  <div>
+                    <h3 class="msi-ov-section-title" id="msiOvRuntimeTitle">计算 / 通信概览</h3>
+                  </div>
+                </div>
+
+                <div class="msi-ov-card msi-ov-runtime-card">
+                  <div class="msi-ov-runtime-controls" aria-label="图表筛选">
+                    <label class="msi-ov-runtime-field">
+                      <span>迭代</span>
+                      <select id="msiOvRuntimeStep" aria-label="选择迭代">
+                        <option value="mean">Step 3–4 均值</option>
+                        <option value="3">Step 3</option>
+                        <option value="4">Step 4</option>
+                      </select>
+                    </label>
+                    <label class="msi-ov-runtime-field">
+                      <span>通信域</span>
+                      <select id="msiOvRuntimeDomain" aria-label="选择通信域">
+                        <option value="all">全部通信</option>
+                        <option value="pp">Pipeline P2P</option>
+                        <option value="dp">Data Parallel</option>
+                      </select>
+                    </label>
+                    <label class="msi-ov-runtime-field">
+                      <span>排序</span>
+                      <select id="msiOvRuntimeSort" aria-label="选择排序方式">
+                        <option value="rank">Rank ID</option>
+                        <option value="computeRatio">计算占比</option>
+                        <option value="communicationRatio">通信占比</option>
+                        <option value="compute">计算时间（未重叠）</option>
+                        <option value="overlap">计算通信重叠时间</option>
+                        <option value="communication">通信时间（未重叠）</option>
+                        <option value="idle">空闲时间</option>
+                        <option value="preprocess">预处理时间</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <div class="msi-ov-runtime-legend" id="msiOvRuntimeLegend" aria-label="图例"></div>
+                  <div class="msi-ov-runtime-chart-wrap">
+                    <svg class="msi-ov-runtime-chart" id="msiOvRuntimeChart" role="img" aria-labelledby="msiOvRuntimeTitle msiOvRuntimeChartDesc"></svg>
+                    <span class="msi-ov-runtime-chart-desc" id="msiOvRuntimeChartDesc">堆叠柱表示各 Rank 的计算、通信、等待和预处理耗时；折线表示计算和通信占比。</span>
+                    <div class="msi-ov-runtime-tooltip" id="msiOvRuntimeTooltip" role="status" aria-live="polite" hidden></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="msi-ov-section" id="msiOvIssuesSection" aria-labelledby="msiOvIssuesTitle">
+                <div class="msi-ov-section-title-row">
+                  <h3 class="msi-ov-section-title" id="msiOvIssuesTitle">关键问题 <span class="msi-ov-section-note">（5）</span></h3>
+                  <span class="msi-ov-section-note">按优化收益从高到低</span>
+                </div>
+                <div class="msi-ov-card msi-ov-issues">
+                  <div class="msi-ov-issue-list" id="msiOvIssueList" role="tablist" aria-label="关键问题"></div>
+                  <article class="msi-ov-issue-detail" id="msiOvIssueDetail" role="tabpanel" aria-live="polite"></article>
+                </div>
+              </section>
+            </main>
+
+            <div class="msi-analysis-stage msi-timeline-panel" id="msiTimelinePanel" role="tabpanel" aria-label="时间线" hidden>
+            <div class="msi-toolbar">
+              <button class="msi-tb-btn" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h13"></path></svg>
+                <span>Timeline View</span>
+                <svg class="msi-tb-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+              </button>
+              <div class="msi-tb-zoom" role="group" aria-label="时间轴缩放">
+                <button class="msi-tb-zoom-btn" type="button" id="msiZoomOut" aria-label="缩短时间窗">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path></svg>
+                </button>
+                <span class="msi-tb-zoom-val" id="msiZoomVal" aria-live="polite">1.2s</span>
+                <button class="msi-tb-zoom-btn" type="button" id="msiZoomIn" aria-label="拉长时间窗">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+                </button>
+              </div>
+              <label class="msi-tb-search">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4-4"></path></svg>
+                <input type="search" placeholder="搜索" aria-label="搜索">
+              </label>
+            </div>
+
+            <div class="msi-timeline-swims" id="msiTimelineSwims">
+              <div class="msi-swim" id="msiSwim">
+                <div class="msi-swim-title" id="msiSwimTitle" hidden></div>
+                <div class="msi-swim-head">
+                  <div class="msi-swim-corner"></div>
+                  <div class="msi-swim-ruler" id="msiRuler" aria-hidden="true"></div>
+                </div>
+                <div class="msi-swim-body" id="msiSwimBody"></div>
+              </div>
+              <div class="msi-swim" id="msiSwimCompare" hidden>
+                <div class="msi-swim-title" id="msiSwimCompareTitle"></div>
+                <div class="msi-swim-head">
+                  <div class="msi-swim-corner"></div>
+                  <div class="msi-swim-ruler" id="msiRulerCompare" aria-hidden="true"></div>
+                </div>
+                <div class="msi-swim-body" id="msiSwimBodyCompare"></div>
+              </div>
+            </div>
+
+            <div class="msi-mouse-tools" id="msiMouseTools" role="group" aria-label="时间线鼠标模式">
+              <div class="msi-mouse-tools-main">
+                <button class="msi-mouse-tool is-active" type="button" data-mouse-mode="select" aria-label="选择模式" title="选择：点击查看事件" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2v18l4.4-4.3 3.3 6 2.5-1.4-3.3-5.9 6.1-.7z" fill="currentColor" stroke="none"/></svg></button>
+                <button class="msi-mouse-tool" type="button" data-mouse-mode="pan" aria-label="拖拽模式" title="拖拽：移动泳道视图" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11V5a1.5 1.5 0 0 1 3 0v4-6a1.5 1.5 0 0 1 3 0v6-4a1.5 1.5 0 0 1 3 0v5-3a1.5 1.5 0 0 1 3 0v7c0 4-2.6 7-6.7 7h-2.2c-2 0-3.1-.8-4.1-2.2L3.2 13a1.6 1.6 0 0 1 2.3-2.2L8 13"/></svg></button>
+                <span class="msi-mouse-tool-separator" aria-hidden="true"></span>
+                <button class="msi-mouse-tool" type="button" data-mouse-mode="height" aria-label="泳道高度模式" title="高度：上下拖动调整泳道高度" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M8 6l4-4 4 4M8 18l4 4 4-4M3 12h18"/></svg></button>
+                <button class="msi-mouse-tool" type="button" data-mouse-mode="box" aria-label="框选模式" title="框选：拖动选取事件" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="1"/><path d="M8 9h8M8 12h8M8 15h5"/><circle cx="4" cy="5" r="1.4" fill="var(--surface-1)"/><circle cx="20" cy="5" r="1.4" fill="var(--surface-1)"/><circle cx="4" cy="19" r="1.4" fill="var(--surface-1)"/><circle cx="20" cy="19" r="1.4" fill="var(--surface-1)"/></svg></button>
+              </div>
+              <span class="msi-mouse-tool-separator" aria-hidden="true"></span>
+              <button class="msi-mouse-tool" type="button" id="msiMouseHelpToggle" aria-label="鼠标模式帮助" title="鼠标模式帮助" aria-expanded="false" aria-controls="msiMouseHelp"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 1 1 4.1 2.1c-1 .7-1.6 1.2-1.6 2.4M12 17h.01"/></svg></button>
+              <button class="msi-mouse-tool msi-mouse-tool-collapse" type="button" id="msiMouseToolsCollapse" aria-label="收起鼠标模式面板" title="收起鼠标模式面板" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 5 7 7-7 7M12 5l7 7-7 7"/></svg></button>
+              <div class="msi-mouse-help" id="msiMouseHelp" hidden>选择：点击事件查看详情<br>拖拽：移动泳道视图<br>高度：上下拖动调整行高<br>框选：拖动选取多个事件</div>
+              <span class="msi-mouse-status" id="msiMouseStatus" role="status" aria-live="polite"></span>
+            </div>
+
+            <!-- 泳道图 ↕ 底部详情栏 的分隔条:往上拖把详情栏拉高、往下拖压扁,双击回到 232px。
+                 详情栏收起时这条一起隐藏(见 initPaneResizers)。 -->
+            <div class="msi-resizer msi-resizer--h" id="msiFootResizer" role="separator"
+                 aria-orientation="horizontal" aria-label="调整详情栏高度" tabindex="0" hidden></div>
+
+            <!-- 进页面默认收起(is-collapsed 直接写在标记里,首帧就不展开,免得脚本跑完再跳一下);
+                 点泳道任务条或点页签才拉开,见 renderSelectionDetail / initSelectionPanel。 -->
+            <footer class="msi-content-foot is-collapsed" id="msiSelectionPanel" aria-expanded="false">
+              <!-- 头部一行两栏:左栏标题「选中详情」,右栏是四个页签(调用链 / 选中列表 / 系统视图 / 查找)
+                   加收起按钮。收起时只留这一行,body 整块隐藏。 -->
+              <div class="msi-foot-head">
+                <div class="msi-foot-head-left">
+                  <button class="msi-foot-title" id="msiDetailTitle" type="button">选中详情</button>
+                  <!-- 折叠左栏:图标里那条竖线画在左边(x=9),左半块就是「选中详情」这一栏,
+                       折起后整个图标水平镜像,方向跟着状态走。 -->
+                  <button class="msi-side-icon msi-foot-fold" id="msiDetailFold" type="button"
+                          aria-expanded="true" aria-controls="msiFootBody" title="折叠选中详情" aria-label="折叠选中详情">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg>
+                  </button>
+                </div>
+                <div class="msi-foot-tabs" role="tablist" aria-label="底部信息面板">
+                  <button class="msi-foot-tab is-active" type="button" role="tab" aria-selected="false" data-foot-tab="chain">调用链</button>
+                  <button class="msi-foot-tab" type="button" role="tab" aria-selected="false" data-foot-tab="list">选中列表</button>
+                  <button class="msi-foot-tab" type="button" role="tab" aria-selected="false" data-foot-tab="system">系统视图</button>
+                  <button class="msi-foot-tab" type="button" role="tab" aria-selected="false" data-foot-tab="find">查找</button>
+                  <button class="msi-foot-close" id="msiDetailClose" type="button" aria-label="展开详情栏" title="展开详情栏" aria-expanded="false">
+                    <svg class="msi-foot-close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+                    <svg class="msi-foot-expand-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"></path></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="msi-foot-body" id="msiFootBody">
+                <!-- 左栏:选中详情。key-value 竖排,value 长了就换行,不用省略号。 -->
+                <section class="msi-foot-left" aria-labelledby="msiDetailTitle">
+                  <span class="msi-foot-title-vert" aria-hidden="true">选中详情</span>
+                  <dl class="msi-basic-grid" id="msiTaskBasics" hidden></dl>
+                  <p class="msi-foot-empty" id="msiDetailEmpty">请选择泳道对象</p>
+                </section>
+                <!-- 右栏:页签内容区。「调用链」有选中就画调用流,没选中显示「请选择泳道对象」;
+                     其余三个页签还没做,统一显示「敬请期待」。文案由 activateFootTab 写入。 -->
+                <section class="msi-foot-right">
+                  <div class="msi-chain-flow" id="msiCallChain" hidden></div>
+                  <div class="msi-foot-placeholder" id="msiFootPlaceholder" hidden></div>
+                </section>
+              </div>
+            </footer>
+
+            </div>
+
+            <section class="msi-analysis-stage msi-memory" id="msiMemoryPanel" role="tabpanel" aria-label="内存分析" hidden>
+  <div class="msi-toolbar msi-memory-toolbar" role="group" aria-label="内存时间线工具栏">
+    <label class="msi-memory-range" for="msiMemoryRange">
+      <span>范围</span>
+      <input id="msiMemoryRange" type="range" min="0" max="1" value="1" disabled>
+      <output id="msiMemoryRangeValue" for="msiMemoryRange">加载中…</output>
+    </label>
+    <label class="msi-tb-search msi-memory-search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4-4"></path></svg>
+      <input id="msiMemoryAddressSearch" type="search" placeholder="搜索地址（十六进制）" aria-label="搜索内存地址" disabled>
+      <span id="msiMemoryAddressMatches" class="msi-memory-matches" aria-live="polite"></span>
+    </label>
+    <label class="msi-tb-search msi-memory-search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4-4"></path></svg>
+      <input id="msiMemoryFrameSearch" type="search" placeholder="搜索调用堆栈" aria-label="搜索调用堆栈" disabled>
+      <span id="msiMemoryFrameMatches" class="msi-memory-matches" aria-live="polite"></span>
+    </label>
+  </div>
+  <div class="msi-memory-charts">
+    <section class="msi-memory-chart-group" aria-labelledby="msiMemoryTimelineTitle">
+      <div class="msi-memory-chart-head"><h3 id="msiMemoryTimelineTitle">Active Memory Timeline</h3></div>
+      <div class="msi-memory-chart">
+        <iframe id="msiMemoryTimelineFrame" class="msi-memory-frame" title="PyTorch Active Memory Timeline" data-src="../memory-viz.html#timeline"></iframe>
+      </div>
+    </section>
+    <section class="msi-memory-chart-group" aria-labelledby="msiMemoryAllocatorTitle">
+      <div class="msi-memory-chart-head"><h3 id="msiMemoryAllocatorTitle">Allocator State History</h3></div>
+      <div class="msi-memory-chart">
+        <iframe id="msiMemoryAllocatorFrame" class="msi-memory-frame" title="PyTorch Allocator State History" data-src="../memory-viz.html#allocator"></iframe>
+      </div>
+    </section>
+  </div>
+  <footer class="msi-content-foot msi-memory-foot is-collapsed" id="msiMemoryFoot" aria-label="内存选中详情" aria-expanded="false">
+    <div class="msi-foot-head">
+      <div class="msi-foot-head-left"><button class="msi-foot-title msi-memory-foot-title" id="msiMemoryDetailTitle" type="button" aria-controls="msiMemoryFootBody" aria-expanded="false">选中详情</button></div>
+      <button class="msi-foot-close" id="msiMemoryDetailToggle" type="button" aria-label="展开详情栏" title="展开详情栏" aria-controls="msiMemoryFootBody" aria-expanded="false">
+        <svg class="msi-foot-close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+        <svg class="msi-foot-expand-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"></path></svg>
+      </button>
+    </div>
+    <div class="msi-memory-foot-body" id="msiMemoryFootBody"><div class="msi-memory-detail" id="msiMemoryDetail" aria-live="polite"></div></div>
+  </footer>
+</section>
+          </section>
+        </section>
+      <!-- 内容区 ↔ 智能对话面板 的分隔条:往左拖把对话面板拉宽、往右拖收窄,双击回到 480px。
+           面板收起或切成悬浮窗时这条一起隐藏(见 initPaneResizers)。 -->
+      <div class="msi-resizer msi-resizer--v" id="chatShellResizer" role="separator"
+           aria-orientation="vertical" aria-label="调整智能对话面板宽度" tabindex="0" hidden></div>
+
+      <!-- 智能对话:默认「挤入式」——作为 workarea 的第二列,和左边内容区形成左右关系,展开时把内容区
+               挤窄而不是盖在上面;点右上角悬浮窗图标(#trainChatFloatBtn)切成浮动抽屉(.is-floating)。
+               开关入口是右上角 #trainChatToggle,默认展开。逻辑见页尾内联脚本(原 js/training-chat-panel.js)。 -->
+      <aside class="wzh-chat-panel" id="trainChatPanel" aria-label="智能对话" aria-hidden="true">
+        <header class="wzh-chat-head">
+          <!-- 左上角品牌区同时是「切换 Agent」的入口(还原稿 src/pic/切换.png):
+               整行是一个按钮,点开在下方落一张 Agent 列表,选中项打勾并浮浅蓝底。 -->
+          <div class="wzh-chat-head-brand">
+            <button class="wzh-chat-head-title-row" id="trainChatAgentBtn" type="button"
+                    aria-haspopup="listbox" aria-expanded="false" title="切换 Agent">
+              <img class="wzh-chat-head-logo" id="trainChatAgentLogo" src="../../src/pic/icon/msinsightbotAvatar.png" data-icon="msinsightbotAvatar.png" alt="">
+              <span class="wzh-chat-head-title" id="trainChatAgentName">MS Insight Native</span>
+              <img class="wzh-chat-head-caret" src="../../src/pic/icon/select.svg" alt="">
+            </button>
+            <div class="wzh-chat-agent-pop" id="trainChatAgentPop" hidden>
+              <p class="wzh-chat-agent-pop-title">切换 Agent</p>
+              <div class="wzh-chat-agent-list" id="trainChatAgentList" role="listbox" aria-label="切换 Agent"></div>
+              <div class="wzh-chat-agent-pop-foot">
+                <button class="wzh-chat-agent-foot-btn" id="trainChatAgentAddBtn" type="button">添加 Agent</button>
+                <button class="wzh-chat-agent-foot-btn" id="trainChatAgentRefreshBtn" type="button">刷新</button>
+              </div>
+            </div>
+          </div>
+          <div class="wzh-chat-head-actions">
+            <button class="wzh-chat-head-btn" id="trainChatNewBtn" type="button" aria-label="新建对话" title="新建对话">
+              <img src="../../src/pic/icon/newchat.svg" alt="">
+            </button>
+            <div class="wzh-chat-head-menu" id="trainChatHistoryWrap">
+              <button class="wzh-chat-head-btn" id="trainChatHistoryBtn" type="button" aria-label="历史对话" title="历史对话"
+                      aria-haspopup="menu" aria-expanded="false" aria-controls="trainChatHistoryPop">
+                <img src="../../src/pic/icon/history.svg" alt="">
+              </button>
+              <div class="wzh-chat-history-pop" id="trainChatHistoryPop" role="menu" aria-label="历史对话" hidden>
+                <p class="wzh-chat-history-pop-title">历史对话</p>
+                <button class="wzh-chat-history-item" id="trainChatHistoryProfileBtn" type="button" role="menuitem"
+                        title="profile_dir 单机多卡性能分析">
+                  <img src="../../src/pic/icon/history.svg" alt="">
+                  <span class="wzh-chat-history-item-text">profile_dir 单机多卡性能分析</span>
+                </button>
+              </div>
+            </div>
+            <button class="wzh-chat-head-btn" id="trainChatKeyBtn" type="button" aria-label="设置 DeepSeek API Key（未配置）" title="设置 DeepSeek API Key（未配置）">
+              <img class="wzh-chat-key-icon" src="../../src/pic/icon/setting.svg" alt="">
+            </button>
+            <button class="wzh-chat-head-btn" id="trainChatFloatBtn" type="button" aria-label="悬浮窗口" title="悬浮窗口">
+              <img src="../../src/pic/icon/floatingwindow.svg" alt="">
+            </button>
+            <button class="wzh-chat-head-btn" id="trainChatCloseBtn" type="button" aria-label="关闭智能对话" title="关闭">
+              <img src="../../src/pic/icon/close.svg" alt="">
+            </button>
+          </div>
+        </header>
+
+        <!-- 会话主题行:发出第一个问题后才出现,钉在标题栏与消息区之间(不随消息滚动)。
+             一次会话往往要问好几轮,置顶问题卡片只记得住"最近这一问",而"这次会话在解决什么"
+             需要一直挂在最上面;悬浮时整行浮出底色和铅笔,点一下就地改名(见 initSessionTitle)。 -->
+        <div class="wzh-chat-session" id="trainChatSession" hidden>
+          <button class="wzh-chat-session-btn" id="trainChatSessionBtn" type="button" title="重命名会话主题">
+            <span class="wzh-chat-session-text" id="trainChatSessionText"></span>
+            <img class="wzh-chat-session-pen" src="../../src/pic/icon/edit.svg" alt="">
+          </button>
+          <input class="wzh-chat-session-input" id="trainChatSessionInput" type="text" maxlength="40"
+                 aria-label="会话主题" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" hidden>
+        </div>
+
+        <div class="wzh-chat-body">
+          <div class="wzh-chat-messages" id="trainChatMessages">
+            <div class="wzh-chat-welcome">
+              <div class="wzh-chat-welcome-hero">
+                <canvas class="wzh-chat-welcome-dots" aria-hidden="true"></canvas>
+                <img class="wzh-chat-welcome-logo" src="../../src/pic/icon/msinsightbotAvatar.png" alt="">
+                <div class="wzh-chat-welcome-text">你好，我是性能分析助手</div>
+              </div>
+              <div class="wzh-chat-guide-list">
+                <button class="wzh-chat-guide-card" type="button" data-scenario="module-statistic-ready" data-prompt="帮我统计拆分模型每一层的耗时，MoE模块每个算子耗时，所有层平均下来MoE模块耗时多少">
+                  <img class="wzh-chat-guide-icon" src="../../src/pic/icon/guidecard1.png" alt="">
+                  <span class="wzh-chat-guide-text">
+                    <span class="wzh-chat-guide-title">内存优化诊断分析</span>
+                    <span class="wzh-chat-guide-sub">
+                      <span class="wzh-chat-guide-tag"><img src="../../src/pic/icon/quote.svg" alt="">Profiling数据</span>
+                      <span class="wzh-chat-guide-desc">智能分析复用策略与分块方案</span>
+                    </span>
+                  </span>
+                </button>
+                <button class="wzh-chat-guide-card" type="button" data-prompt="快慢卡诊断分析：对比通信/计算差异并帮我定位慢卡">
+                  <img class="wzh-chat-guide-icon" src="../../src/pic/icon/guidecard2.png" alt="">
+                  <span class="wzh-chat-guide-text">
+                    <span class="wzh-chat-guide-title">快慢卡诊断分析</span>
+                    <span class="wzh-chat-guide-sub">
+                      <span class="wzh-chat-guide-tag"><img src="../../src/pic/icon/quote.svg" alt="">快慢卡</span>
+                      <span class="wzh-chat-guide-desc">快速对比通信/计算差异并定位慢卡</span>
+                    </span>
+                  </span>
+                </button>
+                <button class="wzh-chat-guide-card" type="button" data-scenario="knowledge" data-prompt="帮我统计拆分模型每一层的耗时，MoE模块每个算子耗时，所有层平均下来MoE模块耗时多少">
+                  <img class="wzh-chat-guide-icon" src="../../src/pic/icon/guidecard3.png" alt="">
+                  <span class="wzh-chat-guide-text">
+                    <span class="wzh-chat-guide-title">咨询领域知识，增强RAG的对话</span>
+                    <span class="wzh-chat-guide-sub">
+                      <span class="wzh-chat-guide-desc">输入问题，检索知识库并生成排查步骤</span>
+                    </span>
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- 回到底部:零高度容器,按钮浮在输入框正上方居中;思考中变成跳动的三个点 -->
+          <div class="wzh-chat-jump-wrap">
+            <button class="wzh-chat-jump-btn" id="trainChatJumpBtn" type="button" title="回到底部" aria-label="回到底部">
+              <svg class="wzh-chat-jump-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M19 12l-7 7-7-7"></path></svg>
+              <span class="wzh-chat-jump-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            </button>
+          </div>
+          <!-- 排队消息:回答期间继续发问不打断当前这轮,新问题排在这里,答完一条自动接上一条 -->
+          <div class="wzh-chat-queue" id="trainChatQueue" hidden>
+            <div class="wzh-chat-queue-card">
+              <div class="wzh-chat-queue-head">
+                <button class="wzh-chat-queue-toggle" id="trainChatQueueToggle" type="button" aria-expanded="true" title="收起排队消息">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+                  <span class="wzh-chat-queue-title" id="trainChatQueueTitle">0 条排队消息</span>
+                </button>
+                <button class="wzh-chat-queue-clear" id="trainChatQueueClear" type="button">全部清除</button>
+              </div>
+              <div class="wzh-chat-queue-listwrap">
+                <ul class="wzh-chat-queue-list" id="trainChatQueueList"></ul>
+              </div>
+            </div>
+          </div>
+          <div class="wzh-chat-input-bar">
+            <!-- 描边流光,回答期间由 .is-flowing 点亮,见 syncInputFlow。
+                 rx=23.5 = 输入栏的 24px 圆角减去描边中心线那 0.5px 内移。 -->
+            <svg class="wzh-chat-input-glow" aria-hidden="true" focusable="false">
+              <rect class="wzh-chat-input-glow-halo" width="100%" height="100%" rx="23.5" pathLength="100"></rect>
+              <rect class="wzh-chat-input-glow-core" width="100%" height="100%" rx="23.5" pathLength="100"></rect>
+            </svg>
+            <div class="wzh-chat-anchor-chip" id="trainChatAnchorChip" title="当前对话已锚定到该任务，提问无需再报任务名" aria-hidden="true">
+              <img src="../../src/pic/icon/folder.svg" alt="">
+              <span id="trainChatAnchorName"></span>
+              <button class="wzh-chat-anchor-close" id="trainChatAnchorCloseBtn" type="button" title="取消锚定" aria-label="取消锚定">
+                <img src="../../src/pic/icon/close.svg" alt="">
+              </button>
+            </div>
+            <!-- 高亮层浮在 textarea 之上(见 .wzh-chat-input-hl):textarea 自己的文字设为透明,
+                 真正看到的字由高亮层画,# 开头的上下文才能包成蓝色标签。两层字体度量必须完全一致。 -->
+            <div class="wzh-chat-input-wrap">
+              <!-- autocomplete=off:刷新时别让浏览器把上一次的草稿恢复回来。textarea 的字是透明的
+                   (真正看到的字由高亮层画),恢复进来的内容看不见,却会把输入框撑高 -->
+              <textarea class="wzh-chat-input" id="trainChatInput" placeholder="输入 # 添加上下文，输入 / 使用指令" rows="2" autocomplete="off"></textarea>
+              <div class="wzh-chat-input-hl" id="trainChatInputHl" aria-hidden="true"></div>
+            </div>
+            <!-- 输入 # 弹出的上下文选择框,内容由 initCtxPicker 按 CTX_FILES 渲染 -->
+            <div class="wzh-chat-ctx-pop" id="trainChatCtxPop" role="listbox" aria-label="选择性能落盘数据"></div>
+            <!-- 输入 / 弹出的指令选择框,交互与 # 上下文选择框一致 -->
+            <div class="wzh-chat-ctx-pop" id="trainChatCommandPop" role="listbox" aria-label="选择指令"></div>
+            <div class="wzh-chat-composer-toolbar">
+              <!-- 模式选择:交互与模型选择一致,默认 Build,可切换为 Plan -->
+              <div class="wzh-chat-model-wrap">
+                <button class="wzh-chat-tool" id="trainChatModeBtn" type="button" title="切换模式（当前 Build）"
+                        aria-haspopup="listbox" aria-expanded="false">
+                  <img src="../../src/pic/icon/Agent.svg" alt=""><span id="trainChatModeName">Build</span>
+                </button>
+                <div class="wzh-chat-model-pop" id="trainChatModePop" hidden>
+                  <p class="wzh-chat-agent-pop-title">切换模式</p>
+                  <div class="wzh-chat-agent-list" id="trainChatModeList" role="listbox" aria-label="切换模式"></div>
+                </div>
+              </div>
+              <!-- 模型选择:弹层往上开(输入框已经贴着面板底了),内容由 initModelSwitch
+                   按当前 Agent 的 models 渲染,所以每次打开都是这个 Agent 自己的型号 -->
+              <div class="wzh-chat-model-wrap">
+                <button class="wzh-chat-tool" id="trainChatModelBtn" type="button" title="切换模型"
+                        aria-haspopup="listbox" aria-expanded="false">
+                  <img src="../../src/pic/icon/model.svg" alt="">MS Insight Native-v4
+                </button>
+                <div class="wzh-chat-model-pop" id="trainChatModelPop" hidden>
+                  <p class="wzh-chat-agent-pop-title">切换模型</p>
+                  <div class="wzh-chat-agent-list" id="trainChatModelList" role="listbox" aria-label="切换模型"></div>
+                </div>
+              </div>
+              <div class="wzh-chat-composer-actions">
+                <button class="wzh-chat-clean-btn" id="trainChatCleanBtn" type="button" title="清空输入" aria-label="清空输入" hidden>
+                  <span class="wzh-chat-clean-icon" aria-hidden="true"></span>
+                </button>
+                <span class="wzh-chat-clean-divider" id="trainChatCleanDivider" aria-hidden="true" hidden></span>
+                <button class="wzh-chat-mic-btn" type="button" title="语音输入" aria-label="语音输入">
+                  <img src="../../src/pic/icon/voice.svg" alt="">
+                </button>
+                <button class="wzh-chat-send-btn" id="trainChatSendBtn" type="button" title="发送" aria-label="发送">
+                  <img src="../../src/pic/icon/sent.svg" alt="">
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="msi-resizer msi-resizer--v wzh-chat-viz-resizer" id="trainChatVizResizer"
+             role="separator" aria-orientation="vertical" aria-label="调整对话与可视化宽度" tabindex="0" hidden></div>
+        <section class="wzh-chat-viz-pane" id="trainChatVizPane" aria-label="回答信息可视化" hidden>
+          <header class="wzh-chat-viz-head">
+            <div class="wzh-chat-viz-tabs" id="trainChatVizTabs" role="tablist" aria-label="已打开的信息可视化"></div>
+            <button class="wzh-chat-viz-close" id="trainChatVizCloseBtn" type="button" aria-label="关闭全部信息可视化" title="关闭全部信息可视化">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+            </button>
+          </header>
+          <div class="wzh-chat-viz-viewport" id="trainChatVizViewport"></div>
+        </section>
+      </aside>
+      </div>
+    </div>
+  </section>
+
+  <script defer src="../theme.js"></script>
+  <script defer src="../timeline-colors.js"></script>
+
+  <!-- ── MindStudio Insight 工作台:左树(采集目录) + 内容区(泳道树 + 泳道) ── -->
+  <script defer src="../overview.js"></script>
+  <script defer src="../workbench.js"></script>
+
+  <!-- ── 智能对话面板逻辑(原 js/training-chat-panel.js,已内联) ── -->
+  <script defer src="../assistant.js"></script>
+
+  <!-- ── 窗口控制:三条分隔条的拖动逻辑 ── -->
+  <script defer src="../resizers.js"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<section class="msi-analysis-stage msi-memory" id="msiMemoryPanel" role="tabpanel" aria-label="内存分析" hidden>
+  <div class="msi-toolbar msi-memory-toolbar" role="group" aria-label="内存时间线工具栏">
+    <label class="msi-memory-range" for="msiMemoryRange">
+      <span>范围</span>
+      <input id="msiMemoryRange" type="range" min="0" max="1" value="1" disabled>
+      <output id="msiMemoryRangeValue" for="msiMemoryRange">加载中…</output>
+    </label>
+    <label class="msi-tb-search msi-memory-search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4-4"></path></svg>
+      <input id="msiMemoryAddressSearch" type="search" placeholder="搜索地址（十六进制）" aria-label="搜索内存地址" disabled>
+      <span id="msiMemoryAddressMatches" class="msi-memory-matches" aria-live="polite"></span>
+    </label>
+    <label class="msi-tb-search msi-memory-search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4-4"></path></svg>
+      <input id="msiMemoryFrameSearch" type="search" placeholder="搜索调用堆栈" aria-label="搜索调用堆栈" disabled>
+      <span id="msiMemoryFrameMatches" class="msi-memory-matches" aria-live="polite"></span>
+    </label>
+  </div>
+  <div class="msi-memory-charts">
+    <section class="msi-memory-chart-group" aria-labelledby="msiMemoryTimelineTitle">
+      <div class="msi-memory-chart-head"><h3 id="msiMemoryTimelineTitle">Active Memory Timeline</h3></div>
+      <div class="msi-memory-chart">
+        <iframe id="msiMemoryTimelineFrame" class="msi-memory-frame" title="PyTorch Active Memory Timeline" data-src="../memory-viz.html#timeline"></iframe>
+      </div>
+    </section>
+    <section class="msi-memory-chart-group" aria-labelledby="msiMemoryAllocatorTitle">
+      <div class="msi-memory-chart-head"><h3 id="msiMemoryAllocatorTitle">Allocator State History</h3></div>
+      <div class="msi-memory-chart">
+        <iframe id="msiMemoryAllocatorFrame" class="msi-memory-frame" title="PyTorch Allocator State History" data-src="../memory-viz.html#allocator"></iframe>
+      </div>
+    </section>
+  </div>
+  <footer class="msi-content-foot msi-memory-foot is-collapsed" id="msiMemoryFoot" aria-label="内存选中详情" aria-expanded="false">
+    <div class="msi-foot-head">
+      <div class="msi-foot-head-left"><button class="msi-foot-title msi-memory-foot-title" id="msiMemoryDetailTitle" type="button" aria-controls="msiMemoryFootBody" aria-expanded="false">选中详情</button></div>
+      <button class="msi-foot-close" id="msiMemoryDetailToggle" type="button" aria-label="展开详情栏" title="展开详情栏" aria-controls="msiMemoryFootBody" aria-expanded="false">
+        <svg class="msi-foot-close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+        <svg class="msi-foot-expand-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"></path></svg>
+      </button>
+    </div>
+    <div class="msi-memory-foot-body" id="msiMemoryFootBody"><div class="msi-memory-detail" id="msiMemoryDetail" aria-live="polite"></div></div>
+  </footer>
+</section>

@@ -1,0 +1,2394 @@
+/**
+ * ================================================================================
+ * MemoryViz.js - PyTorch Memory Visualization Tool
+ * ================================================================================
+ *
+ * OVERVIEW:
+ * ---------
+ * This file contains the core visualization logic for PyTorch's memory profiler.
+ * It renders memory allocation timelines, stack traces, and provides interactive
+ * exploration of memory snapshots captured during model execution.
+ *
+ * KEY FEATURES:
+ * - Multiple visualization tabs/views for different memory analysis perspectives
+ * - Interactive stack trace display (supports both click and hover modes)
+ * - Zoom and brush controls for navigating large memory timelines
+ * - Support for loading memory snapshot files (.pickle format)
+ *
+ * ================================================================================
+ * TESTING INSTRUCTIONS FOR ENGINEERS & AGENTS
+ * ================================================================================
+ *
+ * 1. LOCAL TESTING SETUP:
+ *    - Create a simple HTML file that references this JS file:
+ *
+ *      <!DOCTYPE html>
+ *      <html>
+ *      <head><title>MemoryViz Test</title></head>
+ *      <body>
+ *        <script type="module" src="MemoryViz.js"></script>
+ *      </body>
+ *      </html>
+ *
+ *    - Serve locally using: python3 -m http.server 8888
+ *    - Open http://localhost:8888 in your browser
+ *
+ * 2. WHAT TO TEST:
+ *    - Ensure ALL tabs/views render correctly and switch properly
+ *    - Verify BOTH interaction modes work:
+ *      * Click mode: stack traces appear on click
+ *      * Hover mode: stack traces appear on mouseover
+ *    - Test zoom and brush controls for timeline navigation
+ *    - Verify memory allocation blocks are rendered and interactive
+ *
+ * 3. TEST DATA REQUIREMENTS:
+ *    - DO NOT just test with small dummy .pickle files
+ *    - Use realistic, decent-sized .pickle files (10-100+ MB range)
+ *    - Large files stress-test rendering performance and memory handling
+ *    - Test with snapshots from real model training/inference runs
+ *
+ * 4. COMMON ISSUES TO WATCH FOR:
+ *    - Performance degradation with large snapshots
+ *    - Stack trace popups not appearing or positioning incorrectly
+ *    - Tab switching not updating the visualization properly
+ *    - Zoom/brush state not persisting across interactions
+ *
+ * ================================================================================
+ */
+
+'use strict';
+
+import * as d3 from "d3";
+import {axisLeft} from "d3-axis";
+import {scaleLinear} from "d3-scale";
+import {zoom, zoomIdentity} from "d3-zoom";
+import {brushX} from "d3-brush";
+import {process_alloc_data, isPrivatePoolId, formatSize, formatAddr,
+        elideRepeats, frameFilter, format_user_metadata,
+        format_annotations, format_forward_frames,
+        format_frames} from "./process_alloc_data.js";
+
+// Global configuration for trace interaction mode
+// 'hover' = show trace on hover (default)
+// 'click' = show trace on click
+let traceInteractionMode = 'hover';
+
+function setTraceInteractionMode(mode) {
+  if (mode === 'click' || mode === 'hover') {
+    traceInteractionMode = mode;
+  }
+}
+
+function getTraceInteractionMode() {
+  return traceInteractionMode;
+}
+
+let linkedSelectionHandler = null;
+window.addEventListener('msi-memory-link-target', event => {
+  linkedSelectionHandler?.(event.detail);
+});
+function publishLinkedSelection(selection) {
+  window.dispatchEvent(new CustomEvent('msi-memory-link-selection', {detail: selection}));
+}
+
+// Share the timeline's 18 operator hues. CSS variables keep existing plots in
+// sync when the parent switches theme, without rebuilding the snapshot.
+const tracePaletteHues = [4, 155, 285, 46, 212, 342, 125, 265, 32, 198, 325, 88, 245, 18, 185, 305, 58, 228];
+const tracePalette = tracePaletteHues.map((hue, index) =>
+  `var(--msi-trace-${String(index + 1).padStart(2, '0')}-bg, oklch(82% .095 ${hue}))`,
+);
+
+function version_space() {
+  const version = {};
+  return (addr, increment) => {
+    if (!(addr in version)) {
+      version[addr] = 0;
+    }
+    const r = version[addr];
+    if (increment) {
+      version[addr]++;
+    }
+    return r;
+  };
+}
+
+function Segment(addr, size, stream, frames, version, user_metadata, segment_pool_id) {
+  return {addr, size, stream, version, frames, user_metadata, segment_pool_id};
+}
+
+function Block(addr, size, requested_size, frames, free_requested, version, user_metadata, annotations) {
+  return {addr, size, requested_size, frames, free_requested, version, user_metadata, annotations};
+}
+
+function EventSelector(outer, events, stack_info, memory_view) {
+  const events_div = outer
+    .append('div')
+    .attr('class', 'msi-memory-events')
+    .attr(
+      'style',
+      'grid-column: 1; grid-row: 1; overflow: auto; font-family: monospace; width: 320px; margin: 0 16px 0 8px',
+    );
+
+  const rows = events.map(formatEventColumns);
+  const allocByBlock = new Map();
+  const freeByBlock = new Map();
+  const blockKey = event => `${String(event.addr)}:${event.version}`;
+  events.forEach((event, index) => {
+    if (event.addr == null || event.version == null) return;
+    if (event.action === 'alloc') allocByBlock.set(blockKey(event), index);
+    if (event.action === 'free' || event.action === 'free_completed') {
+      freeByBlock.set(blockKey(event), index);
+    }
+  });
+  function pairedEventIndex(event, index) {
+    if (event.addr == null || event.version == null) return null;
+    const key = blockKey(event);
+    if (event.action === 'alloc') {
+      const target = freeByBlock.get(key);
+      return target != null && target > index ? target : null;
+    }
+    if (event.action === 'free' || event.action === 'free_completed') {
+      const target = allocByBlock.get(key);
+      return target != null && target < index ? target : null;
+    }
+    return null;
+  }
+  const maxChars = (field) => Math.max(1, ...rows.map(row => row[field].length));
+  events_div
+    .style('--msi-memory-action-width', `${maxChars('action')}ch`)
+    .style('--msi-memory-address-width', `${Math.max(1, ...rows.map(row =>
+      Math.max(row.address.length, row.stream.length)))}ch`)
+    .style('--msi-memory-size-width', `${Math.max(1, ...rows.map(row =>
+      Math.max(row.size.length, row.bytes.length, row.deviceFree.length)))}ch`);
+
+  const rowHeight = 35;
+  const overscan = 14;
+  const topSpacer = events_div.append('div').attr('class', 'msi-memory-event-spacer');
+  const rowWindow = events_div.append('div').attr('class', 'msi-memory-event-window');
+  const bottomSpacer = events_div.append('div').attr('class', 'msi-memory-event-spacer');
+  let selected_event_idx = null;
+  let renderedStart = -1;
+  let renderedEnd = -1;
+
+  function renderRows(force = false) {
+    const scroller = events_div.node();
+    const firstVisible = Math.floor(scroller.scrollTop / rowHeight);
+    const lastVisible = Math.ceil((scroller.scrollTop + scroller.clientHeight) / rowHeight);
+    if (!force && firstVisible >= renderedStart + overscan / 2 &&
+        lastVisible <= renderedEnd - overscan / 2) return;
+    const start = Math.max(0, firstVisible - overscan);
+    const end = Math.min(events.length, lastVisible + overscan);
+    rowWindow.selectAll('pre').remove();
+    rowWindow.selectAll('pre')
+      .data(events.slice(start, end))
+      .enter()
+      .append('pre')
+      .attr('class', event => event.idx === selected_event_idx
+        ? 'msi-memory-event-row msi-memory-event-selected' : 'msi-memory-event-row')
+      .attr('title', formatEvent)
+      .each(function (event) {
+        const row = d3.select(this);
+        const parts = rows[event.idx];
+        row.append('span').text(parts.action);
+        const address = row.append('span').attr('class', 'msi-memory-event-address');
+        address.append('span').text(parts.address);
+        if (parts.stream) address.append('span').text(parts.stream);
+        const size = row.append('span').attr('class', 'msi-memory-event-size');
+        size.append('span').text(parts.size);
+        if (parts.bytes) size.append('span').text(parts.bytes);
+        if (parts.deviceFree) size.append('span').text(parts.deviceFree);
+        if (event.action === 'alloc' || event.action === 'free' || event.action === 'free_completed') {
+          const target = pairedEventIndex(event, event.idx);
+          const isAllocation = event.action === 'alloc';
+          const label = isAllocation ? '跳转到对应的 free 记录' : '跳转到对应的 alloc 记录';
+          row.append('button')
+            .attr('type', 'button')
+            .attr('class', 'msi-memory-event-jump')
+            .attr('data-target-event', target == null ? null : target)
+            .attr('aria-label', target == null ? `${label}（未记录）` : label)
+            .attr('title', target == null ? '快照中没有对应记录' : `${label} · 第 ${target + 1} 条`)
+            .property('disabled', target == null)
+            .text(isAllocation ? '○' : '●');
+        }
+      });
+    topSpacer.style('height', `${start * rowHeight}px`);
+    bottomSpacer.style('height', `${(events.length - end) * rowHeight}px`);
+    renderedStart = start;
+    renderedEnd = end;
+  }
+
+  function rowForIndex(index) {
+    return index >= renderedStart && index < renderedEnd
+      ? rowWindow.node().children[index - renderedStart] : null;
+  }
+
+  function showIndex(index, center = false) {
+    const scroller = events_div.node();
+    const top = index * rowHeight;
+    const bottom = top + rowHeight;
+    if (center) {
+      scroller.scrollTop = top - (scroller.clientHeight - rowHeight) / 2;
+    } else if (top < scroller.scrollTop) scroller.scrollTop = top;
+    else if (bottom > scroller.scrollTop + scroller.clientHeight) {
+      scroller.scrollTop = bottom - scroller.clientHeight;
+    }
+    renderRows();
+  }
+
+  const es = {
+    clear() {
+      const selected = selected_event_idx == null ? null : rowForIndex(selected_event_idx);
+      if (selected) d3.select(selected).classed('msi-memory-event-selected', false);
+      selected_event_idx = null;
+    },
+    select(idx, publish = false, block = null, center = false) {
+      if (selected_event_idx !== null) {
+        const selected_event = rowForIndex(selected_event_idx);
+        if (selected_event) d3.select(selected_event).classed('msi-memory-event-selected', false);
+      }
+      if (idx !== null) {
+        selected_event_idx = idx;
+        showIndex(idx, center);
+        const div = d3.select(rowForIndex(idx));
+        div.classed('msi-memory-event-selected', true);
+        const event = events[idx];
+        const beforeRemoval = ['free', 'free_completed', 'segment_free', 'segment_unmap'].includes(event.action);
+        const [reserved, allocated] = memory_view.draw(beforeRemoval ? idx - 1 : idx);
+        const target = block || event;
+        if (event.action.startsWith('segment_') || target.action?.startsWith('segment_')) {
+          memory_view.highlightSegment(target.addr, target.version);
+        } else {
+          memory_view.highlightBlock(target.addr, target.version);
+        }
+        const enter = () => eventStack(div.datum(), allocated, reserved);
+        stack_info.highlight(enter);
+        if (publish) {
+          publishLinkedSelection({
+            eventIndex: idx,
+            addr: event.addr == null ? null : String(event.addr),
+            version: event.version,
+            size: event.size,
+            action: event.action,
+          });
+        }
+      } else {
+        memory_view.draw(0);
+      }
+      selected_event_idx = idx;
+    },
+  };
+  d3.select('body').on('keydown', event => {
+    const key = event.key;
+    const actions = {ArrowDown: 1, ArrowUp: -1};
+    if (selected_event_idx !== null && key in actions) {
+      const new_idx = selected_event_idx + actions[key];
+      es.select(Math.max(0, Math.min(new_idx, events.length - 1)), true);
+      event.preventDefault();
+    }
+  });
+
+  events_div.on('click.msi-memory-jump', function (event) {
+    const button = event.target.closest('.msi-memory-event-jump');
+    if (!button || !this.contains(button) || button.disabled) return;
+    event.stopPropagation();
+    es.select(Number(button.dataset.targetEvent), true, null, true);
+  });
+  stack_info.registerEventRows(
+    events_div,
+    t => eventStack(t.datum()),
+    d => es.select(d.datum().idx, true),
+  );
+
+  let scrollFrame = null;
+  events_div.on('scroll.msi-memory-rows', () => {
+    if (scrollFrame !== null) return;
+    scrollFrame = window.requestAnimationFrame(() => {
+      scrollFrame = null;
+      renderRows();
+    });
+  });
+  renderRows(true);
+
+  return es;
+}
+
+function formatEvent(event) {
+  const stream =
+    event.stream === null ? '' : `\n              (stream ${event.stream})`;
+  switch (event.action) {
+    case 'oom':
+      return `OOM (requested ${formatSize(event.size)}, Device has ${formatSize(
+        event.device_free,
+      )} memory free)${stream}`;
+    case 'snapshot':
+      return 'snapshot';
+    default:
+      return `${event.action.padEnd(14)} ${formatAddr(event).padEnd(
+        18,
+      )} ${formatSize(event.size)}${stream}`;
+  }
+}
+
+function formatEventColumns(event) {
+  if (event.action === 'snapshot') return {action: 'snapshot', address: '', size: '', bytes: '', stream: '', deviceFree: ''};
+  const formattedSize = formatSize(event.size);
+  const separator = formattedSize.indexOf(' (');
+  const stream = event.stream == null ? '' : `(stream ${event.stream})`;
+  return {
+    action: event.action === 'oom' ? 'OOM' : event.action,
+    address: event.action === 'oom' ? '' : formatAddr(event),
+    size: separator < 0 ? formattedSize : formattedSize.slice(0, separator),
+    bytes: separator < 0 ? '' : formattedSize.slice(separator + 1),
+    stream,
+    deviceFree: event.action === 'oom' && event.device_free != null
+      ? `device free ${formatSize(event.device_free, false)}` : '',
+  };
+}
+
+function eventStack(e, allocated, reserved) {
+  let event = formatEvent(e);
+  if (reserved !== undefined) {
+    event = `(${formatSize(allocated)} allocated / ${formatSize(
+      reserved,
+    )} reserved)\n${event}`;
+  }
+  let user_metadata_str = format_user_metadata(e.user_metadata);
+  if (e.internal_metadata) {
+    const internal_str = `Internal Metadata:\n  ${e.internal_metadata}`;
+    user_metadata_str += (user_metadata_str ? '\n' : '') + internal_str;
+  }
+  const frames_str = format_frames(e.frames);
+  const forward_frames_str = format_forward_frames(e.forward_frames);
+  return event + '\n' + (user_metadata_str ? user_metadata_str + '\n' : '') + frames_str + forward_frames_str;
+}
+
+function hashCode(num) {
+  const numStr = num.toString();
+  let hash = 0;
+  for (let i = 0; i < numStr.length; i++) {
+    const charCode = numStr.charCodeAt(i);
+    hash = (hash << 5) - hash + charCode;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return hash;
+}
+
+function addStroke(d) {
+  d.attr('stroke', 'var(--msi-viz-accent, #0077ff)')
+    .attr('stroke-width', '2')
+    .attr('vector-effect', 'non-scaling-stroke');
+}
+
+function removeStroke(d) {
+  d.attr('stroke', '');
+}
+
+function calculate_fragmentation(blocks, sorted_segments) {
+  const sorted_blocks = Object.values(blocks).sort((a, b) => {
+    // See Note [Sort BigInt and Number Safely]
+    if (a.addr === b.addr) return 0;
+    return a.addr < b.addr ? -1 : 1;
+  });
+  let block_i = 0;
+  let total_size = 0;
+  let sum_squared_free = 0;
+  for (const seg of sorted_segments) {
+    let addr = seg.addr;
+    total_size += seg.size;
+    // See Note [BigInt and Number Safe Arithmetic]
+    const seg_end =
+      seg.addr + (typeof seg.addr === "bigint" ? BigInt(seg.size) : seg.size);
+    while (
+      block_i < sorted_blocks.length &&
+      sorted_blocks[block_i].addr < seg_end
+    ) {
+      const block = sorted_blocks[block_i];
+      if (block.addr > addr) {
+        sum_squared_free += Number(block.addr - addr) ** 2;
+      }
+      addr =
+        block.addr + (typeof block.addr === "bigint" ? BigInt(block.size) : block.size);
+      block_i += 1;
+    }
+    if (addr < seg_end) {
+      sum_squared_free += Number(seg_end - addr) ** 2;
+    }
+  }
+  console.log(sum_squared_free / total_size ** 2);
+}
+
+function MemoryView(outer, stack_info, snapshot, device, onSelectBlock) {
+  const svg = outer
+    .append('svg')
+    .attr('class', 'msi-memory-allocator-plot')
+    .attr('style', 'grid-column: 2; grid-row: 1; width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: hidden;')
+    .attr('viewBox', '0 0 200 100')
+    .attr('preserveAspectRatio', 'none');
+  const g = svg.append('g');
+  const seg_zoom = zoom();
+  seg_zoom.on('zoom', (event) => {
+    g.attr('transform', event.transform);
+  });
+  svg.call(seg_zoom);
+
+  const sorted_segments = [];
+  const block_map = {};
+  for (const seg of snapshot.segments) {
+    if (seg.device !== device) {
+      continue;
+    }
+    sorted_segments.push(
+      Segment(
+        seg.address,
+        seg.total_size,
+        seg.stream,
+        seg.frames || [],
+        seg.version,
+        seg.user_metadata,
+        seg.segment_pool_id,
+      ),
+    );
+    for (const b of seg.blocks) {
+      if (b.state !== 'active_pending_free' && b.state !== 'active_allocated') {
+        continue;
+      }
+      block_map[b.addr] = Block(
+        b.addr,
+        b.size,
+        b.requested_size,
+        b.frames,
+        b.state === 'active_pending_free',
+        b.version,
+        b.user_metadata,
+      );
+    }
+  }
+  // Attach post-facto annotations ('annotate' trace events) to the blocks
+  // that are live at snapshot time. Annotations for an address reset when
+  // that address is reused by a new alloc.
+  const annotation_map = {};
+  for (const event of snapshot.device_traces[device] ?? []) {
+    if (event.action === 'alloc') {
+      delete annotation_map[event.addr];
+    } else if (event.action === 'annotate') {
+      (annotation_map[event.addr] ??= []).push(event.user_metadata);
+    }
+  }
+  for (const addr in annotation_map) {
+    if (addr in block_map) {
+      block_map[addr].annotations = annotation_map[addr];
+    }
+  }
+  sorted_segments.sort((x, y) => {
+    // Note [Sort BigInt and Number Safely]
+    // x.addr and y.addr may be BigInt, so subtracting them directly can cause
+    // errors. Use explicit comparison instead to safely handle both BigInt and
+    // Number.
+    if (x.addr === y.addr) return 0;
+    return x.addr < y.addr ? -1 : 1;
+  });
+
+  function simulate_memory(idx) {
+    // create a copy of segments because we edit size properties below
+    const l_segments = sorted_segments.map(x => {
+      return {...x};
+    });
+    const l_block_map = {...block_map};
+
+    function map_segment(merge, seg) {
+      let idx = l_segments.findIndex(e => e.addr > seg.addr);
+      if (!merge) {
+        l_segments.splice(idx, 0, seg);
+        return;
+      }
+      if (idx === -1) {
+        idx = l_segments.length;
+      }
+      l_segments.splice(idx, 0, seg);
+      if (idx + 1 < l_segments.length) {
+        const next = l_segments[idx + 1];
+        // See Note [BigInt and Number Safe Arithmetic]
+        const seg_end =
+          seg.addr + (typeof seg.addr === "bigint" ? BigInt(seg.size) : seg.size);
+        if (seg_end === next.addr && seg.stream === next.stream) {
+          seg.size += next.size;
+          l_segments.splice(idx + 1, 1);
+        }
+      }
+      if (idx > 0) {
+        const prev = l_segments[idx - 1];
+        const prev_end =
+          prev.addr + (typeof prev.addr === "bigint" ? BigInt(prev.size) : prev.size);
+        if (prev_end === seg.addr && prev.stream === seg.stream) {
+          prev.size += seg.size;
+          l_segments.splice(idx, 1);
+        }
+      }
+    }
+    function unmap_segment(merge, seg) {
+      if (!merge) {
+        l_segments.splice(
+          l_segments.findIndex(x => x.addr === seg.addr),
+          1,
+        );
+        return;
+      }
+      // See Note [BigInt and Number Safe Arithmetic]
+      const seg_end =
+        seg.addr + (typeof seg.addr === "bigint" ? BigInt(seg.size) : seg.size);
+      const idx = l_segments.findIndex( e => {
+        const e_end =
+          e.addr + (typeof e.addr === "bigint" ? BigInt(e.size) : e.size);
+        return e.addr <= seg.addr && seg_end <= e_end;
+      });
+      const existing = l_segments[idx];
+      const existing_end =
+        existing.addr + (typeof existing.addr === "bigint" ? BigInt(existing.size) : existing.size);
+      if (existing.addr === seg.addr) {
+        existing.addr += typeof existing.addr === "bigint" ? BigInt(seg.size) : seg.size;
+        existing.size -= seg.size;
+        if (existing.size === 0) {
+          l_segments.splice(idx, 1);
+        }
+      } else if (existing_end === seg_end) {
+        existing.size -= seg.size;
+      } else {
+        existing.size = Number(seg.addr - existing.addr);
+        seg.addr = seg_end;
+        seg.size = Number(existing_end - seg_end);
+        l_segments.splice(idx + 1, 0, seg);
+      }
+    }
+    const events = snapshot.device_traces[device];
+    for (let i = events.length - 1; i > idx; i--) {
+      const event = events[i];
+      switch (event.action) {
+        case 'free':
+          l_block_map[event.addr] = Block(
+            event.addr,
+            event.size,
+            event.size,
+            event.frames,
+            false,
+            event.version,
+            event.user_metadata,
+          );
+          break;
+        case 'free_requested':
+          l_block_map[event.addr].free_requested = false;
+          break;
+        case 'free_completed':
+          l_block_map[event.addr] = Block(
+            event.addr,
+            event.size,
+            event.size,
+            event.frames,
+            true,
+            event.version,
+            event.user_metadata,
+          );
+          break;
+        case 'alloc':
+          delete l_block_map[event.addr];
+          break;
+        case 'segment_free':
+        case 'segment_unmap':
+          map_segment(
+            event.action === 'segment_unmap',
+            Segment(
+              event.addr,
+              event.size,
+              event.stream,
+              event.frames,
+              event.version,
+              event.user_metadata,
+            ),
+          );
+          break;
+        case 'segment_alloc':
+        case 'segment_map':
+          unmap_segment(
+            event.action === 'segment_map',
+            Segment(
+              event.addr,
+              event.size,
+              event.stream,
+              event.frames,
+              event.version,
+              event.user_metadata,
+            ),
+          );
+          break;
+        case 'oom':
+          break;
+        default:
+          break;
+      }
+    }
+    const new_blocks = Object.values(l_block_map);
+    return [l_segments, new_blocks];
+  }
+
+  let drawnBlocks = null;
+  let drawnSegments = null;
+  return {
+    highlightBlock(addr, version) {
+      if (!drawnBlocks || addr == null) return;
+      drawnBlocks.each(function (block) {
+        if (String(block.addr) !== String(addr) ||
+            (version != null && block.version !== version)) return;
+        addStroke(d3.select(this));
+        d3.select(this).attr('stroke-width', '3');
+      });
+    },
+    highlightSegment(addr, version) {
+      if (!drawnSegments || addr == null) return;
+      drawnSegments.each(function (segment) {
+        const start = BigInt(segment.addr);
+        const target = BigInt(addr);
+        if (target < start || target >= start + BigInt(segment.size) ||
+            (version != null && segment.version !== version && String(segment.addr) === String(addr))) return;
+        addStroke(d3.select(this));
+        d3.select(this).attr('stroke-width', '3');
+      });
+    },
+    draw(idx) {
+      const [segments_unsorted, blocks] = simulate_memory(idx);
+      g.selectAll('g').remove();
+
+      const segment_d = g.append('g');
+      const block_g = g.append('g');
+      const block_r = g.append('g');
+
+      segment_d.selectAll('rect').remove();
+      block_g.selectAll('rect').remove();
+      block_r.selectAll('rect').remove();
+      const segments = [...segments_unsorted].sort((x, y) => {
+        // See Note [Sort BigInt and Number Safely].
+        if (x.size > y.size) return 1;
+        if (x.size < y.size) return -1;
+        if (x.addr > y.addr) return 1;
+        if (x.addr < y.addr) return -1;
+        return 0;
+      });
+
+      const segments_by_addr = [...segments].sort((x, y) => {
+        // See Note [Sort BigInt and Number Safely]
+        if (x.addr === y.addr) return 0;
+        return x.addr < y.addr ? -1 : 1;
+      });
+
+      const max_size = segments.length === 0 ? 0 : segments.at(-1).size;
+
+      const xScale = scaleLinear().domain([0, max_size]).range([0, 200]);
+      const padding = xScale.invert(1);
+
+      let cur_row = 0;
+      let cur_row_size = 0;
+      for (const seg of segments) {
+        seg.occupied = 0;
+        seg.internal_free = 0;
+        if (cur_row_size + seg.size > max_size) {
+          cur_row_size = 0;
+          cur_row += 1;
+        }
+        seg.offset = cur_row_size;
+        seg.row = cur_row;
+        cur_row_size += seg.size + padding;
+      }
+
+      const num_rows = cur_row + 1;
+
+      const yScale = scaleLinear().domain([0, num_rows]).range([0, 100]);
+
+      const segments_selection = segment_d
+        .selectAll('rect')
+        .data(segments)
+        .enter()
+        .append('rect')
+        .attr('x', x => xScale(x.offset))
+        .attr('y', x => yScale(x.row))
+        .attr('width', x => xScale(x.size))
+        .attr('height', yScale(4 / 5))
+        .attr('stroke', 'var(--msi-viz-foreground, #24292f)')
+        .attr('stroke-width', '1')
+        .attr('vector-effect', 'non-scaling-stroke')
+        .attr('fill', 'var(--msi-viz-background, #fff)');
+      drawnSegments = segments_selection;
+
+      stack_info.register(
+        segments_selection,
+        d => {
+          addStroke(d);
+          const t = d.datum();
+          const free = t.size - t.occupied;
+          let internal = '';
+          if (t.internal_free > 0) {
+            internal = ` (${(t.internal_free / free) * 100}% internal)`;
+          }
+          const user_metadata_str = format_user_metadata(t.user_metadata);
+          const frames_str = format_frames(t.frames);
+          const forward_frames_str = format_forward_frames(t.forward_frames);
+          let pool_str = '';
+          if (isPrivatePoolId(t.segment_pool_id)) {
+            pool_str = `, pool_id (${t.segment_pool_id[0]}, ${t.segment_pool_id[1]})`;
+          }
+          return (
+            `s${t.addr.toString(16)}_${t.version}: segment ${formatSize(
+              t.size,
+            )} allocated, ` +
+            `${formatSize(free)} free${internal} (stream ${
+              t.stream
+            }${pool_str})\n` +
+            (user_metadata_str ? user_metadata_str + '\n' : '') +
+            frames_str +
+            forward_frames_str
+          );
+        },
+        d => {
+          d.attr('stroke', 'var(--msi-viz-foreground, #24292f)')
+            .attr('stroke-width', '1')
+            .attr('vector-effect', 'non-scaling-stroke');
+        },
+        d => {
+          const segment = d.datum();
+          const selection = {
+            eventIndex: null,
+            addr: String(segment.addr),
+            version: segment.version,
+            size: segment.size,
+            action: 'segment_block',
+          };
+          publishLinkedSelection(selection);
+          onSelectBlock(selection);
+        },
+      );
+
+      function find_segment(addr) {
+        let left = 0;
+        let right = segments_by_addr.length - 1;
+        while (left <= right) {
+          const mid = Math.floor((left + right) / 2);
+          const seg = segments_by_addr[mid];
+          // See Note [BigInt and Number Safe Arithmetic]
+          const seg_end =
+            seg.addr + (typeof seg.addr === "bigint" ? BigInt(seg.size) : seg.size);
+          if (addr < seg.addr) {
+            right = mid - 1;
+          } else if (addr >= seg_end) {
+            left = mid + 1;
+          } else {
+            return seg;
+          }
+        }
+        return null;
+      }
+
+      for (const b of blocks) {
+        b.segment = find_segment(b.addr);
+        b.segment.occupied += b.requested_size;
+        b.segment.internal_free += b.size - b.requested_size;
+      }
+
+      const block_selection = block_g
+        .selectAll('rect')
+        .data(blocks)
+        .enter()
+        .append('rect')
+        .attr('x', x => xScale(x.segment.offset + Number(x.addr - x.segment.addr)))
+        .attr('y', x => yScale(x.segment.row))
+        .attr('width', x => xScale(x.requested_size))
+        .attr('height', yScale(4 / 5))
+        .style('fill', (x, _i) =>
+          x.free_requested
+            ? 'var(--msi-viz-danger, #d62f35)'
+            : tracePalette[
+                Math.abs(hashCode(x.addr)) % tracePalette.length
+              ],
+        );
+      drawnBlocks = block_selection;
+
+      stack_info.register(
+        block_selection,
+        d => {
+          addStroke(d);
+          const t = d.datum();
+          let requested = '';
+          if (t.free_requested) {
+            requested = ' (block freed but waiting due to record_stream)';
+          }
+          const user_metadata_str = format_user_metadata(t.user_metadata);
+          const annotations_str = format_annotations(t.annotations);
+          const frames_str = format_frames(t.frames);
+          const forward_frames_str = format_forward_frames(t.forward_frames);
+          let pool_str = '';
+          if (isPrivatePoolId(t.segment?.segment_pool_id)) {
+            pool_str = `, pool_id (${t.segment.segment_pool_id[0]}, ${t.segment.segment_pool_id[1]})`;
+          }
+          return (
+            `b${t.addr.toString(16)}_${t.version} ` +
+            `${formatSize(t.requested_size)} allocation${requested} (stream ${
+              t.segment.stream
+            }${pool_str})\n` +
+            (user_metadata_str ? user_metadata_str + '\n' : '') +
+            (annotations_str ? annotations_str + '\n' : '') +
+            frames_str +
+            forward_frames_str
+          );
+        },
+        removeStroke,
+        d => {
+          const block = d.datum();
+          const selection = {
+            eventIndex: null,
+            addr: String(block.addr),
+            version: block.version,
+            size: block.size,
+            action: 'block',
+          };
+          publishLinkedSelection(selection);
+          onSelectBlock(selection);
+        },
+      );
+
+      const free_selection = block_r
+        .selectAll('rect')
+        .data(blocks)
+        .enter()
+        .append('rect')
+        .attr('x', x =>
+          xScale(
+            x.segment.offset + Number(x.addr - x.segment.addr) + x.requested_size,
+          ),
+        )
+        .attr('y', x => yScale(x.segment.row))
+        .attr('width', x => xScale(x.size - x.requested_size))
+        .attr('height', yScale(4 / 5))
+        .attr('fill', (_x, _i) => 'var(--msi-viz-danger, #d62f35)');
+
+      stack_info.register(
+        free_selection,
+        d => {
+          addStroke(d);
+          const t = d.datum();
+          const user_metadata_str = format_user_metadata(t.user_metadata);
+          const frames_str = format_frames(t.frames);
+          const forward_frames_str = format_forward_frames(t.forward_frames);
+          return (
+            `Free space lost due to rounding ${formatSize(
+              t.size - t.requested_size,
+            )}` +
+            ` (stream ${t.segment.stream})\n` +
+            (user_metadata_str ? user_metadata_str + '\n' : '') +
+            frames_str +
+            forward_frames_str
+          );
+        },
+        removeStroke,
+        d => {
+          const block = d.datum();
+          const selection = {
+            eventIndex: null,
+            addr: String(block.addr),
+            version: block.version,
+            size: block.size,
+            action: 'block',
+          };
+          publishLinkedSelection(selection);
+          onSelectBlock(selection);
+        },
+      );
+
+      const reserved = segments.reduce((x, y) => x + y.size, 0);
+      const allocated = blocks.reduce((x, y) => x + y.requested_size, 0);
+      return [reserved, allocated];
+    },
+  };
+}
+
+function StackInfo(outer) {
+  const stack_trace = outer
+    .append('pre')
+    .attr('style', 'grid-column: 1 / 3; grid-row: 2; overflow: auto');
+  let selected = {
+    enter: () => {
+      stack_trace.text('');
+    },
+    leave: () => {},
+  };
+  return {
+    registerEventRows(container, enter, select) {
+      const root = container.node();
+      let hoveredRow = null;
+      let hoverTimer = null;
+      const rowFor = event => {
+        const row = event.target.closest('.msi-memory-event-row');
+        return row && root.contains(row) ? row : null;
+      };
+      const cancelHover = () => {
+        if (hoverTimer !== null) window.clearTimeout(hoverTimer);
+        hoverTimer = null;
+      };
+      const selectRow = row => {
+        cancelHover();
+        selected.leave();
+        const item = d3.select(row);
+        selected = {enter: () => stack_trace.text(enter(item)), leave: () => {}};
+        select(item);
+      };
+      if (getTraceInteractionMode() === 'hover') {
+        container
+          .on('mousemove.msi-memory-row', function (event) {
+            const row = rowFor(event);
+            if (!row || row === hoveredRow) return;
+            hoveredRow = row;
+            cancelHover();
+            hoverTimer = window.setTimeout(() => {
+              hoverTimer = null;
+              if (hoveredRow === row && root.contains(row)) {
+                selected.leave();
+                stack_trace.text(enter(d3.select(row)));
+              }
+            }, 40);
+          })
+          .on('mousedown.msi-memory-row', function (event) {
+            if (event.target.closest('.msi-memory-event-jump')) {
+              hoveredRow = null;
+              cancelHover();
+              return;
+            }
+            const row = rowFor(event);
+            if (row) selectRow(row);
+          })
+          .on('mouseleave.msi-memory-row', function () {
+            hoveredRow = null;
+            cancelHover();
+            selected.enter();
+          });
+      } else {
+        container.on('click.msi-memory-row', function (event) {
+          if (event.target.closest('.msi-memory-event-jump')) return;
+          const row = rowFor(event);
+          if (row) selectRow(row);
+        });
+      }
+    },
+    register(dom, enter, leave = _e => {}, select = _e => {}) {
+      if (getTraceInteractionMode() === 'hover') {
+        // Hover mode: show on mouseover, pin on click
+        dom
+          .on('mouseover', function (event) {
+            selected.leave();
+            stack_trace.text(enter(d3.select(event.currentTarget)));
+          })
+          .on('mousedown', function (event) {
+            const obj = d3.select(event.currentTarget);
+            selected = {
+              enter: () => stack_trace.text(enter(obj)),
+              leave: () => leave(obj),
+            };
+            select(obj);
+          })
+          .on('mouseleave', function (event) {
+            leave(d3.select(event.currentTarget));
+            selected.enter();
+          });
+      } else {
+        // Click mode: show only on click
+        dom
+          .on('click', function (event) {
+            selected.leave();
+            const obj = d3.select(event.currentTarget);
+            selected = {
+              enter: () => stack_trace.text(enter(obj)),
+              leave: () => leave(obj),
+            };
+            stack_trace.text(enter(obj));
+            select(obj);
+          });
+      }
+    },
+    highlight(enter, leave = () => {}) {
+      selected = {enter: () => stack_trace.text(enter()), leave};
+      selected.enter();
+    },
+  };
+}
+
+function create_segment_view(dst, snapshot, device) {
+  const outer = dst
+    .append('div')
+    .attr('class', 'msi-memory-allocator-grid')
+    .attr(
+      'style',
+      'display: grid; grid-template-columns: 344px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); width: 100%; min-width: 0; height: 100%; overflow: hidden; gap: 4px',
+    );
+
+  const events = snapshot.device_traces[device];
+  const stack_info = StackInfo(outer);
+  let selectLinkedAllocator = () => {};
+  const memory_view = MemoryView(outer, stack_info, snapshot, device,
+    selection => selectLinkedAllocator(selection));
+  const event_selector = EventSelector(outer, events, stack_info, memory_view);
+
+  selectLinkedAllocator = selection => {
+    if (!selection || selection.addr == null) return;
+    let index = Number.isInteger(selection.eventIndex) &&
+      selection.eventIndex >= 0 && selection.eventIndex < events.length
+      ? selection.eventIndex : -1;
+    if (index < 0) {
+      index = events.findIndex(event =>
+        event.action === 'alloc' && String(event.addr) === selection.addr &&
+        event.version === selection.version);
+    }
+    if (index < 0) {
+      index = events.findIndex(event =>
+        event.addr != null && String(event.addr) === selection.addr &&
+        event.version === selection.version);
+    }
+    if (index < 0) {
+      event_selector.clear();
+      if (selection.action?.startsWith('segment_')) {
+        memory_view.highlightSegment(selection.addr, selection.version);
+      } else {
+        memory_view.highlightBlock(selection.addr, selection.version);
+      }
+      return;
+    }
+    event_selector.select(index, false, selection, true);
+  };
+  linkedSelectionHandler = selectLinkedAllocator;
+
+  window.requestAnimationFrame(function () {
+    event_selector.select(events.length > 0 ? events.length - 1 : null);
+  });
+}
+
+function annotate_snapshot(snapshot) {
+  snapshot.segment_version = version_space();
+  snapshot.block_version = version_space();
+  snapshot.categories = [];
+  const empty_list = [];
+  let next_stream = 1;
+  const stream_names = {0: 0};
+  function stream_name(s) {
+    if (!(s in stream_names)) {
+      stream_names[s] = next_stream++;
+    }
+    return stream_names[s];
+  }
+  const new_traces = [];
+  for (const device_trace of snapshot.device_traces) {
+    const new_trace = [];
+    new_traces.push(new_trace);
+    for (const t of device_trace) {
+      if (!('frames' in t)) {
+        t.frames = empty_list;
+      }
+      // set unique version for each time an address is used
+      // so that ctrl-f can be used to search for the beginning
+      // and end of allocations and segments
+      if (t.stream != null) t.stream = stream_name(t.stream);
+      switch (t.action) {
+        case 'free_completed':
+          t.version = snapshot.block_version(t.addr, true);
+          if (new_trace.length > 0) {
+            // elide free_requested/free_completed into a single event
+            const prev = new_trace.at(-1);
+            if (prev.action === 'free_requested' && prev.addr === t.addr) {
+              prev.action = 'free';
+              continue;
+            }
+          }
+          break;
+        case 'free_requested':
+        case 'alloc':
+          t.version = snapshot.block_version(t.addr, false);
+          break;
+        case 'segment_free':
+        case 'segment_unmap':
+          t.version = snapshot.segment_version(t.addr, true);
+          break;
+        case 'segment_alloc':
+        case 'segment_map':
+          t.version = snapshot.segment_version(t.addr, false);
+          break;
+        default:
+          break;
+      }
+      if ('category' in t && !snapshot.categories.includes(t.category)) {
+        snapshot.categories.push(t.category);
+      }
+      t.idx = new_trace.length;
+      new_trace.push(t);
+    }
+  }
+  snapshot.device_traces = new_traces;
+
+  for (const seg of snapshot.segments) {
+    if (seg.stream != null) seg.stream = stream_name(seg.stream);
+    seg.version = snapshot.segment_version(seg.address, false);
+    let addr = seg.address;
+    for (const b of seg.blocks) {
+      b.addr = addr;
+      if (!('frames' in b)) {
+        // legacy format where 'requested_size' may be missing
+        // and frames might be in history rather than directly on block
+        if ('history' in b) {
+          b.frames = b.history[0].frames || empty_list;
+          b.requested_size = b.requested_size || b.history[0].real_size;
+        } else {
+          b.frames = empty_list;
+          b.requested_size = b.requested_size || b.size;
+        }
+      }
+      b.version = snapshot.block_version(b.addr, false);
+      b.segment_pool_id = seg.segment_pool_id;
+      // Note [BigInt and Number Safe Arithmetic]
+      // Device pointer addresses may be represented as either Number or BigInt.
+      // Use explicit conversions to perform arithmetic safely and avoid mixing
+      // BigInt and Number types, which would otherwise trigger JS type errors.
+      addr += typeof addr === "bigint" ? BigInt(b.size) : b.size;
+    }
+  }
+
+  if (
+    snapshot.categories.length > 0 &&
+    !snapshot.categories.includes('unknown')
+  ) {
+    snapshot.categories.push('unknown');
+  }
+}
+
+function MemoryPlot(
+  svg,
+  axis_svg,
+  data,
+  axis_gutter,
+  width,
+  height,
+  colors = tracePalette,
+) {
+  function format_points(d) {
+    const size = d.size;
+    const xs = d.timesteps.map(t => xscale(t));
+    const bottom = d.offsets.map(t => yscale(t));
+    const m = Array.isArray(size)
+      ? (t, i) => yscale(t + size[i])
+      : t => yscale(t + size);
+    const top = d.offsets.map(m);
+    const p0 = xs.map((x, i) => `${x},${bottom[i]}`);
+    const p1 = xs.map((x, i) => `${x},${top[i]}`).reverse();
+    return `${p0.join(' ')} ${p1.join(' ')}`;
+  }
+
+  const max_timestep = data.max_at_time.length;
+  const max_size = data.max_size;
+
+  const plot_width = width;
+  const plot_height = height;
+
+  const yscale = scaleLinear().domain([0, max_size]).range([plot_height, 0]);
+  const xscale = scaleLinear().domain([0, max_timestep]).range([0, plot_width]);
+  const plot_outer = svg.append('g');
+
+  function view_rect(a) {
+    return a
+      .append('rect')
+      .attr('x', 0)
+      .attr('y', 0)
+      .attr('width', plot_width)
+      .attr('height', plot_height)
+      .attr('fill', 'var(--msi-viz-background, #fff)');
+  }
+
+  view_rect(plot_outer);
+
+  const cp = svg.append('clipPath').attr('id', 'clip');
+  view_rect(cp);
+  plot_outer.attr('clip-path', 'url(#clip)');
+
+  const zoom_group = plot_outer.append('g');
+  const scrub_group = zoom_group.append('g');
+
+  const plot = scrub_group
+    .selectAll('polygon')
+    .data(data.allocations_over_time)
+    .enter()
+    .append('polygon')
+    .attr('points', format_points)
+    .style('fill', d => data.grouped_segments && d.elem === 'summarized'
+      ? 'var(--msi-viz-summary, #d1d5db)'
+      : colors[d.color % colors.length])
+    .attr('opacity', d => d.opacity ?? 1)
+    .attr('stroke', d => typeof d.elem === 'string' && d.elem.startsWith('pool:') ? 'var(--msi-viz-foreground, #24292f)' : null)
+    .attr('stroke-width', d => typeof d.elem === 'string' && d.elem.startsWith('pool:') ? 3 : null)
+    .attr('vector-effect', d => typeof d.elem === 'string' && d.elem.startsWith('pool:') ? 'non-scaling-stroke' : null);
+
+  const axis = axis_svg.append('g');
+  let axis_domain = yscale.domain();
+
+  function drawAxis() {
+    const bounds = axis_svg.node().getBoundingClientRect();
+    if (bounds.width === 0 || bounds.height === 0) {
+      return;
+    }
+
+    const max_value = Math.max(...axis_domain.map(Math.abs));
+    const units = ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi'];
+    const unit_index = Math.min(
+      units.length - 1,
+      Math.max(0, Math.floor(Math.log(max_value) / Math.log(1024))),
+    );
+    const unit = 1024 ** unit_index;
+    const unit_domain = axis_domain.map(value => value / unit);
+    const tick_count = Math.max(2, Math.floor(bounds.height / 50));
+    const tick_step = Math.abs(d3.tickStep(...unit_domain, tick_count));
+    const precision = tick_step === 0
+      ? 0
+      : Math.max(0, Math.min(3, -Math.floor(Math.log10(tick_step))));
+    const tick_values = d3
+      .ticks(...unit_domain, tick_count)
+      .map(value => value * unit);
+    const axis_scale = scaleLinear().domain(axis_domain).range([bounds.height, 0]);
+    const yaxis = axisLeft(axis_scale)
+      .tickValues(tick_values)
+      .tickFormat(value => `${(value / unit).toFixed(precision)}${units[unit_index]}B`);
+
+    axis
+      .attr('transform', `translate(${axis_gutter}, 0)`)
+      .call(yaxis);
+  }
+
+  new ResizeObserver(drawAxis).observe(axis_svg.node());
+  drawAxis();
+
+  function handleZoom(event) {
+    const t = event.transform;
+    zoom_group.attr('transform', t);
+    axis_domain = event.transform.rescaleY(yscale).domain();
+    drawAxis();
+  }
+
+  const thezoom = zoom().on('zoom', handleZoom);
+  plot_outer.call(thezoom);
+
+  return {
+    select_window: (stepbegin, stepend, max) => {
+      const begin = xscale(stepbegin);
+      const size = xscale(stepend) - xscale(stepbegin);
+      const scale = plot_width / size;
+      const translate = -begin;
+      const yscale = max_size / max;
+      scrub_group.attr(
+        'transform',
+        `scale(${scale / yscale}, 1) translate(${translate}, 0)`,
+      );
+      plot_outer.call(
+        thezoom.transform,
+        zoomIdentity
+          .scale(yscale)
+          .translate(0, -(plot_height - plot_height / yscale)),
+      );
+    },
+    set_delegate: delegate => {
+      function timestep_at(event) {
+        if (!data.grouped_segments) return null;
+        const x = d3.pointer(event, scrub_group.node())[0];
+        return Math.max(0, Math.min(max_timestep - 1, Math.floor(xscale.invert(x))));
+      }
+      if (getTraceInteractionMode() === 'hover') {
+        // Hover mode: show on mouseover, pin on click
+        plot
+          .on('mouseover', function (event) {
+            delegate.set_selected(d3.select(this), timestep_at(event));
+          })
+          .on('mousedown', function (event) {
+            delegate.default_selected = d3.select(this);
+            delegate.default_timestep = timestep_at(event);
+            delegate.default_event = delegate.set_selected(delegate.default_selected, delegate.default_timestep);
+          })
+          .on('mouseleave', function (_e, _d) {
+            delegate.set_selected(delegate.default_selected, delegate.default_timestep, delegate.default_event);
+          });
+        if (data.grouped_segments) {
+          plot.on('mousemove', function (event) {
+            delegate.set_selected(d3.select(this), timestep_at(event));
+          });
+        }
+      } else {
+        // Click mode: show only on click
+        plot
+          .on('click', function (event) {
+            delegate.default_selected = d3.select(this);
+            delegate.default_timestep = timestep_at(event);
+            delegate.default_event = delegate.set_selected(delegate.default_selected, delegate.default_timestep);
+          });
+      }
+    },
+  };
+}
+
+function ContextViewer(text, data, event_select = null) {
+  let current_selected = null;
+  let current_event = -1;
+  let selected_events = [];
+
+  function show_event() {
+    const id = current_selected.datum().elem;
+    const event = selected_events[current_event];
+    const change = event && event.action !== 'segment_snapshot'
+      ? `\nSelected event ${event.timestep}: mapped capacity ${formatSize(event.before, false)} to ${formatSize(event.after, false)}.`
+      : '';
+    text.text(data.context_for_id(id) + change + (event ? `\n\n${event.context}` : ''));
+    event_select.property('value', current_event);
+  }
+  if (event_select) {
+    event_select.on('change', function () {
+      current_event = Number(this.value);
+      delegate.default_selected = current_selected;
+      delegate.default_event = current_event;
+      show_event();
+    });
+  }
+
+  function restore_search_highlight(d) {
+    if (!d) return;
+    const addr = d.attr('data-search-match') === 'true';
+    const frame = d.attr('data-frame-match') === 'true';
+    if (addr && frame) {
+      d.attr('stroke', 'var(--msi-viz-purple, #8a21bc)')
+        .attr('stroke-width', 3)
+        .attr('stroke-dasharray', '6,3')
+        .attr('vector-effect', 'non-scaling-stroke');
+    } else if (addr) {
+      d.attr('stroke', 'var(--msi-viz-danger, #d62f35)')
+        .attr('stroke-width', 2)
+        .attr('stroke-dasharray', null)
+        .attr('vector-effect', 'non-scaling-stroke');
+    } else if (frame) {
+      d.attr('stroke', 'var(--msi-viz-accent, #0077ff)')
+        .attr('stroke-width', 2)
+        .attr('stroke-dasharray', null)
+        .attr('vector-effect', 'non-scaling-stroke');
+    }
+  }
+
+  const delegate = {
+    default_selected: null,
+    default_timestep: null,
+    default_event: null,
+    set_selected: (d, timestep = null, selected_event = null) => {
+      let events = [];
+      let event_index = -1;
+      if (event_select && d && typeof d.datum().elem === 'number') {
+        const id = d.datum().elem;
+        events = data.segment_events_for_id(id);
+        let lo = 0;
+        let hi = events.length;
+        while (timestep != null && lo < hi) {
+          const mid = (lo + hi) >> 1;
+          if (events[mid].timestep <= timestep) lo = mid + 1;
+          else hi = mid;
+        }
+        event_index = lo - 1;
+        if (selected_event != null) event_index = selected_event;
+      }
+      const same = current_selected && d && current_selected.node() === d.node();
+      if (event_select && same && current_event === event_index) return event_index;
+      if (current_selected !== null) {
+        const prev = current_selected.datum();
+        const is_pool = prev && typeof prev.elem === 'string' && prev.elem.startsWith('pool:');
+        current_selected
+          .classed('msi-memory-selected-block', false)
+          .attr('stroke', is_pool ? 'var(--msi-viz-foreground, #24292f)' : null)
+          .attr('stroke-width', is_pool ? 3 : null)
+          .attr('stroke-dasharray', null)
+          .attr('vector-effect', is_pool ? 'non-scaling-stroke' : null);
+        restore_search_highlight(current_selected);
+      }
+      if (d === null) {
+        text.text('');
+        if (event_select) event_select.style('display', 'none');
+      } else {
+        const dd = d.datum();
+        if (dd.elem === 'summarized') {
+          text.html(
+            data.grouped_segments
+              ? 'Other segments hidden by the detail limit.\nUse the detail slider to see more segment groups.'
+              : 'Small tensors that were not plotted to cutdown on render time.\n' +
+                'Use detail slider to see smaller allocations.',
+          );
+        } else if (typeof dd.elem === 'string' && dd.elem.startsWith('pool:')) {
+          const pool_key = dd.elem.slice(5);
+          const capacity = Array.isArray(dd.size) ? dd.size.at(-1) : dd.size;
+          text.text(`Private Pool (${pool_key}): capacity ${formatSize(capacity)}`);
+        } else {
+          text.text(`${dd.elem} ${data.context_for_id(dd.elem)}`);
+        }
+        if (event_select) {
+          event_select.style('display', events.length ? 'block' : 'none');
+          if (!same) {
+            event_select.selectAll('option').remove();
+            event_select.append('option').attr('value', -1).text('Group summary');
+            events.forEach((event, i) => {
+              const delta = event.after - event.before;
+              event_select.append('option').attr('value', i).text(
+                event.action === 'segment_snapshot'
+                  ? `Initial observed range: ${event.addr.toString(16)}, ${formatSize(event.size, false)}`
+                  : `Event ${event.timestep}: ${event.action.replace('segment_', '')} ` +
+                    `${delta >= 0 ? '+' : ''}${formatSize(delta, false)} ` +
+                    `(${formatSize(event.before, false)} to ${formatSize(event.after, false)})`,
+              );
+            });
+          }
+        }
+        const is_pool_sel = typeof dd.elem === 'string' && dd.elem.startsWith('pool:');
+        d.classed('msi-memory-selected-block', true)
+          .raise()
+          .attr('stroke', 'var(--msi-viz-accent, #0077ff)')
+          .attr('stroke-width', is_pool_sel ? 5 : 1.5)
+          .attr('vector-effect', 'non-scaling-stroke');
+      }
+      current_selected = d;
+      current_event = event_index;
+      selected_events = events;
+      if (event_select && d && typeof d.datum().elem === 'number') show_event();
+      return event_index;
+    },
+  };
+  return delegate;
+}
+
+function MiniMap(mini_svg, plot, data, left_pad, width, height = 60) {
+  const max_at_time = data.max_at_time;
+  const handleInset = 9;
+  const previewLeft = left_pad + handleInset;
+  const previewRight = width - handleInset;
+  const plot_width = previewRight - previewLeft;
+  const yscale = scaleLinear().domain([0, data.max_size]).range([height - 3, 3]);
+  const minixscale = scaleLinear()
+    .domain([0, max_at_time.length])
+    .range([previewLeft, previewRight]);
+
+  const mini_points = [
+    [max_at_time.length, 0],
+    [0, 0],
+  ];
+
+  for (const [i, m] of max_at_time.entries()) {
+    const [_lastx, lasty] = mini_points[mini_points.length - 1];
+    if (m !== lasty) {
+      mini_points.push([i, lasty]);
+      mini_points.push([i, m]);
+    } else if (i === max_at_time.length - 1) {
+      mini_points.push([i, m]);
+    }
+  }
+  mini_points.push([max_at_time.length, max_at_time.at(-1) ?? 0]);
+
+  let points = mini_points.map(([t, o]) => `${minixscale(t)}, ${yscale(o)}`);
+  points = points.join(' ');
+  mini_svg
+    .append('polygon')
+    .attr('class', 'msi-memory-preview')
+    .attr('points', points);
+
+  const xscale = scaleLinear()
+    .domain([0, max_at_time.length])
+    .range([0, plot_width]);
+
+  // Keep the preview inset while making each visible brush handle half as wide.
+  const brush = brushX().handleSize(handleInset);
+  brush.extent([
+    [previewLeft, 3],
+    [previewRight, height - 3],
+  ]);
+  brush.on('brush', function (event) {
+    if (!event.selection) return;
+    const [begin, end] = event.selection.map(x => x - previewLeft);
+
+    const stepbegin = Math.max(0, Math.floor(xscale.invert(begin)));
+    const stepend = Math.min(max_at_time.length, Math.ceil(xscale.invert(end)));
+    if (stepend <= stepbegin) return;
+    let max = 0;
+    for (let i = stepbegin; i < stepend; i++) {
+      max = Math.max(max, max_at_time[i]);
+    }
+    if (max > 0) plot.select_window(stepbegin, stepend, max);
+  });
+  brush.on('end', function (event) {
+    if (!event.selection && max_at_time.length) {
+      mini_svg.call(brush.move, [previewLeft, previewRight]);
+    }
+  });
+  mini_svg.call(brush);
+  if (max_at_time.length) mini_svg.call(brush.move, [previewLeft, previewRight]);
+}
+
+function Legend(plot_svg, categories) {
+  const xstart = 100;
+  const ystart = 5;
+  plot_svg
+    .append('g')
+    .selectAll('rect')
+    .data(categories)
+    .enter()
+    .append('rect')
+    .attr('x', (c, i) => xstart)
+    .attr('y', (c, i) => ystart + i * 15)
+    .attr('width', 10)
+    .attr('height', 10)
+    .style('fill', (c, i) => tracePalette[i % tracePalette.length]);
+  plot_svg
+    .append('g')
+    .selectAll('text')
+    .data(categories)
+    .enter()
+    .append('text')
+    .attr('x', (c, i) => xstart + 20)
+    .attr('y', (c, i) => ystart + i * 15 + 8)
+    .attr('font-family', 'helvetica')
+    .attr('font-size', 10)
+    .text(c => c);
+  return {};
+}
+
+function create_trace_view(
+  dst,
+  snapshot,
+  device,
+  plot_segments = false,
+  max_entries = 15000,
+  include_private_inactive = false,
+  segment_options = {grouped: true},
+) {
+  const axis_gutter = 64;
+  const data = process_alloc_data(snapshot, device, plot_segments, max_entries, include_private_inactive, segment_options);
+  dst.selectAll('svg').remove();
+  dst.selectAll('div').remove();
+
+  const detail_limit = max_entries;
+  max_entries = Math.min(max_entries, data.elements_length);
+  if (data.history_error) {
+    dst.append('div').text(
+      `Final snapshot only - recorded history cannot be reconciled. ${data.history_error}`,
+    );
+  }
+  if (include_private_inactive) {
+    dst.append('div')
+      .attr('style', 'padding: 4px 8px; background: #fff3cd; border: 1px solid #ffc107; font-size: 13px; margin-bottom: 4px;')
+      .text('Note: Private pool memory (the gray bar) is shown as allocated until the pool\'s segment is freed. '
+          + 'This view requires that MemPools are not deleted before torch.cuda.memory._snapshot() is called.');
+  }
+  const d = dst.append('div').attr('class', 'msi-memory-native-toolbar');
+  function redraw(options = {}, detail = detail_limit) {
+    create_trace_view(dst, snapshot, device, plot_segments, detail, include_private_inactive, {
+      ...segment_options, ...options,
+      address_query: search_input.node().value,
+      frame_query: frame_input.node().value,
+    });
+  }
+  if (plot_segments && data.streams.length > 1) {
+    d.append('label').text('Stream: ');
+    const streams = d.append('select').attr('aria-label', 'Stream');
+    streams.append('option').attr('value', '').text('All');
+    for (const stream of data.streams) {
+      streams.append('option').attr('value', stream).text(stream === 'unknown' ? 'Unknown' : stream);
+    }
+    streams.property('value', segment_options.stream ?? '')
+      .on('change', function () { redraw({stream: this.value || null}); });
+    d.append('span').text('  |  ');
+  }
+  if (plot_segments && snapshot.categories.length && data.has_expandable) {
+    d.append('label').text('View: ');
+    const view = d.append('select').attr('aria-label', 'Segment view');
+    view.append('option').attr('value', 'groups').text('Segment groups');
+    view.append('option').attr('value', 'categories').text('Mapping categories');
+    view.property('value', segment_options.grouped ? 'groups' : 'categories')
+      .on('change', function () { redraw({grouped: this.value === 'groups'}); });
+    d.append('span').text('  |  ');
+  }
+  d.append('input')
+    .attr('type', 'range')
+    .attr('min', 0)
+    .attr('max', data.elements_length)
+    .attr('value', max_entries)
+    .on('change', function () {
+      redraw({}, this.value);
+    });
+  d.append('label').text(
+    `Detail: ${max_entries} of ${data.elements_length} ${data.grouped_segments ? 'segment groups' : 'entries'}`,
+  );
+  if (data.grouped_segments) {
+    dst.append('div').text('Expandable groups are inferred from mapped addresses. Select a band near a growth step to inspect its mapping event.');
+  }
+  if (plot_segments && segment_options.stream != null) {
+    dst.append('div').text(`Showing stream ${segment_options.stream}: peak mapped capacity ${formatSize(data.max_size, false)} (selected stream only).`);
+  }
+
+  d.append('span').text('  |  ');
+  const search_input = d.append('input')
+    .attr('type', 'text')
+    .attr('placeholder', 'Search address (hex)...')
+    .property('value', segment_options.address_query ?? '')
+    .attr('style', 'width: 180px; margin-left: 4px; font-family: monospace;');
+  const search_label = d.append('label')
+    .attr('style', 'margin-left: 4px;');
+
+  d.append('span').text('  |  ');
+  const frame_input = d.append('input')
+    .attr('type', 'text')
+    .attr('placeholder', 'Search stack frame...')
+    .property('value', segment_options.frame_query ?? '')
+    .attr('style', 'width: 200px; margin-left: 4px; font-family: monospace;');
+  const frame_label = d.append('label')
+    .attr('style', 'margin-left: 4px;');
+
+  const grid_container = dst
+    .append('div')
+    .attr(
+      'style',
+      'display: grid; grid-template-columns: 1fr; grid-template-rows: 10fr 1fr 8fr; flex: 1; min-height: 0; gap: 10px',
+    );
+
+  const plot_container = grid_container
+    .append('div')
+    .attr(
+      'style',
+      'position: relative; grid-column: 1; grid-row: 1; box-sizing: border-box; width: 100%; height: 100%; min-height: 0; padding: 16px 8px; overflow: hidden;',
+    );
+  const plot_svg = plot_container
+    .append('svg')
+    .attr('display', 'block')
+    .attr('viewBox', '0 0 1024 576')
+    .attr('preserveAspectRatio', 'none')
+    .attr('style', `width: calc(100% - ${axis_gutter}px); height: 100%; margin-left: ${axis_gutter}px;`);
+  const axis_svg = plot_container
+    .append('svg')
+    .attr('display', 'block')
+    .attr(
+      'style',
+      'position: absolute; top: 16px; left: 8px; width: calc(100% - 16px); height: calc(100% - 32px); overflow: visible; pointer-events: none;',
+    );
+
+  const plot = MemoryPlot(plot_svg, axis_svg, data, axis_gutter, 1024, 576);
+
+  if (snapshot.categories.length !== 0 && !data.grouped_segments) {
+    Legend(plot_svg.append('g'), snapshot.categories);
+  }
+
+  const mini_svg = grid_container
+    .append('div')
+    .attr(
+      'style',
+      'grid-column: 1; grid-row: 2; width: 100%; height: 100%; min-height: 0; overflow: hidden;',
+    )
+    .append('svg')
+    .attr('class', 'msi-memory-minimap')
+    .attr('display', 'block')
+    .attr('viewBox', '0 0 1024 60')
+    .attr('preserveAspectRatio', 'none')
+    .attr('style', 'width: 100%; height: 100%;');
+
+  MiniMap(mini_svg, plot, data, 70, 1024);
+  const context_div = grid_container
+    .append('div')
+    .attr(
+      'style',
+      'grid-column: 1; grid-row: 3; width: 100%; height: 100%; min-height: 0; overflow: auto;',
+    );
+  const event_select = data.grouped_segments
+    ? context_div.append('select').attr('aria-label', 'Mapping event')
+      .attr('style', 'display:none;max-width:100%;font-family:monospace;')
+    : null;
+  const context_text = context_div.append('pre').text('none');
+  if (plot_segments) context_text.style('white-space', 'pre-wrap').style('overflow-wrap', 'anywhere');
+  const delegate = ContextViewer(context_text, data, event_select);
+  plot.set_delegate(delegate);
+
+  const polygons = plot_svg.selectAll('polygon').filter(d =>
+    d && typeof d.elem === 'number');
+  const polygonsByBlock = new Map();
+  polygons.each(function (item) {
+    const element = data.element_for_id(item.elem);
+    const key = `${element.addr}:${element.version}`;
+    if (!polygonsByBlock.has(key)) polygonsByBlock.set(key, []);
+    polygonsByBlock.get(key).push({node: this, element});
+  });
+  function selectLinkedTimeline(selection) {
+    if (!selection || selection.addr == null || !data.element_for_id) return;
+    let match = null;
+    let segmentMatch = null;
+    const segmentEvent = selection.action?.startsWith('segment_');
+    const start = segmentEvent ? BigInt(selection.addr) : null;
+    const end = segmentEvent && Number.isFinite(selection.size)
+      ? start + BigInt(selection.size) : null;
+    const candidates = selection.version == null
+      ? [...polygonsByBlock.entries()]
+        .filter(([key]) => key.startsWith(`${selection.addr}:`))
+        .flatMap(([, entries]) => entries)
+      : polygonsByBlock.get(`${selection.addr}:${selection.version}`) || [];
+    const exact = candidates.find(({element}) => element.eventIndex === selection.eventIndex);
+    if (exact || candidates.length) match = d3.select((exact || candidates[0]).node);
+    if (!match && segmentEvent && end != null) {
+      polygons.each(function (item) {
+        const element = data.element_for_id(item.elem);
+        const addr = BigInt(element.addr);
+        if (addr >= start && addr < end &&
+            (element.eventIndex == null || selection.eventIndex == null ||
+             element.eventIndex <= selection.eventIndex)) {
+          if (!segmentMatch || addr < BigInt(data.element_for_id(segmentMatch.datum().elem).addr)) {
+            segmentMatch = d3.select(this);
+          }
+        }
+      });
+    }
+    const target = match || segmentMatch;
+    if (!target) return;
+    delegate.default_selected = target;
+    delegate.default_timestep = null;
+    delegate.default_event = delegate.set_selected(target);
+  }
+  linkedSelectionHandler = selectLinkedTimeline;
+
+  polygons.on('mousedown.msi-memory-link', function () {
+    const element = data.element_for_id(d3.select(this).datum().elem);
+    publishLinkedSelection({...element, action: 'block'});
+  });
+
+  const searchContextCache = new Map();
+  function apply_search_highlights() {
+    const addr_query = search_input.node().value.toLowerCase().trim();
+    const frame_query = frame_input.node().value.toLowerCase().trim();
+    const polygons = plot_svg.selectAll('polygon');
+    let addr_matches = 0;
+    let frame_matches = 0;
+    polygons.each(function () {
+      const dd = d3.select(this).datum();
+      if (!dd || typeof dd.elem !== 'number') {
+        d3.select(this)
+          .attr('data-search-match', null)
+          .attr('data-frame-match', null);
+        return;
+      }
+      let ctx_lower = '';
+      if (addr_query || frame_query) {
+        if (!searchContextCache.has(dd.elem)) {
+          const ctx = data.search_context_for_id
+            ? data.search_context_for_id(dd.elem) : data.context_for_id(dd.elem);
+          searchContextCache.set(dd.elem, ctx.toLowerCase());
+        }
+        ctx_lower = searchContextCache.get(dd.elem);
+      }
+      const addr_hit = addr_query && ctx_lower.includes(addr_query);
+      const frame_hit = frame_query && ctx_lower.includes(frame_query);
+      d3.select(this)
+        .attr('data-search-match', addr_hit ? 'true' : null)
+        .attr('data-frame-match', frame_hit ? 'true' : null);
+      if (addr_hit && frame_hit) {
+        d3.select(this)
+          .attr('stroke', 'var(--msi-viz-purple, #8a21bc)')
+          .attr('stroke-width', 3)
+          .attr('stroke-dasharray', '6,3')
+          .attr('vector-effect', 'non-scaling-stroke');
+      } else if (addr_hit) {
+        d3.select(this)
+          .attr('stroke', 'var(--msi-viz-danger, #d62f35)')
+          .attr('stroke-width', 2)
+          .attr('stroke-dasharray', null)
+          .attr('vector-effect', 'non-scaling-stroke');
+      } else if (frame_hit) {
+        d3.select(this)
+          .attr('stroke', 'var(--msi-viz-accent, #0077ff)')
+          .attr('stroke-width', 2)
+          .attr('stroke-dasharray', null)
+          .attr('vector-effect', 'non-scaling-stroke');
+      } else {
+        d3.select(this)
+          .attr('stroke', null)
+          .attr('stroke-width', null)
+          .attr('stroke-dasharray', null);
+      }
+      if (addr_hit) addr_matches++;
+      if (frame_hit) frame_matches++;
+    });
+    search_label.text(addr_query ? `${addr_matches} match${addr_matches !== 1 ? 'es' : ''}` : '');
+    frame_label.text(frame_query ? `${frame_matches} match${frame_matches !== 1 ? 'es' : ''}` : '');
+  }
+
+  let searchTimer = null;
+  const scheduleSearch = () => {
+    if (searchTimer !== null) window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(() => {
+      searchTimer = null;
+      apply_search_highlights();
+    }, 80);
+  };
+  search_input.on('input', scheduleSearch);
+  frame_input.on('input', scheduleSearch);
+  if (segment_options.address_query || segment_options.frame_query) apply_search_highlights();
+}
+
+function create_settings_view(dst, snapshot, device) {
+  dst.selectAll('svg').remove();
+  dst.selectAll('div').remove();
+  const settings_div = dst.append('div');
+  settings_div.append('p').text('Caching Allocator Settings:');
+
+  // Check if allocator_settings exists in snapshot
+  if ('allocator_settings' in snapshot) {
+    settings_div
+      .append('pre')
+      .text(JSON.stringify(snapshot.allocator_settings, null, 2));
+  } else {
+    settings_div.append('p').text('No allocator settings found.');
+  }
+}
+
+function unpickle(buffer) {
+  try {
+    const decoder = new TextDecoder();
+    const jsonString = decoder.decode(new Uint8Array(buffer));
+    const data = JSON.parse(jsonString);
+
+    return data;
+  } catch (e) {
+    console.log('Failed to decode the data as JSON, fall back to pickle', e);
+  }
+  return unpickleData(buffer);
+}
+
+function unpickleData(buffer) {
+  const bytebuffer = new Uint8Array(buffer);
+  const decoder = new TextDecoder();
+
+  const stack = [];
+  const marks = [];
+  const memo = [];
+  let offset = 0;
+  let memo_id = 0;
+
+  const APPENDS = 'e'.charCodeAt(0);
+  const BINGET = 'h'.charCodeAt(0);
+  const BININT = 'J'.charCodeAt(0);
+  const BININT1 = 'K'.charCodeAt(0);
+  const BININT2 = 'M'.charCodeAt(0);
+  const EMPTY_DICT = '}'.charCodeAt(0);
+  const EMPTY_LIST = ']'.charCodeAt(0);
+  const FRAME = 0x95;
+  const LONG1 = 0x8a;
+  const LONG_BINGET = 'j'.charCodeAt(0);
+  const MARK = '('.charCodeAt(0);
+  const MEMOIZE = 0x94;
+  const PROTO = 0x80;
+  const SETITEMS = 'u'.charCodeAt(0);
+  const SHORT_BINUNICODE = 0x8c;
+  const STOP = '.'.charCodeAt(0);
+  const TUPLE2 = 0x86;
+  const APPEND = 'a'.charCodeAt(0);
+  const NEWFALSE = 0x89;
+  const BINPUT = 'q'.charCodeAt(0);
+  const BINUNICODE = 'X'.charCodeAt(0);
+  const EMPTY_TUPLE = ')'.charCodeAt(0);
+  const NEWTRUE = 0x88;
+  const NONE = 'N'.charCodeAt(0);
+  const BINFLOAT = 'G'.charCodeAt(0);
+  const TUPLE = 't'.charCodeAt(0);
+  const TUPLE1 = 0x85;
+  const TUPLE3 = 0x87;
+  // untested
+  const LONG_BINPUT = 'r'.charCodeAt(0);
+  const LIST = 'l'.charCodeAt(0);
+  const DICT = 'd'.charCodeAt(0);
+  const SETITEM = 's'.charCodeAt(0);
+  const BYTEARRAY8 = 0x96;
+  const NEXT_BUFFER = 0x97;
+  const READONLY_BUFFER = 0x98;
+
+  const scratch_buffer = new ArrayBuffer(8);
+  const scratch_bytes = new Uint8Array(scratch_buffer);
+  const big = new BigInt64Array(scratch_buffer);
+  const float64 = new Float64Array(scratch_buffer);
+
+  function read_uint4() {
+    const n =
+      bytebuffer[offset] +
+      bytebuffer[offset + 1] * 256 +
+      bytebuffer[offset + 2] * 65536 +
+      bytebuffer[offset + 3] * 16777216;
+    offset += 4;
+    return n;
+  }
+  function read_uint64() {
+    const lo = read_uint4();
+    const hi = read_uint4();
+    const n = lo + hi * 0x100000000;
+    if (!Number.isSafeInteger(n)) {
+      throw new Error('Pickle length exceeds safe integer range');
+    }
+    return n;
+  }
+  function setitems(d, mark) {
+    for (let i = mark; i < stack.length; i += 2) {
+      d[stack[i]] = stack[i + 1];
+    }
+    stack.splice(mark, Infinity);
+  }
+
+  while (true) {
+    const opcode = bytebuffer[offset++];
+    switch (opcode) {
+      case PROTO:
+        {
+          const version = bytebuffer[offset++];
+          if (version < 2 || version > 5) {
+            throw new Error(`Unhandled version ${version}`);
+          }
+        }
+        break;
+      case APPEND:
+        {
+          const v = stack.pop();
+          stack.at(-1).push(v);
+        }
+        break;
+      case APPENDS:
+        {
+          const mark = marks.pop();
+          const arr = stack[mark - 1];
+          arr.push(...stack.splice(mark, Infinity));
+        }
+        break;
+      case LIST:
+      case TUPLE:
+        {
+          const mark = marks.pop();
+          stack.push([...stack.splice(mark, Infinity)]);
+        }
+        break;
+      case NEWFALSE:
+        stack.push(false);
+        break;
+      case NEWTRUE:
+        stack.push(true);
+        break;
+      case NONE:
+        stack.push(null);
+        break;
+      case BINGET:
+        stack.push(memo[bytebuffer[offset++]]);
+        break;
+      case BININT:
+        {
+          let i32 = read_uint4();
+          if (i32 > 0x7fffffff) {
+            i32 -= 0x100000000;
+          }
+          stack.push(i32);
+        }
+        break;
+      case BININT1:
+        stack.push(bytebuffer[offset++]);
+        break;
+      case BININT2:
+        {
+          const v = bytebuffer[offset] + bytebuffer[offset + 1] * 256;
+          stack.push(v);
+          offset += 2;
+        }
+        break;
+      case EMPTY_DICT:
+        stack.push({});
+        break;
+      case EMPTY_LIST:
+        stack.push([]);
+        break;
+      case FRAME:
+        offset += 8;
+        break;
+      case LONG1:
+        {
+          const s = bytebuffer[offset++];
+          if (s <= 8) {
+            for (let i = 0; i < s; i++) {
+              scratch_bytes[i] = bytebuffer[offset++];
+            }
+            const fill = scratch_bytes[s - 1] >= 128 ? 0xff : 0x0;
+            for (let i = s; i < 8; i++) {
+              scratch_bytes[i] = fill;
+            }
+            stack.push(Number(big[0]));
+          } else { // BigInt
+            let scratch_bytes_unbounded = [];
+            for (let i = 0; i < s; i++) {
+              scratch_bytes_unbounded.push(bytebuffer[offset++]);
+            }
+
+            // BigInt can only convert from unsigned hex, thus we need to
+            // convert from twos-complement if negative
+            const negative = scratch_bytes_unbounded[s - 1] >= 128;
+            if (negative) {
+              // implements scratch_bytes_unbounded = ~scratch_bytes_unbounded + 1
+              // byte-by-byte.
+              let carry = 1;
+              for (let i = 0; i < s; i++) {
+                const twos_complement = (0xff ^ scratch_bytes_unbounded[i]) + carry;
+                carry = twos_complement > 0xff ? 1 : 0;
+                scratch_bytes_unbounded[i] = 0xff & twos_complement;
+              }
+            }
+
+            const hex_str = Array.from(scratch_bytes_unbounded.reverse(), byte => {
+              return byte.toString(16).padStart(2, '0');
+            }).join('');
+
+            const big_int = negative ? -BigInt(`0x${hex_str}`) : BigInt(`0x${hex_str}`);
+            stack.push(big_int);
+          }
+        }
+        break;
+      case LONG_BINGET:
+        {
+          const idx = read_uint4();
+          stack.push(memo[idx]);
+        }
+        break;
+      case MARK:
+        marks.push(stack.length);
+        break;
+      case MEMOIZE:
+        memo[memo_id++] = stack.at(-1);
+        break;
+      case BINPUT:
+        memo[bytebuffer[offset++]] = stack.at(-1);
+        break;
+      case LONG_BINPUT:
+        memo[read_uint4()] = stack.at(-1);
+        break;
+      case SETITEMS:
+        {
+          const mark = marks.pop();
+          const d = stack[mark - 1];
+          setitems(d, mark);
+        }
+        break;
+      case SETITEM: {
+        const v = stack.pop();
+        const k = stack.pop();
+        stack.at(-1)[k] = v;
+        break;
+      }
+      case DICT:
+        {
+          const mark = marks.pop();
+          const d = {};
+          setitems(d, mark);
+          stack.push(d);
+        }
+        break;
+      case SHORT_BINUNICODE:
+        {
+          const n = bytebuffer[offset++];
+          stack.push(decoder.decode(new Uint8Array(buffer, offset, n)));
+          offset += n;
+        }
+        break;
+      case BINUNICODE:
+        {
+          const n = read_uint4();
+          stack.push(decoder.decode(new Uint8Array(buffer, offset, n)));
+          offset += n;
+        }
+        break;
+      case STOP:
+        return stack.pop();
+      case EMPTY_TUPLE:
+        stack.push([]);
+        break;
+      case TUPLE1:
+        stack.push([stack.pop()]);
+        break;
+      case TUPLE2:
+        stack.push(stack.splice(-2, Infinity));
+        break;
+      case TUPLE3:
+        stack.push(stack.splice(-3, Infinity));
+        break;
+      case BINFLOAT:
+        for (let i = 7; i >= 0; i--) {
+          // stored in big-endian order
+          scratch_bytes[i] = bytebuffer[offset++];
+        }
+        stack.push(float64[0]);
+        break;
+      case BYTEARRAY8:
+        {
+          const n = read_uint64();
+          stack.push(new Uint8Array(buffer.slice(offset, offset + n)));
+          offset += n;
+        }
+        break;
+      case NEXT_BUFFER:
+      case READONLY_BUFFER:
+        throw new Error('Out-of-band buffer opcodes are not supported');
+      default:
+        throw new Error(`UNKNOWN OPCODE: ${opcode}`);
+    }
+  }
+}
+
+function decode_base64(input) {
+  function decode_char(i, shift) {
+    const nChr = input.charCodeAt(i);
+    const r =
+      nChr > 64 && nChr < 91
+        ? nChr - 65
+        : nChr > 96 && nChr < 123
+        ? nChr - 71
+        : nChr > 47 && nChr < 58
+        ? nChr + 4
+        : nChr === 43
+        ? 62
+        : nChr === 47
+        ? 63
+        : 0;
+    return r << shift;
+  }
+  const output = new Uint8Array((input.length / 4) * 3);
+  for (let i = 0, j = 0; i < input.length; i += 4, j += 3) {
+    const u24 =
+      decode_char(i, 18) +
+      decode_char(i + 1, 12) +
+      decode_char(i + 2, 6) +
+      decode_char(i + 3);
+    output[j] = u24 >> 16;
+    output[j + 1] = (u24 >> 8) & 0xff;
+    output[j + 2] = u24 & 0xff;
+  }
+  return output.buffer;
+}
+
+const kinds = {
+  'Active Memory Timeline': create_trace_view,
+  'Allocated Memory (incl. Private Pools)': (dst, snapshot, device) =>
+    create_trace_view(dst, snapshot, device, false, 15000, true),
+  'Allocator State History': create_segment_view,
+  'Active Cached Segment Timeline': (dst, snapshot, device) =>
+    create_trace_view(dst, snapshot, device, true),
+  'Allocator Settings': create_settings_view,
+};
+
+const snapshot_cache = {};
+const snapshot_to_loader = {};
+const snapshot_to_url = {};
+const selection_to_div = {};
+
+const style = `
+pre {
+  margin: 0px;
+}
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: clip;
+}
+body {
+  display: flex;
+  flex-direction: column;
+}`;
+
+const head = d3.select('head');
+head.append('style').text(style);
+const body = d3.select('body');
+const controls = body.append('div');
+const snapshot_select = controls.append('select');
+const view = controls.append('select');
+for (const x in kinds) {
+  view.append('option').text(x);
+}
+const gpu = controls.append('select');
+
+// Add interaction mode toggle (hover vs click)
+const interactionLabel = body.append('label')
+  .attr('style', 'margin-left: 15px; cursor: pointer;');
+const interactionCheckbox = interactionLabel.append('input')
+  .attr('type', 'checkbox')
+  .attr('id', 'interaction-mode-toggle')
+  .attr('style', 'cursor: pointer; margin-right: 5px;');
+interactionLabel.append('span').text('Require click to show trace (applies on file load)');
+
+interactionCheckbox.on('change', function() {
+  const mode = this.checked ? 'click' : 'hover';
+  setTraceInteractionMode(mode);
+  // Only refresh the view if a snapshot is already loaded
+  if (snapshot_select.node().value) {
+    selected_change();
+  }
+});
+
+function unpickle_and_annotate(data) {
+  data = unpickle(data);
+  annotate_snapshot(data);
+  return data;
+}
+
+function snapshot_change(f) {
+  const view_value = view.node().value;
+  let no_starting_gpu = gpu.node().value == '';
+  let device = Number(gpu.node().value);
+  const snapshot = snapshot_cache[f];
+  gpu.selectAll('option').remove();
+  const has_segments = {};
+  for (const s of snapshot.segments) {
+    has_segments[s.device] = true;
+  }
+  let device_valid = false;
+  let maxTraceLength = -1;
+  let defaultDevice = null;
+  for (const [i, trace] of snapshot.device_traces.entries()) {
+    if (trace.length > 0 || i in has_segments) {
+      gpu.append('option').text(i);
+      if (trace.length > maxTraceLength) {
+        maxTraceLength = trace.length;
+        defaultDevice = i;
+      }
+      if (i === device) {
+        device_valid = true;
+        gpu.node().selectedIndex = gpu.node().children.length - 1;
+      }
+    }
+  }
+  if (!device_valid) {
+    device = Number(gpu.node().value);
+  }
+
+  if (no_starting_gpu) {
+    device = defaultDevice;
+    gpu.node().value = device;
+  }
+
+  const key = [f, view_value, device];
+  if (!(key in selection_to_div)) {
+    selection_to_div[key] = d3.select('body').append('div');
+    kinds[view_value](selection_to_div[key], snapshot, device);
+  }
+  const selected_div = selection_to_div[key];
+
+  selected_div.attr('style', 'display: flex; flex-direction: column; flex: 1; min-height: 0');
+}
+
+function selected_change() {
+  for (const d of Object.values(selection_to_div)) {
+    d.attr('style', 'display: none; flex-direction: column; flex: 1; min-height: 0');
+  }
+  const f = snapshot_select.node().value;
+  if (f === '') {
+    return;
+  }
+  if (!(f in snapshot_cache)) {
+    snapshot_to_loader[f](f);
+  } else {
+    snapshot_change(f);
+  }
+}
+
+snapshot_select.on('change', selected_change);
+view.on('change', selected_change);
+gpu.on('change', selected_change);
+
+body.on('dragover', e => {
+  event.preventDefault();
+});
+
+body.on('drop', () => {
+  console.log(event.dataTransfer.files);
+  Array.from(event.dataTransfer.files).forEach(file => {
+    add_snapshot(file.name, unique_name => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        finished_loading(unique_name, e.target.result);
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  });
+  event.preventDefault();
+  snapshot_select.node().selectedIndex =
+    snapshot_select.node().options.length - 1;
+  selected_change();
+});
+
+selection_to_div[''] = body
+  .append('div')
+  .text(
+    'Drag and drop or select a file to load a local snapshot. No data from the snapshot is uploaded.',
+  );
+
+const fileInput = body.append('input')
+  .attr('type', 'file')
+  .attr('multiple', true)    // allow several snapshots at once
+  .style('margin-left', '8px')
+  .on('change', function () {
+    Array.from(this.files).forEach(file => {
+      add_snapshot(file.name, unique_name => {
+        const reader = new FileReader();
+        reader.onload = e =>
+          finished_loading(unique_name, e.target.result);
+        reader.readAsArrayBuffer(file);
+      });
+    });
+    this.value = null;                       // reset so the same file can be picked again
+    snapshot_select.node().selectedIndex =
+      snapshot_select.node().options.length - 1;
+    selected_change();                       // refresh the UI
+  });
+
+let next_unique_n = 1;
+function add_snapshot(name, loader) {
+  if (name in snapshot_to_loader) {
+    name = `${name} (${next_unique_n++})`;
+  }
+  snapshot_select.append('option').text(name);
+  snapshot_to_loader[name] = loader;
+}
+
+function finished_loading(name, data) {
+  snapshot_cache[name] = unpickle_and_annotate(data);
+  snapshot_change(name);
+}
+
+export function add_remote_files(files) {
+  files.forEach(f =>
+    add_snapshot(f.name, unique_name => {
+      console.log('fetching', f.url);
+      fetch(f.url)
+        .then(x => x.arrayBuffer())
+        .then(data => finished_loading(unique_name, data));
+    }),
+  );
+  if (files.length > 0) {
+    selected_change();
+  }
+}
+
+export function add_local_files(files, view_value) {
+  view.node().value = view_value;
+  files.forEach(f =>
+    add_snapshot(f.name, unique_name => {
+      finished_loading(unique_name, decode_base64(f.base64));
+    }),
+  );
+  if (files.length > 0) {
+    selected_change();
+  }
+}
+
+// InsightChat extension: accept decompressed snapshot bytes without a base64 round trip.
+export function add_snapshot_buffer(name, buffer, view_value) {
+  view.node().value = view_value;
+  add_snapshot(name, unique_name => finished_loading(unique_name, buffer));
+  selected_change();
+}
+
+// Export configuration functions for external use
+export { setTraceInteractionMode, getTraceInteractionMode };

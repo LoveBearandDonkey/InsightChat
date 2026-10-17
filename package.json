@@ -25,6 +25,12 @@
     "@remotion/eslint-config-flat": "4.0.513",
     "@types/react": "19.2.7",
     "@types/web": "0.0.166",
+    "d3": "7.9.0",
+    "d3-axis": "3.0.0",
+    "d3-brush": "3.0.0",
+    "d3-scale": "4.0.2",
+    "d3-zoom": "3.0.0",
+    "esbuild": "0.28.1",
     "eslint": "9.19.0",
     "prettier": "3.8.1",
     "typescript": "5.9.3"
@@ -32,6 +38,9 @@
   "scripts": {
     "dev": "remotion studio",
     "build": "remotion bundle",
+    "build:chat": "node tools/build-chat-pages.cjs",
+    "build:memory-viz": "node tools/build-memory-viz.cjs",
+    "build:standalone": "node tools/build-standalone.js",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc"
   },

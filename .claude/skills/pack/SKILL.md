@@ -7,7 +7,7 @@ description: 把 chat.html 及其图标、可视化 iframe 页面打包成零外
 
 ## 做什么
 
-跑 `node tools/build-standalone.js`。它会内联 [chat.html](../../../chat.html) 引用的
+跑 `node tools/build-standalone.js`。它会内联 [chat.html](../../../app/pages/chat.html) 引用的
 `src/pic/icon/` 图标，以及聊天可视化 iframe 使用的 `v15-report-modules-pto.html`
 和该页面引用的本地 CSS/JS，产出
 `dist/chat.standalone.<YYYYMMDD-HHmm>.html` —— 零外部依赖,可以直接发给别人双击打开。
@@ -22,7 +22,7 @@ description: 把 chat.html 及其图标、可视化 iframe 页面打包成零外
    node tools/build-standalone.js
    ```
 
-   脚本自己扫描依赖：静态的 `src="src/pic/icon/xxx"`、JS 里 `icon: 'xxx'`
+   脚本自己扫描依赖：页面中的 `src="../../src/pic/icon/xxx"`、JS 里 `icon: 'xxx'`
    字面量，以及 iframe 子页的本地 `<link>` / `<script src>`，都会自动收进来。
    iframe 子页以内联 `data:` URL 承载，并通过 hash 接收 module、size、theme 参数。
 

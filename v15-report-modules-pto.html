@@ -33,6 +33,7 @@
 
     <!-- 本页局部 layout / data-viz -->
     <link rel="stylesheet" href="./v15-report-modules-pto.css" />
+    <link rel="stylesheet" href="./app/timeline-swim.css" />
   </head>
   <body>
     <section
@@ -462,6 +463,7 @@
     <script src="./assets/pto-design-system/patterns/workbench-shell/pattern.js"></script>
     <script src="./assets/pto-design-system/patterns/swimlane-task/pattern.js"></script>
     <script src="./assets/pto-design-system/patterns/ide-frame/pattern.js"></script>
+    <script src="./app/timeline-colors.js"></script>
     <script>
       /* ======================================================================
        * 页面只负责：domain data、pane content、commands、glue code。
@@ -1074,7 +1076,7 @@
             { label: "FWD", opName: "Forward", start: 16, duration: 144, status: "accounted" },
             { label: "MatMul", opName: "MatMul", start: 176, duration: 136, status: "accounted" },
             { label: "BWD", opName: "Backward", start: 328, duration: 136, status: "accounted" },
-            { label: "Optimizer", opName: "Optimizer step", start: 576, duration: 184, status: "accounted" },
+            { label: "Optimizer", opName: "Optimizer step", start: 608, duration: 184, status: "accounted" },
           ],
           communication: [
             { label: "AllReduce", opName: "AllReduce · gradients", start: 464, duration: 128, status: "wait" },
@@ -1226,6 +1228,131 @@
               </div>
             </div>`;
           }).join("");
+        }
+
+        /* 对话扩展复用主时间线的泳道骨架。嵌入图只呈现诊断所需的行，
+           独立报告页继续使用上面的完整交互视图。 */
+        function renderEmbeddedTimeline(moduleId) {
+          const host = document.querySelector(`.rp-module[data-module="${moduleId}"]`);
+          if (!host || moduleId === "top4") return;
+
+          const config = {
+            top1: {
+              title: "瓶颈所在 · stage3 与其他 stage 对比",
+              hint: "相同时间基线 · step 约 10.80 s",
+              eyebrow: "RANK COMPARISON / 01",
+              headline: "末级计算比其他 stage 多 3.11 s",
+              stats: [["9.26 s", "末级计算"], ["1.51×", "相较其余 Stage"]],
+              window: 12000,
+              ticks: ["0", "2", "4", "6", "8", "10", "12 s"],
+              rows: [{
+                name: "其他 stage 均值",
+                meta: "R0–5 · PP stage0–2",
+                reference: true,
+                tasks: [
+                  { start: 0, duration: 6150, name: "计算", kind: "compute", label: "计算 6.15 s" },
+                  { start: 6150, duration: 740, name: "通信", kind: "communication" },
+                  { start: 6890, duration: 3770, name: "等待", kind: "waiting", label: "等待 3.77 s" },
+                  { start: 10660, duration: 140, name: "Free", kind: "free" },
+                ],
+              }, ...[6, 7].map((rank) => ({
+                name: `Rank ${rank}`,
+                meta: "PP stage3",
+                tasks: [
+                  { start: 0, duration: 9260, name: "计算", kind: "compute", label: "计算 9.26 s" },
+                  { start: 9260, duration: 620, name: "通信", kind: "communication" },
+                  { start: 9880, duration: 780, name: "等待", kind: "waiting" },
+                  { start: 10660, duration: 140, name: "Free", kind: "free" },
+                ],
+              }))],
+              focus: { start: 6150, duration: 3110, kind: "excess" },
+              callout: "其他 stage 计算约 6.15 s 后等待约 3.77 s；R6/R7 仍计算到 9.26 s，超出的 3.11 s 落在浅红区间。",
+              note: "计算与等待时长取报告的 stage 汇总值；通信、Free 的分段比例为示意。",
+              legend: [["compute", "计算"], ["communication", "通信"], ["waiting", "等待"], ["free", "Free"], ["excess", "超出其他 stage"]],
+            },
+            top2: {
+              title: "问题所在 · 计算结束后才开始通信",
+              hint: "Rank 3 · Step 128 · 0—800 ms",
+              eyebrow: "COMPUTE × COMMUNICATION / 02",
+              headline: "128 ms 通信完全暴露在计算空档中",
+              stats: [["0%", "计算-通信重叠率"], ["128 ms", "暴露通信"]],
+              window: 800,
+              ticks: ["0", "160", "320", "480", "640", "800 ms"],
+              rows: [
+                { name: "计算", meta: "AI Core", tasks: OVERLAP_TASKS.compute.map((task) => ({ ...task, name: task.opName })) },
+                { name: "通信", meta: "HCCL", tasks: OVERLAP_TASKS.communication.map((task) => ({ ...task, name: task.opName })) },
+              ],
+              focus: { start: 464, duration: 128, kind: "exposed" },
+              callout: "两条红色边界界定 464—592 ms：AllReduce 正好落在计算任务之间，重叠率为 0%。",
+              note: "两条泳道共用时间轴；浅红区间表示通信完全暴露的 128 ms。",
+              legend: [["operator", "按算子名称着色"], ["exposed", "暴露通信区间"]],
+            },
+            top3: {
+              title: "问题所在 · 末级过载引起尾部排空",
+              hint: "4 stages · 12 个调度槽",
+              eyebrow: "PIPELINE BUBBLE / 03",
+              headline: "空泡集中在调度的开始与末尾",
+              stats: [["26%", "Bubble 率"], ["4.26 s", "每 step 无效等待"]],
+              window: 12,
+              ticks: ["T1", "T3", "T5", "T7", "T9", "T11", "T12"],
+              rows: PIPELINE.map((row) => ({
+                name: `Stage ${row.stage}`,
+                meta: row.ranks,
+                tasks: row.cells.map((cell, slot) => ({
+                  start: slot,
+                  duration: 1,
+                  name: cell.startsWith("-") ? "Bubble" : cell.startsWith("F") ? "Forward" : "Backward",
+                  kind: cell === "-!" ? "bubble-hot" : cell === "-" ? "bubble" : cell.startsWith("F") ? "forward" : "backward",
+                  label: cell.startsWith("-") ? "" : cell,
+                })),
+              })),
+              callout: "T12 时 Stage 0/1 已无任务，暖色空泡正是尾部排空；其余灰格是普通调度空位。",
+              note: "沿用报告的 1F1B 调度序列；蓝色为 Forward、紫色为 Backward。",
+              legend: [["forward", "Forward"], ["backward", "Backward"], ["bubble", "普通空位"], ["bubble-hot", "尾部排空"]],
+            },
+          }[moduleId];
+          if (!config) return;
+
+          const ticks = config.ticks.map((label, index) =>
+            `<span class="msi-ruler-tick${index === config.ticks.length - 1 ? " msi-ruler-tick--end" : ""}" style="left:${(index / (config.ticks.length - 1)) * 100}%">${escapeHtml(label)}</span>`,
+          ).join("");
+          const rows = config.rows.map((row) => `
+            <div class="msi-lane-row rp-embed-row${row.reference ? " rp-embed-row--reference" : ""}">
+              <div class="msi-lane-label" title="${escapeHtml(row.name)} · ${escapeHtml(row.meta)}"><span class="rp-embed-lane-name">${escapeHtml(row.name)}</span><span class="rp-embed-lane-meta">${escapeHtml(row.meta)}</span></div>
+              <div class="msi-lane-track">
+                ${row.tasks.map((task) => {
+                  const color = moduleId === "top2" ? window.MsiTraceColors.colorForName(task.name) : null;
+                  const label = task.label ?? task.name;
+                  const showLabel = moduleId === "top1" ? task.kind === "compute" || row.reference && task.kind === "waiting" : task.duration / config.window >= 0.05;
+                  return `<span class="msi-bar rp-embed-op${task.kind ? " rp-embed-op--" + task.kind : ""}"
+                    style="left:calc(${((task.start / config.window) * 100).toFixed(3)}% + 1px);width:calc(${((task.duration / config.window) * 100).toFixed(3)}% - 2px)${color ? ";background:" + color.bg + ";color:" + color.fg : ""}"
+                    title="${escapeHtml(task.name)} · ${task.start}—${task.start + task.duration}${moduleId === "top3" ? " 槽" : " ms"}">${escapeHtml(showLabel ? label : "")}</span>`;
+                }).join("")}
+                ${config.focus && !row.reference ? `<span class="rp-embed-focus rp-embed-focus--${config.focus.kind}" style="left:${((config.focus.start / config.window) * 100).toFixed(3)}%;width:${((config.focus.duration / config.window) * 100).toFixed(3)}%" aria-hidden="true"></span>` : ""}
+              </div>
+            </div>`).join("");
+          const annotation = `<p class="rp-embed-annotation"><span class="rp-embed-annotation-mark rp-embed-annotation-mark--${moduleId}" aria-hidden="true"></span>${escapeHtml(config.callout)}</p>`;
+          const legend = `<div class="rp-embed-legend">${config.legend.map(([kind, label]) => `<span class="rp-embed-legend-item"><i class="rp-embed-legend-dot rp-embed-legend-dot--${kind}"></i>${escapeHtml(label)}</span>`).join("")}</div>`;
+          host.classList.add("rp-view--timeline-embed");
+          host.innerHTML = `
+            <header class="rp-embed-header">
+              <span class="rp-embed-eyebrow">${escapeHtml(config.eyebrow || "TIMELINE / 02")}</span>
+              <h3>${escapeHtml(config.headline || config.title)}</h3>
+              <p>${escapeHtml(config.hint)}</p>
+            </header>
+            ${config.stats ? `<div class="rp-embed-stats">${config.stats.map(([value, label]) => `<div class="rp-embed-stat"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`).join("")}</div>` : ""}
+            <div class="rp-embed-chart-shell">
+              <div class="rp-embed-chart-title"><strong>${escapeHtml(config.title)}</strong><span>${escapeHtml(config.hint)}</span></div>
+              <div class="rp-embed-chart-scroll">
+                <div class="msi-swim rp-embed-swim" style="--msi-lane-w:112px">
+                  <div class="msi-swim-head"><div class="msi-swim-corner">泳道</div><div class="msi-swim-ruler">${ticks}</div></div>
+                  <div class="msi-swim-body">${rows}</div>
+                </div>
+              </div>
+              ${annotation}
+              ${legend}
+            </div>
+            <p class="rp-embed-note">${escapeHtml(config.note)}</p>`;
         }
 
         /* ==================================================================
@@ -1419,6 +1546,9 @@
 
           const rank = Number(query.get("rank"));
           if (query.has("rank") && Number.isInteger(rank)) locateRank(rank);
+          if (document.documentElement.dataset.embedChart === "true") {
+            renderEmbeddedTimeline(MODULES[requestedModule] ? requestedModule : "top1");
+          }
         }
 
         if (document.readyState === "loading") {

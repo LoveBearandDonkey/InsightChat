@@ -1,6 +1,6 @@
 ## 在线体验
 
-[点击在线访问 InsightChat](https://lovebearanddonkey.github.io/InsightChat/chat.html)
+[点击在线访问 InsightChat](https://lovebearanddonkey.github.io/InsightChat/app/pages/chat.html)
 
 # InsightChat
 
@@ -17,9 +17,15 @@ InsightChat 是一个面向性能分析场景的智能对话与数据洞察体�
 
 ### 浏览交互原型
 
-直接打开仓库根目录下的 `chat.html`，或使用上方的在线体验地址。
+直接打开 `app/pages/chat.html`，或使用上方的在线体验地址。`app/pages/timeline.html` 和 `app/pages/compare.html` 分别以时间线、对比模式作为初始视图；三个入口共用同一套外壳与功能代码。对比页默认只勾选基线任务，可用 `?compare=任务名` 指定第二个任务。
 
-页面依赖的图片与图标位于 `src/pic/icon/`，移动或单独复制页面时需要保留相同的相对目录结构。
+页面依赖 `app/` 中的样式与脚本，以及 `src/pic/icon/` 中的图片。移动页面时需保留这些相对目录；如需交付单个 HTML 文件，运行 `npm run build:standalone`，到 `dist/` 中取生成文件。
+
+修改原型时编辑 `app/shell.html`、`app/pages/` 中的视图片段、`app/chat.css` 或 `app/*.js`，然后运行 `npm run build:chat`。`app/pages/` 中的三个入口 HTML 是生成文件，不应直接编辑。
+
+概览和时间线在源码中各占一个视图片段；入口页只决定首次显示哪个视图。页签仍在当前页面内切换，以保留聊天会话和工作台状态。`overview.js` 在时间线、对比入口中等到首次打开概览时才加载。新增视图时，在 `app/pages/` 添加片段，并在 `app/shell.html` 与 `tools/build-chat-pages.cjs` 注册入口。
+
+“内存”页签使用仓库内预置的 PyTorch 示例快照。两张图的外层布局在 `app/chat.css`，图内样式在 `app/memory-viz/host.css`；可视化源码及固定版本在 `app/memory-viz/vendor/`，示例快照原件压缩存放于 `app/memory-viz/snapshot.pickle.gz`。`npm run build:memory-viz` 会将 PyTorch MemoryViz 与 D3 打包为本地脚本，并生成浏览器可直接读取的压缩数据；`build:chat` 和 `build:standalone` 也会自动执行这一步。浏览器运行时不依赖 PyTorch 网站或 CDN，内存资源只在打开页签后加载。示例快照不代表左侧任务的实测数据。
 
 ### 运行 Remotion 项目
 
@@ -44,6 +50,12 @@ npm run lint
 # 构建 Remotion Bundle
 npm run build
 
+# 生成原型的三个 HTML 入口
+npm run build:chat
+
+# 生成可单独交付的 chat.html 单文件版
+npm run build:standalone
+
 # 渲染完整演示视频
 npx remotion render Launch out/InsightChat.mp4
 
@@ -55,7 +67,21 @@ npm run upgrade
 
 ```text
 InsightChat/
-├── chat.html                  # 智能对话工作台交互原型
+├── app/                       # 原型源码：公共外壳、视图、样式和功能脚本
+│   ├── shell.html             # 三个页面共用的 HTML 外壳
+│   ├── pages/                 # 三个生成入口和概览、时间线、内存视图片段
+│   │   ├── chat.html          # 生成的默认入口
+│   │   ├── timeline.html      # 生成的时间线入口
+│   │   ├── compare.html       # 生成的对比入口
+│   │   ├── overview.html      # 概览视图片段
+│   │   ├── timeline-view.html # 时间线视图片段
+│   │   └── memory.html        # 内存视图片段
+│   ├── chat.css               # 公共样式和视图样式
+│   ├── workbench.js           # 工程树、时间线和对比逻辑
+│   ├── overview.js            # 概览页数据和交互，按需加载
+│   ├── assistant.js           # 智能对话逻辑
+│   ├── theme.js               # 主题切换
+│   └── resizers.js            # 面板尺寸控制
 ├── src/
 │   ├── components/            # 视频与界面通用组件
 │   ├── scenes/                # Remotion 分镜场景
@@ -66,6 +92,7 @@ InsightChat/
 ├── handoff/                   # 可独立复用的交互动效交付物
 ├── v15-report-modules-pto.html
 ├── v15-report-modules-pto.css # 报告可视化原型
+├── tools/build-chat-pages.cjs # 根据公共外壳和视图生成页面
 └── PLAN.md                    # 项目规划与实现记录
 ```
 
@@ -81,7 +108,7 @@ InsightChat/
 
 在线原型通过 GitHub Pages 发布。发布源应设置为 `main` 分支的 `/(root)` 目录，对应地址：
 
-<https://lovebearanddonkey.github.io/InsightChat/chat.html>
+<https://lovebearanddonkey.github.io/InsightChat/app/pages/chat.html>
 
 ## 许可
 

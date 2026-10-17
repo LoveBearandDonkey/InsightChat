@@ -1,0 +1,104 @@
+<div class="msi-analysis-stage msi-timeline-panel" id="msiTimelinePanel" role="tabpanel" aria-label="时间线" hidden>
+            <div class="msi-toolbar">
+              <button class="msi-tb-btn" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h13"></path></svg>
+                <span>Timeline View</span>
+                <svg class="msi-tb-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+              </button>
+              <div class="msi-tb-zoom" role="group" aria-label="时间轴缩放">
+                <button class="msi-tb-zoom-btn" type="button" id="msiZoomOut" aria-label="缩短时间窗">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path></svg>
+                </button>
+                <span class="msi-tb-zoom-val" id="msiZoomVal" aria-live="polite">1.2s</span>
+                <button class="msi-tb-zoom-btn" type="button" id="msiZoomIn" aria-label="拉长时间窗">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+                </button>
+              </div>
+              <label class="msi-tb-search">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4-4"></path></svg>
+                <input type="search" placeholder="搜索" aria-label="搜索">
+              </label>
+            </div>
+
+            <div class="msi-timeline-swims" id="msiTimelineSwims">
+              <div class="msi-swim" id="msiSwim">
+                <div class="msi-swim-title" id="msiSwimTitle" hidden></div>
+                <div class="msi-swim-head">
+                  <div class="msi-swim-corner"></div>
+                  <div class="msi-swim-ruler" id="msiRuler" aria-hidden="true"></div>
+                </div>
+                <div class="msi-swim-body" id="msiSwimBody"></div>
+              </div>
+              <div class="msi-swim" id="msiSwimCompare" hidden>
+                <div class="msi-swim-title" id="msiSwimCompareTitle"></div>
+                <div class="msi-swim-head">
+                  <div class="msi-swim-corner"></div>
+                  <div class="msi-swim-ruler" id="msiRulerCompare" aria-hidden="true"></div>
+                </div>
+                <div class="msi-swim-body" id="msiSwimBodyCompare"></div>
+              </div>
+            </div>
+
+            <div class="msi-mouse-tools" id="msiMouseTools" role="group" aria-label="时间线鼠标模式">
+              <div class="msi-mouse-tools-main">
+                <button class="msi-mouse-tool is-active" type="button" data-mouse-mode="select" aria-label="选择模式" title="选择：点击查看事件" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2v18l4.4-4.3 3.3 6 2.5-1.4-3.3-5.9 6.1-.7z" fill="currentColor" stroke="none"/></svg></button>
+                <button class="msi-mouse-tool" type="button" data-mouse-mode="pan" aria-label="拖拽模式" title="拖拽：移动泳道视图" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11V5a1.5 1.5 0 0 1 3 0v4-6a1.5 1.5 0 0 1 3 0v6-4a1.5 1.5 0 0 1 3 0v5-3a1.5 1.5 0 0 1 3 0v7c0 4-2.6 7-6.7 7h-2.2c-2 0-3.1-.8-4.1-2.2L3.2 13a1.6 1.6 0 0 1 2.3-2.2L8 13"/></svg></button>
+                <span class="msi-mouse-tool-separator" aria-hidden="true"></span>
+                <button class="msi-mouse-tool" type="button" data-mouse-mode="height" aria-label="泳道高度模式" title="高度：上下拖动调整泳道高度" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M8 6l4-4 4 4M8 18l4 4 4-4M3 12h18"/></svg></button>
+                <button class="msi-mouse-tool" type="button" data-mouse-mode="box" aria-label="框选模式" title="框选：拖动选取事件" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="1"/><path d="M8 9h8M8 12h8M8 15h5"/><circle cx="4" cy="5" r="1.4" fill="var(--surface-1)"/><circle cx="20" cy="5" r="1.4" fill="var(--surface-1)"/><circle cx="4" cy="19" r="1.4" fill="var(--surface-1)"/><circle cx="20" cy="19" r="1.4" fill="var(--surface-1)"/></svg></button>
+              </div>
+              <span class="msi-mouse-tool-separator" aria-hidden="true"></span>
+              <button class="msi-mouse-tool" type="button" id="msiMouseHelpToggle" aria-label="鼠标模式帮助" title="鼠标模式帮助" aria-expanded="false" aria-controls="msiMouseHelp"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 1 1 4.1 2.1c-1 .7-1.6 1.2-1.6 2.4M12 17h.01"/></svg></button>
+              <button class="msi-mouse-tool msi-mouse-tool-collapse" type="button" id="msiMouseToolsCollapse" aria-label="收起鼠标模式面板" title="收起鼠标模式面板" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 5 7 7-7 7M12 5l7 7-7 7"/></svg></button>
+              <div class="msi-mouse-help" id="msiMouseHelp" hidden>选择：点击事件查看详情<br>拖拽：移动泳道视图<br>高度：上下拖动调整行高<br>框选：拖动选取多个事件</div>
+              <span class="msi-mouse-status" id="msiMouseStatus" role="status" aria-live="polite"></span>
+            </div>
+
+            <!-- 泳道图 ↕ 底部详情栏 的分隔条:往上拖把详情栏拉高、往下拖压扁,双击回到 232px。
+                 详情栏收起时这条一起隐藏(见 initPaneResizers)。 -->
+            <div class="msi-resizer msi-resizer--h" id="msiFootResizer" role="separator"
+                 aria-orientation="horizontal" aria-label="调整详情栏高度" tabindex="0" hidden></div>
+
+            <!-- 进页面默认收起(is-collapsed 直接写在标记里,首帧就不展开,免得脚本跑完再跳一下);
+                 点泳道任务条或点页签才拉开,见 renderSelectionDetail / initSelectionPanel。 -->
+            <footer class="msi-content-foot is-collapsed" id="msiSelectionPanel" aria-expanded="false">
+              <!-- 头部一行两栏:左栏标题「选中详情」,右栏是四个页签(调用链 / 选中列表 / 系统视图 / 查找)
+                   加收起按钮。收起时只留这一行,body 整块隐藏。 -->
+              <div class="msi-foot-head">
+                <div class="msi-foot-head-left">
+                  <button class="msi-foot-title" id="msiDetailTitle" type="button">选中详情</button>
+                  <!-- 折叠左栏:图标里那条竖线画在左边(x=9),左半块就是「选中详情」这一栏,
+                       折起后整个图标水平镜像,方向跟着状态走。 -->
+                  <button class="msi-side-icon msi-foot-fold" id="msiDetailFold" type="button"
+                          aria-expanded="true" aria-controls="msiFootBody" title="折叠选中详情" aria-label="折叠选中详情">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path></svg>
+                  </button>
+                </div>
+                <div class="msi-foot-tabs" role="tablist" aria-label="底部信息面板">
+                  <button class="msi-foot-tab is-active" type="button" role="tab" aria-selected="false" data-foot-tab="chain">调用链</button>
+                  <button class="msi-foot-tab" type="button" role="tab" aria-selected="false" data-foot-tab="list">选中列表</button>
+                  <button class="msi-foot-tab" type="button" role="tab" aria-selected="false" data-foot-tab="system">系统视图</button>
+                  <button class="msi-foot-tab" type="button" role="tab" aria-selected="false" data-foot-tab="find">查找</button>
+                  <button class="msi-foot-close" id="msiDetailClose" type="button" aria-label="展开详情栏" title="展开详情栏" aria-expanded="false">
+                    <svg class="msi-foot-close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+                    <svg class="msi-foot-expand-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"></path></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="msi-foot-body" id="msiFootBody">
+                <!-- 左栏:选中详情。key-value 竖排,value 长了就换行,不用省略号。 -->
+                <section class="msi-foot-left" aria-labelledby="msiDetailTitle">
+                  <span class="msi-foot-title-vert" aria-hidden="true">选中详情</span>
+                  <dl class="msi-basic-grid" id="msiTaskBasics" hidden></dl>
+                  <p class="msi-foot-empty" id="msiDetailEmpty">请选择泳道对象</p>
+                </section>
+                <!-- 右栏:页签内容区。「调用链」有选中就画调用流,没选中显示「请选择泳道对象」;
+                     其余三个页签还没做,统一显示「敬请期待」。文案由 activateFootTab 写入。 -->
+                <section class="msi-foot-right">
+                  <div class="msi-chain-flow" id="msiCallChain" hidden></div>
+                  <div class="msi-foot-placeholder" id="msiFootPlaceholder" hidden></div>
+                </section>
+              </div>
+            </footer>
+
+            </div>

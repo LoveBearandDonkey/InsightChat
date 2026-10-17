@@ -1,0 +1,118 @@
+<main class="msi-analysis-stage msi-overview" id="msiOverviewPanel" role="tabpanel" aria-label="性能概览">
+              <div class="msi-ov-runtime-insight">
+                <div class="msi-ov-runtime-insight-main">
+                  <div class="msi-ov-runtime-insight-copy"><strong>专家建议</strong><span>Rank 6 / 7 的计算耗时比其余 Rank 高约 51%，各 Rank 最大计算差异为 <b id="msiOvRuntimeGap">3.11 s</b>；建议优先均衡末级负载，减少 Rank 0–5 每步约 3.77 s 的通信等待，并开启计算通信重叠。</span></div>
+                </div>
+
+                <div class="msi-ov-watch-grid">
+                  <article class="msi-ov-watch-tile msi-ov-watch-health">
+                    <div class="msi-ov-watch-rings" role="img" aria-label="性能健康度 75 分，计算 64，通信 93，调度 71">
+                      <i class="msi-ov-watch-ring msi-ov-watch-ring--outer"></i>
+                      <i class="msi-ov-watch-ring msi-ov-watch-ring--middle"></i>
+                      <i class="msi-ov-watch-ring msi-ov-watch-ring--inner"></i>
+                      <strong>75</strong>
+                    </div>
+                    <div class="msi-ov-watch-copy"><span>性能健康度</span><strong>A级</strong><small>优化后预计 85</small></div>
+                  </article>
+                  <article class="msi-ov-watch-tile msi-ov-watch-conclusion">
+                    <div class="msi-ov-watch-kicker">核心瓶颈</div>
+                    <div class="msi-ov-watch-conclusion-copy">stage3 计算约 9.26 s/step，是其余各级的 1.51×；其余 6 卡每步在 P2P recv 上空等约 3.77 s，流水线 bubble 占 step 约 35%。</div>
+                  </article>
+                </div>
+              </div>
+
+              <section class="msi-ov-section" aria-labelledby="msiOvMetricTitle">
+                <div class="msi-ov-section-title-row msi-ov-metric-head">
+                  <h3 class="msi-ov-section-title" id="msiOvMetricTitle">关键指标</h3>
+                  <button class="msi-ov-metric-edit-btn" id="msiOvMetricEditBtn" type="button" aria-label="编辑关键指标及其顺序" aria-controls="msiOvMetricEditor" aria-expanded="false" title="编辑关键指标及其顺序"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>编辑</span></button>
+                  <div class="msi-ov-metric-editor" id="msiOvMetricEditor" aria-label="关键指标编辑" hidden></div>
+                </div>
+                <div class="msi-ov-metrics" id="msiOvMetricBoard">
+                  <article class="msi-ov-card msi-ov-metric msi-ov-metric--ok" data-metric="op_utilization">
+                    <div class="msi-ov-metric-name">算子利用率</div>
+                    <button class="msi-ov-metric-help" type="button" aria-label="算子利用率说明：各卡 device 计算时间除以 step 均值；Cube 硬件利用率另达约 92%">?<span class="msi-ov-metric-help-pop" role="tooltip">各卡 device 计算时间 / step 均值；Cube 硬件利用率另达约 92%</span></button>
+                    <div class="msi-ov-metric-value">64<span class="msi-ov-metric-unit">%</span></div>
+                  </article>
+                  <article class="msi-ov-card msi-ov-metric msi-ov-metric--bad" data-metric="overlap_ratio">
+                    <div class="msi-ov-metric-name">计算-通信重叠率</div>
+                    <button class="msi-ov-metric-help" type="button" aria-label="计算通信重叠率说明：8 卡全部为 0，无任何通信被计算掩盖">?<span class="msi-ov-metric-help-pop" role="tooltip">8 卡全部为 0，无任何通信被计算掩盖</span></button>
+                    <div class="msi-ov-metric-value">0<span class="msi-ov-metric-unit">%</span></div>
+                  </article>
+                  <article class="msi-ov-card msi-ov-metric msi-ov-metric--bad" data-metric="max_lane_idle">
+                    <div class="msi-ov-metric-name">最空闲泳道空挡</div>
+                    <button class="msi-ov-metric-help" type="button" aria-label="最空闲泳道空挡说明：stage0 到 stage2 每步在 P2P recv 上空等约 3.77 秒">?<span class="msi-ov-metric-help-pop" role="tooltip">stage0–2 每步在 P2P recv 上空等约 3.77 s</span></button>
+                    <div class="msi-ov-metric-value">35<span class="msi-ov-metric-unit">%</span></div>
+                  </article>
+                  <article class="msi-ov-card msi-ov-metric msi-ov-metric--ok" data-metric="step_cv">
+                    <div class="msi-ov-metric-name">step 抖动（CV）</div>
+                    <button class="msi-ov-metric-help" type="button" aria-label="step 抖动说明：8 卡单步 10796.6 到 10800.6 毫秒，无掉队 rank">?<span class="msi-ov-metric-help-pop" role="tooltip">8 卡单步 10796.6–10800.6 ms，无掉队 rank</span></button>
+                    <div class="msi-ov-metric-value">0.012<span class="msi-ov-metric-unit">%</span></div>
+                  </article>
+                  <article class="msi-ov-card msi-ov-metric msi-ov-metric--warn" data-metric="mfu">
+                    <div class="msi-ov-metric-name">MFU（端到端）</div>
+                    <button class="msi-ov-metric-help" type="button" aria-label="MFU 说明：910B1 的 stage0 MatMul 达成约 301.7 TF每秒，bubble 与零重叠拉低端到端效率">?<span class="msi-ov-metric-help-pop" role="tooltip">910B1 · stage0 MatMul 达成约 301.7 TF/s，bubble 与零重叠拉低端到端效率</span></button>
+                    <div class="msi-ov-metric-value">40<span class="msi-ov-metric-unit">%</span></div>
+                  </article>
+                </div>
+              </section>
+
+              <section class="msi-ov-section msi-ov-runtime" aria-labelledby="msiOvRuntimeTitle">
+                <div class="msi-ov-section-title-row msi-ov-runtime-head">
+                  <div>
+                    <h3 class="msi-ov-section-title" id="msiOvRuntimeTitle">计算 / 通信概览</h3>
+                  </div>
+                </div>
+
+                <div class="msi-ov-card msi-ov-runtime-card">
+                  <div class="msi-ov-runtime-controls" aria-label="图表筛选">
+                    <label class="msi-ov-runtime-field">
+                      <span>迭代</span>
+                      <select id="msiOvRuntimeStep" aria-label="选择迭代">
+                        <option value="mean">Step 3–4 均值</option>
+                        <option value="3">Step 3</option>
+                        <option value="4">Step 4</option>
+                      </select>
+                    </label>
+                    <label class="msi-ov-runtime-field">
+                      <span>通信域</span>
+                      <select id="msiOvRuntimeDomain" aria-label="选择通信域">
+                        <option value="all">全部通信</option>
+                        <option value="pp">Pipeline P2P</option>
+                        <option value="dp">Data Parallel</option>
+                      </select>
+                    </label>
+                    <label class="msi-ov-runtime-field">
+                      <span>排序</span>
+                      <select id="msiOvRuntimeSort" aria-label="选择排序方式">
+                        <option value="rank">Rank ID</option>
+                        <option value="computeRatio">计算占比</option>
+                        <option value="communicationRatio">通信占比</option>
+                        <option value="compute">计算时间（未重叠）</option>
+                        <option value="overlap">计算通信重叠时间</option>
+                        <option value="communication">通信时间（未重叠）</option>
+                        <option value="idle">空闲时间</option>
+                        <option value="preprocess">预处理时间</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <div class="msi-ov-runtime-legend" id="msiOvRuntimeLegend" aria-label="图例"></div>
+                  <div class="msi-ov-runtime-chart-wrap">
+                    <svg class="msi-ov-runtime-chart" id="msiOvRuntimeChart" role="img" aria-labelledby="msiOvRuntimeTitle msiOvRuntimeChartDesc"></svg>
+                    <span class="msi-ov-runtime-chart-desc" id="msiOvRuntimeChartDesc">堆叠柱表示各 Rank 的计算、通信、等待和预处理耗时；折线表示计算和通信占比。</span>
+                    <div class="msi-ov-runtime-tooltip" id="msiOvRuntimeTooltip" role="status" aria-live="polite" hidden></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="msi-ov-section" id="msiOvIssuesSection" aria-labelledby="msiOvIssuesTitle">
+                <div class="msi-ov-section-title-row">
+                  <h3 class="msi-ov-section-title" id="msiOvIssuesTitle">关键问题 <span class="msi-ov-section-note">（5）</span></h3>
+                  <span class="msi-ov-section-note">按优化收益从高到低</span>
+                </div>
+                <div class="msi-ov-card msi-ov-issues">
+                  <div class="msi-ov-issue-list" id="msiOvIssueList" role="tablist" aria-label="关键问题"></div>
+                  <article class="msi-ov-issue-detail" id="msiOvIssueDetail" role="tabpanel" aria-live="polite"></article>
+                </div>
+              </section>
+            </main>

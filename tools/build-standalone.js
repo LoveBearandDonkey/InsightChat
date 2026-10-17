@@ -14,9 +14,10 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { buildAll } = require('./build-chat-pages.cjs');
 
 const ROOT = path.join(__dirname, '..');
-const SRC = path.join(ROOT, 'chat.html');
+const SRC = path.join(ROOT, 'app', 'pages', 'chat.html');
 const OUT_DIR = path.join(ROOT, 'dist');
 const ICON_DIR = path.join(ROOT, 'src', 'pic', 'icon');
 const VIZ_SRC = path.join(ROOT, 'v15-report-modules-pto.html');
@@ -89,7 +90,49 @@ const buildVisualizationFrame = () => {
   };
 };
 
+buildAll();
 let html = fs.readFileSync(SRC, 'utf8');
+// Inline the page using the former root-relative spellings expected below.
+// The generated entry now lives two directories below the repository root.
+html = html.replaceAll('../../src/pic/icon/', 'src/pic/icon/')
+  .replace(/(?:\.\.\/)([\w.-]+\.(?:css|js))/g, 'app/$1')
+  .replaceAll('../memory-viz.html', 'app/memory-viz.html')
+  .replaceAll('../../v15-report-modules-pto.html', 'v15-report-modules-pto.html');
+html = html.replace('href="chat.html"', 'href=""');
+for (const view of ['timeline', 'allocator']) {
+  if (countOf(html, 'data-src="app/memory-viz.html#' + view + '"') !== 1) {
+    throw new Error('内存快照 iframe 引用数量异常: ' + view);
+  }
+}
+let memoryFrameDoc = fs.readFileSync(path.join(ROOT, 'app', 'memory-viz.html'), 'utf8');
+memoryFrameDoc = memoryFrameDoc.replace('<link rel="stylesheet" href="memory-viz/host.css">',
+  '<style>\n' + fs.readFileSync(path.join(ROOT, 'app', 'memory-viz', 'host.css'), 'utf8') + '\n</style>');
+for (const file of ['MemoryViz.bundle.js', 'snapshot-data.js', 'host.js']) {
+  const ref = '<script src="memory-viz/' + file + '"></script>';
+  if (countOf(memoryFrameDoc, ref) !== 1) throw new Error('内存快照资源引用数量异常: ' + file);
+  const source = fs.readFileSync(path.join(ROOT, 'app', 'memory-viz', file), 'utf8');
+  if (/<\/script/i.test(source)) throw new Error('内存快照脚本不能安全内联: ' + file);
+  memoryFrameDoc = memoryFrameDoc.replace(ref, () => '<script>\n' + source + '\n</script>');
+}
+const unresolvedMemoryRefs = memoryFrameDoc.match(/(?:src|href)="memory-viz\/[^"\s]+/g);
+if (unresolvedMemoryRefs) throw new Error('内存快照仍引用外部资源: ' + unresolvedMemoryRefs.slice(0, 3).join(', '));
+const memoryFrame = 'data:text/html;base64,' + Buffer.from(memoryFrameDoc, 'utf8').toString('base64');
+html = html.replace(/<link rel="stylesheet" href="(app\/[\w.-]+\.css)">/g, (_, ref) => {
+  const css = fs.readFileSync(path.join(ROOT, ref), 'utf8')
+    .replaceAll("url('../src/pic/icon/", "url('src/pic/icon/");
+  return '<style>\n' + css + '\n</style>';
+});
+html = html.replace(/<script defer src="(app\/[\w.-]+\.js)"><\/script>/g, (_, ref) => {
+  const js = fs.readFileSync(path.join(ROOT, ref), 'utf8');
+  if (/<\/script/i.test(js)) throw new Error('外部脚本不能安全内联: ' + ref);
+  return '<script>\n' + js + '\n</script>';
+});
+// Scripts are read from app/ after the first normalization pass.
+html = html.replaceAll('../../src/pic/icon/', 'src/pic/icon/')
+  .replaceAll('../../v15-report-modules-pto.html', 'v15-report-modules-pto.html');
+if (/<(?:link|script)\b[^>]*(?:href|src)="app\//.test(html)) {
+  throw new Error('仍有未内联的 app 资源');
+}
 const visualization = buildVisualizationFrame();
 
 // 只处理真正被引用到的图标,没用上的不进包
@@ -140,6 +183,7 @@ const table = '\n  // 图标 base64 映射表(由 tools/build-standalone.js 生�
   JSON.stringify(icons, null, 0) + ';\n' +
   '  // 聊天可视化 iframe 的完整内联页面\n' +
   '  const WZH_VIZ_FRAME = ' + JSON.stringify(visualization.uri) + ';\n' +
+  '  window.MSI_MEMORY_FRAME = ' + JSON.stringify(memoryFrame) + ';\n' +
   '  (function () {\n' +
   '    const fill = (el) => { if (!el.getAttribute("src")) el.src = WZH_ICON[el.dataset.wzhIcon] || ""; };\n' +
   '    const scan = (root) => {\n' +
