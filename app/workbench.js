@@ -337,7 +337,6 @@
   function swapCompareRoles() {
     if (!compareMode || compareTasks.length < 2) return;
     compareTasks = [compareTasks[1], compareTasks[0]];
-    pinnedLaneIds.clear();
     renderTree();
     renderContentTitle();
     refreshCompareSwimlanes();
@@ -442,9 +441,9 @@
   /* ══ 4. 泳道:泳道树(左列) + 轨道(右列) ═══════════════════════ */
   const ROW_H = 29;       // 普通泳道行高
   const AREA_H = 42;      // HBM 带宽曲线行高
-  const ZOOM_STEPS = [200, 500, 800, 1000, 1200, 1500, 2000, 3000, 5000];  // 可选的时间窗长度(ms)
-  let zoomIdx = 4;        // 默认 1200ms = 1.2s
-  let DUR_MS = ZOOM_STEPS[zoomIdx];   // 时间轴总长,和顶部刻度一致
+  const DUR_MS = 1200; // 示意任务的完整时间范围始终不变
+  const ZOOM_SCALES = [1, 1.5, 2, 3, 4, 6, 8];
+  let zoomIdx = 0; // 默认完整时间范围刚好适配泳道宽度
 
   // NPU Metrics 与任务条共用同一套主题色。面积图只保存基色；填充透明度和
   // 描边明度由 areaTrack 结合当前主题生成，避免深色主题继续使用浅色粉彩。
@@ -1120,23 +1119,14 @@
     const nodeMaxWidth = 220;
     const arrowWidth = 38;
     const availableWidth = chain.clientWidth || chain.parentElement?.clientWidth || nodeMinWidth;
-    const fitCount = Math.max(1, Math.min(items.length,
-      Math.floor((availableWidth + arrowWidth) / (nodeMinWidth + arrowWidth))));
     const nodeWidth = Math.min(nodeMaxWidth, Math.max(nodeMinWidth,
-      Math.floor((availableWidth - (fitCount - 1) * arrowWidth) / fitCount)));
-    chain.dataset.fitCount = String(fitCount);
+      Math.floor((availableWidth - (items.length - 1) * arrowWidth) / Math.max(1, items.length))));
+    chain.dataset.layoutWidth = String(availableWidth);
     chain.style.setProperty('--msi-chain-node-w', nodeWidth + 'px');
-    chain.style.setProperty('--msi-chain-turn-left', ((fitCount - 1) * (nodeWidth + arrowWidth)) + 'px');
-    chain.style.setProperty('--msi-chain-tail-w', nodeWidth + 'px');
-    const head = items.slice(0, fitCount);
-    const tail = items.slice(fitCount);
     chain.innerHTML = '<div class="msi-chain-row">' +
-      head.map((item, index) => nodeHtml(item, index < head.length - 1)).join('') +
-      '</div>' +
-      (tail.length ? '<div class="msi-chain-tail">' + chainArrowHtml() +
-        tail.map((item, index) => nodeHtml(item, false) +
-          (index < tail.length - 1 ? chainArrowHtml() : '')).join('') +
-        '</div>' : '') + note;
+      items.map((item, index) => nodeHtml(item, index < items.length - 1)).join('') +
+      '</div>' + note;
+    chain.scrollLeft = 0;
   }
 
   function previewBarMetrics(bar) {
@@ -1371,8 +1361,7 @@
             count = previewRelatedBars(selectedPreviewBar.bar, selectedPreviewBar.body).length;
           }
           if (!count) return;
-          const nextFit = Math.max(1, Math.min(count, Math.floor((chain.clientWidth + 38) / 158)));
-          if (String(nextFit) !== chain.dataset.fitCount) renderSelectionDetail();
+          if (Math.abs(chain.clientWidth - Number(chain.dataset.layoutWidth)) > 1) renderSelectionDetail();
         });
       }).observe(chain);
     }
@@ -1977,6 +1966,7 @@
   }
 
   function renderRuler() {
+    syncSwimScale();
     [[document.getElementById('msiRuler'), compareMode ? compareTasks[0] : selected.task],
      [document.getElementById('msiRulerCompare'), compareTasks[1]]].forEach(([host, task]) => {
       if (!host) return;
@@ -2020,25 +2010,41 @@
     return ticks.join('');
   }
 
-  /* ══ 6. 时间轴缩放:左减右加,中间显示当前时间窗 ═══════════════════ */
+  /* ══ 6. 时间轴缩放：放大时间刻度，保持完整数据范围 ════════════════ */
   function fmtSpan(ms) {
+    if (ms < 1000) return (Number.isInteger(ms) ? ms : ms.toFixed(1)) + 'ms';
     const s = ms / 1000;
     return (Number.isInteger(s) ? s : s.toFixed(1)) + 's';
   }
 
+  function syncSwimScale() {
+    ['msiSwim', 'msiSwimCompare', 'msiPinnedCard'].forEach((id) => {
+      const panel = document.getElementById(id);
+      if (!panel || panel.hidden) return;
+      const body = panel.querySelector('.msi-swim-body');
+      const corner = panel.querySelector('.msi-swim-corner');
+      const ruler = panel.querySelector('.msi-swim-ruler');
+      if (!body || !corner || !ruler || !body.clientWidth) return;
+      const trackWidth = Math.max(1, body.clientWidth - corner.offsetWidth);
+      panel.style.setProperty('--msi-track-w', (trackWidth * ZOOM_SCALES[zoomIdx]) + 'px');
+      ruler.style.transform = 'translateX(-' + body.scrollLeft + 'px)';
+    });
+  }
+
   function applyZoom() {
-    DUR_MS = ZOOM_STEPS[zoomIdx];
     syncTimelineControls();
+    if (selectedTraceTaskId) requestAnimationFrame(drawTraceTaskLinks);
+    else if (selectedPreviewBar?.bar.isConnected) requestAnimationFrame(drawPreviewTaskLinks);
   }
 
   function syncTimelineControls() {
     const val = document.getElementById('msiZoomVal');
     const out = document.getElementById('msiZoomOut');
     const inc = document.getElementById('msiZoomIn');
-    const real = !compareMode && isRealTraceSelection();
-    if (val) val.textContent = real ? TRACE_WINDOW_MS.toFixed(1) + 'ms' : fmtSpan(DUR_MS);
-    if (out) out.disabled = real || zoomIdx === 0;
-    if (inc) inc.disabled = real || zoomIdx === ZOOM_STEPS.length - 1;
+    const span = compareMode ? (pinnedTimeSpan() || DUR_MS) : taskTimeSpan(selected.task);
+    if (val) val.textContent = fmtSpan(span / ZOOM_SCALES[zoomIdx]);
+    if (out) out.disabled = zoomIdx === 0;
+    if (inc) inc.disabled = zoomIdx === ZOOM_SCALES.length - 1;
     renderRuler();
     syncPreviewBarDurations();
   }
@@ -2053,8 +2059,18 @@
     document.fonts?.ready.then(renderRuler);
     const out = document.getElementById('msiZoomOut');
     const inc = document.getElementById('msiZoomIn');
-    if (out) out.addEventListener('click', () => { if ((compareMode || !isRealTraceSelection()) && zoomIdx > 0) { zoomIdx--; applyZoom(); } });
-    if (inc) inc.addEventListener('click', () => { if ((compareMode || !isRealTraceSelection()) && zoomIdx < ZOOM_STEPS.length - 1) { zoomIdx++; applyZoom(); } });
+    if (out) out.addEventListener('click', () => { if (zoomIdx > 0) { zoomIdx--; applyZoom(); } });
+    if (inc) inc.addEventListener('click', () => { if (zoomIdx < ZOOM_SCALES.length - 1) { zoomIdx++; applyZoom(); } });
+    ['msiSwimBody', 'msiSwimBodyCompare', 'msiPinnedBody'].forEach((id) => {
+      const body = document.getElementById(id);
+      body?.addEventListener('scroll', () => {
+        document.querySelectorAll('#msiTimelineSwims .msi-swim-body').forEach((other) => {
+          if (other !== body && other.scrollLeft !== body.scrollLeft) other.scrollLeft = body.scrollLeft;
+          const ruler = other.parentElement?.querySelector('.msi-swim-ruler');
+          if (ruler) ruler.style.transform = 'translateX(-' + other.scrollLeft + 'px)';
+        });
+      });
+    });
     applyZoom();
   }
 
@@ -2065,6 +2081,7 @@
     const help = document.getElementById('msiMouseHelp');
     const helpToggle = document.getElementById('msiMouseHelpToggle');
     const collapse = document.getElementById('msiMouseToolsCollapse');
+    const grip = document.getElementById('msiMouseToolsGrip');
     if (!tools || !stack) return;
     let mode = 'select';
     let rowScale = 1;
@@ -2072,6 +2089,39 @@
     const bodies = ['msiSwimBody', 'msiSwimBodyCompare', 'msiPinnedBody']
       .map((id) => document.getElementById(id)).filter(Boolean);
     const announce = (message) => { if (status) status.textContent = message; };
+    const clampToolsTop = (top) => Math.max(0, Math.min(top,
+      tools.parentElement.clientHeight - tools.offsetHeight));
+    if (grip) {
+      let toolsDrag = null;
+      grip.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        grip.setPointerCapture(event.pointerId);
+        toolsDrag = { pointerId: event.pointerId, y: event.clientY, top: tools.offsetTop };
+      });
+      grip.addEventListener('pointermove', (event) => {
+        if (!toolsDrag || toolsDrag.pointerId !== event.pointerId) return;
+        tools.style.top = clampToolsTop(toolsDrag.top + event.clientY - toolsDrag.y) + 'px';
+      });
+      const finishToolsDrag = (event) => {
+        if (!toolsDrag || toolsDrag.pointerId !== event.pointerId) return;
+        if (grip.hasPointerCapture(event.pointerId)) grip.releasePointerCapture(event.pointerId);
+        toolsDrag = null;
+      };
+      grip.addEventListener('pointerup', finishToolsDrag);
+      grip.addEventListener('pointercancel', finishToolsDrag);
+      grip.addEventListener('keydown', (event) => {
+        if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+        event.preventDefault();
+        const step = event.shiftKey ? 40 : 10;
+        tools.style.top = clampToolsTop(tools.offsetTop + (event.key === 'ArrowDown' ? step : -step)) + 'px';
+      });
+      if (typeof ResizeObserver === 'function') {
+        new ResizeObserver(() => {
+          if (tools.style.top) tools.style.top = clampToolsTop(tools.offsetTop) + 'px';
+        }).observe(tools.parentElement);
+      }
+    }
     const setMode = (next) => {
       mode = next;
       stack.dataset.mouseMode = next;

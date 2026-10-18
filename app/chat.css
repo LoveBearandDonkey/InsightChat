@@ -6834,21 +6834,25 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   text-align: center;
   overflow-wrap: anywhere;
 }
-/* 图形区:单列网格,横向主链和纵向尾链是同一列里上下两个格子,整列在区域里水平、垂直都居中。
-   justify-items: start 让尾链仍以列左缘为基准算 margin-left(拐点位置),不会因居中错位。
-   flex: 1 0 auto 只长不缩——链条比区域高时区域随之撑高,由外层 pane 滚动,不会被裁掉。 */
+/* 调用链保持在一行；宽于详情栏时由本区域横向滚动。 */
 .msi-chain-flow {
   --msi-chain-node-w: 120px;
   width: 100%;
   min-width: 0;
-  flex: 1 0 auto;
+  min-height: 0;
+  flex: 1 1 auto;
   display: grid;
   grid-template-columns: max-content;
-  place-content: center;
+  align-content: safe center;
+  justify-content: safe center;
   justify-items: start;
   padding: 4px 2px 12px;
-  overflow: hidden;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) transparent;
 }
+.msi-chain-flow::-webkit-scrollbar { width: 8px; height: 8px; }
+.msi-chain-flow::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 4px; }
 .msi-chain-note { margin: 10px 0 0; max-width: 560px; color: var(--foreground-muted); font-size: 11px; line-height: 1.5; }
 /* 横向主链用一张共享的 3 行网格(路径 / 任务条 / 说明),step 和 node 都 display: contents
    把子元素直接交给网格:这样不管各节点的路径换了几行,所有任务条都落在同一行、同一高度,

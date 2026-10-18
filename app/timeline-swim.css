@@ -24,6 +24,15 @@
   background: var(--surface-1); color: var(--foreground-secondary);
   box-shadow: 0 5px 12px color-mix(in srgb, #253d66 15%, transparent);
 }
+.msi-mouse-tools-grip {
+  width: 26px; height: 14px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 4px; background: transparent;
+  color: var(--foreground-muted); cursor: ns-resize; touch-action: none;
+}
+.msi-mouse-tools-grip:hover { background: var(--state-hover); color: var(--foreground); }
+.msi-mouse-tools-grip:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.msi-mouse-tools-grip span { width: 14px; height: 5px; border-top: 1px solid currentColor; border-bottom: 1px solid currentColor; }
 .msi-mouse-tools-main { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .msi-mouse-tool {
   display: flex; align-items: center; justify-content: center;
@@ -62,10 +71,10 @@
 .msi-swim-title .msi-tree-compare-role { margin-left: 0; cursor: default; }
 .msi-swim-title-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .msi-swim-empty { padding: 24px 12px; color: var(--foreground-muted); font-size: 12px; text-align: center; }
-.msi-swim-head { flex: 0 0 auto; display: flex; height: 30px; border-bottom: 1px solid var(--border-subtle); }
+.msi-swim-head { flex: 0 0 auto; display: flex; height: 30px; border-bottom: 1px solid var(--border-subtle); overflow: hidden; }
 .msi-swim-head[hidden] { display: none; }
-.msi-swim-corner { width: var(--msi-lane-w, 220px); flex: 0 0 var(--msi-lane-w, 220px); border-right: 1px solid var(--border-subtle); }
-.msi-swim-ruler { position: relative; flex: 1 1 auto; min-width: 0; border-right: 8px solid transparent; }
+.msi-swim-corner { position: relative; z-index: 1; width: var(--msi-lane-w, 220px); flex: 0 0 var(--msi-lane-w, 220px); border-right: 1px solid var(--border-subtle); background: var(--surface-1); }
+.msi-swim-ruler { position: relative; flex: 0 0 var(--msi-track-w, 100%); width: var(--msi-track-w, 100%); min-width: 0; }
 /* 末格 1000ms 的标签往左收,否则会被 .msi-swim 的 overflow:hidden 切掉 */
 .msi-ruler-tick--end { padding: 0 6px 0 0; text-align: right; border-left: 0; border-right: 1px solid var(--border-subtle); transform: translateX(-100%); }
 .msi-ruler-tick {
@@ -86,6 +95,9 @@
   scrollbar-width: thin;
   scrollbar-color: var(--border-default) transparent;
 }
+.msi-swim-body > .msi-lane-row,
+.msi-swim-body > .msi-pinned-pair { width: calc(var(--msi-lane-w, 220px) + var(--msi-track-w, 0px)); }
+.msi-swim-body .msi-pinned-pair > .msi-lane-row { width: 100%; }
 .msi-swim-body::-webkit-scrollbar { width: 8px; height: 8px; }
 .msi-swim-body::-webkit-scrollbar-track { background: transparent; }
 .msi-swim-body::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 4px; }
@@ -98,7 +110,7 @@
   flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--border-subtle);
-  border-left: 4px solid color-mix(in srgb, var(--success) 45%, var(--surface-1));
+  border-left: 4px solid color-mix(in srgb, var(--foreground-muted) 45%, var(--surface-1));
   border-radius: var(--radius-md);
   background: var(--surface-1);
 }
@@ -157,15 +169,19 @@
 }
 
 .msi-lane-label {
+  position: sticky; left: 0; z-index: 2;
   width: var(--msi-lane-w, 220px);
   flex: 0 0 var(--msi-lane-w, 220px);
   display: flex; align-items: center; gap: 5px;
   padding: 0 10px 0 12px;
   border: 0; border-right: 1px solid var(--border-subtle);
-  background: transparent;
   color: var(--foreground);
   font-size: 13px; text-align: left;
+  background: var(--surface-1);
 }
+.msi-lane-row.is-selected .msi-lane-label { background: color-mix(in srgb, var(--msi-accent) var(--brand-tint), var(--surface-1)); }
+.msi-lane-row:hover .msi-lane-label { background: color-mix(in srgb, var(--foreground) 4%, var(--surface-1)); }
+.msi-lane-row:hover.is-selected .msi-lane-label { background: color-mix(in srgb, var(--msi-accent) var(--brand-tint-strong), var(--surface-1)); }
 .msi-lane-row:hover { background: color-mix(in srgb, var(--foreground) 4%, transparent); }
 .msi-lane-row:hover.is-selected { background: color-mix(in srgb, var(--msi-accent) var(--brand-tint-strong), transparent); }
 /* 箭头是行内独立按钮:点它只折叠,不改选中行 */
