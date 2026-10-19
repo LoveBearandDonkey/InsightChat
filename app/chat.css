@@ -6259,6 +6259,20 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 .wzh-chat-messages::-webkit-scrollbar-thumb:hover { background: var(--foreground-muted); }
 
 /* ══ 顶栏品牌区:MSInsight 图标 + 产品名 ══ */
+.msi-sidebar-menu {
+  width: 28px; height: 28px; flex: 0 0 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0;
+  border: 0; border-radius: var(--radius-md, 8px);
+  background: transparent; color: var(--foreground);
+  cursor: pointer;
+}
+.msi-sidebar-menu[hidden] { display: none; }
+.msi-sidebar-menu:hover, .msi-sidebar-menu:focus-visible { background: var(--state-hover); }
+.msi-sidebar-menu svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.msi-sidebar-menu-restore { display: none; }
+.pto-ide-frame.is-sidebar-drawer-open .msi-sidebar-menu-bars { display: none; }
+.pto-ide-frame.is-sidebar-drawer-open .msi-sidebar-menu-restore { display: block; }
 .msi-brand { display: inline-flex; align-items: center; gap: 8px; min-width: 0; text-decoration: none; }
 .msi-brand-logo { width: 28px; height: 28px; display: block; flex-shrink: 0; border-radius: 4px; }
 .msi-brand-name {
@@ -6279,6 +6293,43 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   gap: 8px;
   padding: 8px 6px 8px 8px;
   overflow: hidden;
+}
+.pto-ide-frame.is-sidebar-collapsed .chat-shell-workarea { padding-left: 8px; }
+.pto-ide-frame.is-sidebar-collapsed > .pto-ide-frame__topbar { z-index: 31; }
+.pto-ide-frame.is-sidebar-collapsed .msi-sidebar {
+  --msi-drawer-pink-alpha: .06;
+  --msi-drawer-purple-alpha: .025;
+  position: fixed;
+  z-index: 30;
+  top: 0; bottom: 0; left: 0;
+  width: min(300px, 90vw);
+  flex: none;
+  padding-top: 56px;
+  border-right: 1px solid var(--border-subtle);
+  border-radius: 0 16px 16px 0;
+  background:
+    radial-gradient(ellipse at 0% 12%, rgb(var(--ide-glow-bottom) / var(--msi-drawer-pink-alpha)), transparent 78%),
+    radial-gradient(ellipse at 12% 88%, rgb(var(--ide-glow-left) / var(--msi-drawer-purple-alpha)), transparent 75%),
+    linear-gradient(180deg, var(--ide-bg-start) 0%, var(--ide-bg-mid) 42%, var(--ide-bg-end) 100%);
+  box-shadow: 8px 4px 24px color-mix(in srgb, var(--foreground) 12%, transparent);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-8px);
+  transition: opacity var(--duration-fast, 120ms) ease,
+              transform var(--duration-fast, 120ms) ease,
+              visibility var(--duration-fast, 120ms) ease;
+}
+:root[data-theme='light'] .pto-ide-frame.is-sidebar-collapsed .msi-sidebar {
+  --msi-drawer-pink-alpha: .08;
+  --msi-drawer-purple-alpha: .03;
+}
+.pto-ide-frame.is-sidebar-collapsed #msiSidebarFold { display: none; }
+.pto-ide-frame.is-sidebar-drawer-open .msi-sidebar {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(0);
 }
 .msi-side-toolbar { display: flex; align-items: center; gap: 5px; margin-top: 8px; padding: 0 2px 2px; }
 /* 品牌蓝在 .wzh-chat-panel 里是局部变量,这里补一个同值的根级定义给左树用 */
@@ -6325,7 +6376,31 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   stroke-linecap: round; stroke-linejoin: round;
 }
 .msi-compare-heading { color: var(--foreground); font-size: 13px; font-weight: 600; }
-.msi-compare-back[hidden], .msi-compare-heading[hidden], .msi-side-normal-action[hidden] { display: none; }
+.msi-manage-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  color: var(--foreground);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.msi-manage-select-all:has(input:disabled) { opacity: .45; cursor: default; }
+.msi-manage-select-all input { width: 14px; height: 14px; margin: 0; accent-color: var(--msi-accent); cursor: inherit; }
+.msi-manage-delete {
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 8px);
+  background: var(--surface-1);
+  color: var(--foreground);
+  font-size: 12px;
+  cursor: pointer;
+}
+.msi-manage-delete:hover:not(:disabled) { background: var(--state-hover); }
+.msi-manage-delete:disabled { color: var(--foreground-muted); opacity: .45; cursor: default; }
+.msi-compare-back[hidden], .msi-compare-heading[hidden], .msi-manage-select-all[hidden], .msi-manage-delete[hidden], .msi-side-normal-action[hidden] { display: none; }
 /* 设置 / 收起靠右贴边,和「导入」「对比」拉开 */
 .msi-side-icon:nth-of-type(3) { margin-left: auto; }
 .msi-side-icon {
@@ -6338,6 +6413,14 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 }
 .msi-side-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .msi-side-icon:hover { background: var(--state-hover); }
+#msiSidebarFold svg { width: 18px; height: 18px; }
+#msiSidebarFold .msi-sidebar-direction,
+.msi-sidebar-menu-restore .msi-sidebar-direction {
+  opacity: 0;
+  transition: opacity var(--duration-fast, 120ms) ease;
+}
+#msiSidebarFold:is(:hover, :focus-visible) .msi-sidebar-direction,
+.msi-sidebar-menu:is(:hover, :focus-visible) .msi-sidebar-direction { opacity: 1; }
 
 .msi-tree {
   flex: 1 1 auto;
@@ -6384,6 +6467,11 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 .msi-tree-check[aria-checked="true"] {
   border-color: var(--msi-accent);
   background: var(--msi-accent);
+}
+.msi-tree-check[aria-checked="mixed"] {
+  border-color: var(--msi-accent);
+  background: var(--surface-1);
+  color: var(--msi-accent);
 }
 .msi-tree-check[aria-disabled="true"] { opacity: .38; cursor: not-allowed; }
 .msi-tree-caret {
@@ -6432,6 +6520,15 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   padding: 0;
   overflow: hidden;
   background: transparent;
+}
+.msi-content.has-no-tasks > :not(.msi-content-head) { display: none !important; }
+.msi-content.has-no-tasks::after {
+  content: "工程树中暂无任务";
+  flex: 1 1 auto;
+  display: grid;
+  place-items: center;
+  color: var(--foreground-muted);
+  font-size: 13px;
 }
 .msi-content-head {
   flex: 0 0 auto;
@@ -7081,6 +7178,14 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 
 /* ══ 概览页：profile_dir 多机多卡训练性能诊断报告 ══════════════════ */
 .msi-analysis-stage[hidden] { display: none !important; }
+.msi-operator {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.msi-operator-empty { color: var(--foreground-muted); font-size: 13px; }
 .msi-memory {
   flex: 1 1 auto;
   min-height: 0;
@@ -7164,7 +7269,7 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-rows: repeat(2, minmax(210px, 1fr));
+  grid-template-rows: minmax(260px, 1.1fr) minmax(210px, 1fr);
   gap: 10px;
   margin: 0 16px;
   overflow: auto;
@@ -7194,9 +7299,69 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   color: var(--foreground);
 }
 .msi-memory-chart-head h3 { margin: 0; font-size: 12px; font-weight: 600; }
+.msi-memory-reset {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--foreground-secondary);
+  cursor: pointer;
+  visibility: hidden;
+}
+.msi-memory-reset[data-view-modified="true"] { visibility: visible; }
+.msi-memory-reset:hover:not(:disabled) { background: var(--state-hover); color: var(--foreground); }
+.msi-memory-reset:focus-visible { outline: 2px solid var(--msi-accent); outline-offset: 1px; }
+.msi-memory-reset:disabled { opacity: .4; cursor: default; }
+.msi-memory-reset svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.msi-memory-zoom-control { position: relative; flex: 0 0 auto; margin-left: 2px; }
+.msi-memory-zoom-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--foreground-secondary);
+  cursor: pointer;
+}
+.msi-memory-zoom-toggle:hover { background: var(--state-hover); color: var(--foreground); }
+.msi-memory-zoom-toggle:focus-visible { outline: 2px solid var(--msi-accent); outline-offset: 1px; }
+.msi-memory-zoom-toggle svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.msi-memory-zoom-popover {
+  position: absolute;
+  z-index: 10;
+  top: 100%;
+  right: 0;
+  width: max-content;
+  padding: 4px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--foreground) 12%, transparent);
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+.msi-memory-zoom-control:hover .msi-memory-zoom-popover,
+.msi-memory-zoom-control:focus-within .msi-memory-zoom-popover { visibility: visible; opacity: 1; pointer-events: auto; }
+.msi-memory-zoom-tip { padding: 5px 6px; color: var(--foreground); font-size: 11px; line-height: 16px; white-space: nowrap; }
+.msi-memory-zoom-gesture { color: var(--foreground-secondary); }
+.msi-memory-zoom-gesture svg { display: inline-block; width: 15px; height: 15px; margin: 0 1px; vertical-align: -3px; fill: none; stroke: currentColor; stroke-width: 1.5; }
+.msi-memory-zoom-gesture .msi-memory-wheel { fill: var(--msi-accent); stroke: var(--msi-accent); }
+.msi-memory-summary { display: grid; grid-template-columns: repeat(3, minmax(150px, 1fr)); gap: 8px; overflow-x: auto; scrollbar-width: thin; }
+.msi-memory-summary-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 6px 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--surface-1); }
+.msi-memory-summary-item span { color: var(--foreground-muted); font-size: 11px; white-space: nowrap; }
+.msi-memory-summary-item strong { color: var(--foreground); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.2; }
 .msi-memory-frame { display: block; flex: 1 1 auto; width: 100%; min-height: 0; border: 0; background: var(--surface-1); }
 .msi-memory-foot {
-  flex: 0 0 clamp(220px, 30vh, 280px);
+  flex: 0 0 198px;
   display: flex;
   flex-direction: column;
   margin: 10px 16px 16px;
@@ -7208,11 +7373,11 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 .msi-memory-foot .msi-foot-close { margin: 0 8px 0 auto; }
 .msi-memory-foot-title { color: var(--foreground); font-size: 13px; font-weight: 600; }
 .msi-content-foot.msi-memory-foot .msi-foot-title { cursor: pointer; }
-.msi-memory-foot-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 8px 14px 14px; }
+.msi-memory-foot-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 14px 14px; }
 .msi-memory-foot.is-collapsed .msi-memory-foot-body { display: none; }
 .msi-memory-detail {
   display: grid;
-  grid-template-columns: minmax(205px, 34%) minmax(0, 1fr);
+  grid-template-columns: minmax(181px, min(calc(34% - 24px), 360px)) minmax(0, 1fr);
   gap: 18px;
   align-items: start;
   color: var(--foreground);
@@ -7231,7 +7396,9 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 .msi-memory-detail-overview {
   position: sticky;
   top: 0;
+  box-sizing: border-box;
   min-width: 0;
+  max-width: 360px;
   padding: 4px 17px 4px 0;
   border-right: 1px solid var(--border-subtle);
   background: var(--surface-1);
@@ -7252,37 +7419,48 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 .msi-memory-detail-address-value small { padding: 1px 6px; border-radius: var(--radius-pill); background: var(--surface-2); color: var(--foreground-muted); font-size: 10px; white-space: nowrap; }
 .msi-memory-detail-mono { font-family: var(--text-mono); }
 .msi-memory-detail-path { min-width: 0; padding: 3px 0 0; }
-.msi-memory-detail-path-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 5px 10px; margin-bottom: 14px; }
-.msi-memory-detail-path-head strong { font-size: 13px; }
-.msi-memory-detail-path-head span { color: var(--foreground-muted); font-size: 11px; }
-.msi-memory-detail-stack-label { margin: 12px 0 10px; color: var(--foreground-secondary); font-size: 11px; font-weight: 600; }
+.msi-memory-detail-path-head { display: flex; flex-wrap: wrap; align-items: center; gap: 15px; margin-bottom: 8px; }
+.msi-memory-detail-path-tab { padding: 2px 0 6px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--foreground-muted); font: inherit; font-size: 11px; white-space: nowrap; cursor: pointer; }
+.msi-memory-detail-path-tab[aria-selected="true"] { border-bottom-color: var(--msi-accent); color: var(--foreground); font-weight: 600; }
+.msi-memory-detail-path-tab:focus-visible { outline: 2px solid var(--msi-accent); outline-offset: 2px; }
+.msi-memory-detail-stack-label { margin: 8px 0 6px; color: var(--foreground-secondary); font-size: 10px; font-weight: 600; }
 .msi-memory-detail-stack {
   display: flex;
-  gap: 38px;
+  gap: 22px;
   margin: 0;
   overflow-x: auto;
-  padding: 2px 0 11px;
+  padding: 2px 0 6px;
   list-style: none;
   scrollbar-width: thin;
 }
 .msi-memory-detail-frame {
-  flex: 0 0 136px;
+  flex: 0 0 112px;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px;
 }
-.msi-memory-detail-frame-head { position: relative; display: flex; align-items: center; }
-.msi-memory-detail-frame-head .msi-chain-arrow { position: absolute; left: 100%; }
+.msi-memory-detail-frame-head { position: relative; display: flex; align-items: center; height: 30px; flex: 0 0 30px; }
+.msi-memory-detail-frame-head .msi-chain-arrow { position: absolute; left: calc(100% + 2px); width: 18px; }
+.msi-memory-detail-frame-head .msi-chain-arrow svg { width: 18px; height: 16px; }
 .msi-memory-detail-title {
-  min-height: 30px;
+  box-sizing: border-box;
+  height: 30px;
+  min-height: 0;
+  padding: 2px 5px;
   border-color: color-mix(in srgb, var(--msi-accent) 18%, transparent);
   background: color-mix(in srgb, var(--msi-accent) 11%, var(--surface-1));
   color: var(--foreground);
+  font-size: 9.5px;
+  line-height: 12px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  overflow: hidden;
   cursor: default;
 }
+.msi-memory-detail-location { font-size: 9px; line-height: 12px; }
 .msi-memory-detail-location, .msi-memory-detail-extra { white-space: normal; overflow-wrap: anywhere; }
-.msi-memory-detail-extra { color: var(--foreground-muted); font-size: 10px; line-height: 1.4; }
+.msi-memory-detail-extra { color: var(--foreground-muted); font-size: 9px; line-height: 1.3; }
 .msi-memory-detail-no-stack { margin: 0 0 12px; color: var(--foreground-muted); line-height: 1.5; }
 .msi-memory-detail-raw { margin: 6px 0 10px; }
 .msi-memory-detail-raw summary {
@@ -7308,7 +7486,6 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   transition: transform var(--duration-fast, 120ms) ease;
 }
 .msi-memory-detail-raw[open] > summary::before { transform: rotate(45deg); }
-.msi-memory-detail-stack--full { margin-top: 12px; }
 .msi-memory-detail-raw pre {
   margin: 0;
   padding: 9px 11px;
@@ -7606,7 +7783,7 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 .msi-ov-runtime-tooltip-value { color: var(--foreground); font-weight: 620; font-variant-numeric: tabular-nums; }
 .msi-ov-runtime-insight {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   margin: 0 0 22px;
   padding: 12px;
   border: 1px solid color-mix(in srgb, var(--msi-accent) 22%, var(--border-subtle));
@@ -7641,37 +7818,64 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 }
 .msi-ov-watch-health {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 11px;
   padding: 9px 12px;
   background: color-mix(in srgb, #0a84ff 10%, var(--surface-1));
 }
-.msi-ov-watch-rings {
+.msi-ov-watch-health:hover,
+.msi-ov-watch-health:focus-within { position: relative; z-index: 2; }
+.msi-ov-watch-radar-wrap {
+  position: relative;
   width: 58px;
   height: 58px;
   flex: 0 0 58px;
+}
+.msi-ov-watch-radar {
+  width: 58px;
+  height: 58px;
+  display: block;
+  cursor: help;
+}
+.msi-ov-watch-radar:focus-visible { outline: 2px solid var(--msi-accent); outline-offset: 3px; border-radius: 4px; }
+.msi-ov-radar-axis,
+.msi-ov-radar-grid { fill: none; stroke: var(--border-default); stroke-width: .8; }
+.msi-ov-radar-data { fill: rgba(10, 132, 255, .2); stroke: #0a84ff; stroke-width: 1.8; stroke-linejoin: round; }
+.msi-ov-radar-point { fill: #0a84ff; stroke: var(--surface-1); stroke-width: 1; }
+.msi-ov-radar-tooltip {
+  width: 175px;
   display: grid;
-  place-items: center;
-  position: relative;
-}
-.msi-ov-watch-ring {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3px 10px;
   position: absolute;
-  border-radius: 50%;
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 0);
-  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 0);
+  z-index: 20;
+  top: calc(100% + 8px);
+  left: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-lg);
+  color: var(--foreground-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-3px);
+  transition: opacity .14s ease, transform .14s ease, visibility .14s ease;
 }
-.msi-ov-watch-ring--outer { inset: 0; background: conic-gradient(#0a84ff 0 75%, color-mix(in srgb, #0a84ff 14%, transparent) 75%); }
-.msi-ov-watch-ring--middle { inset: 6px; background: conic-gradient(#30d158 0 93%, color-mix(in srgb, #30d158 14%, transparent) 93%); }
-.msi-ov-watch-ring--inner { inset: 12px; background: conic-gradient(#ff375f 0 71%, color-mix(in srgb, #ff375f 14%, transparent) 71%); }
-.msi-ov-watch-rings > strong {
-  position: relative;
-  z-index: 1;
-  color: var(--foreground);
-  font-size: 12px;
-  font-weight: 720;
-  font-variant-numeric: tabular-nums;
+.msi-ov-radar-tooltip strong { grid-column: 1 / -1; margin-bottom: 3px; }
+.msi-ov-radar-tooltip span { white-space: nowrap; }
+.msi-ov-radar-tooltip b { color: var(--foreground); font-weight: 650; }
+.msi-ov-watch-radar-wrap:hover .msi-ov-radar-tooltip,
+.msi-ov-watch-radar-wrap:focus-within .msi-ov-radar-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }
-.msi-ov-watch-copy { min-width: 0; display: grid; gap: 2px; }
+.msi-ov-watch-copy { flex: 1 1 95px; min-width: 0; display: grid; gap: 2px; }
 .msi-ov-watch-copy span { color: var(--foreground-muted); font-size: 10px; }
 .msi-ov-watch-copy strong { color: var(--foreground); font-size: 12px; }
 .msi-ov-watch-copy small { color: #159447; font-size: 10px; white-space: nowrap; }
@@ -7782,7 +7986,6 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   min-width: 0;
   padding: 8px;
   border-right: 1px solid var(--border-subtle);
-  background: color-mix(in srgb, var(--surface-2) 64%, var(--surface-1));
 }
 .msi-ov-issue-btn {
   width: 100%;

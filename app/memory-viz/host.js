@@ -2,6 +2,7 @@
 (async function () {
   'use strict';
   const viewName = location.hash === '#allocator' ? 'Allocator State History' : 'Active Memory Timeline';
+  const memoryHues = [4, 155, 285, 46, 212, 342, 125, 265, 32, 198, 325, 88, 245, 18, 185, 305, 58, 228];
   const encoded = window.MSI_MEMORY_SNAPSHOT_GZIP_BASE64;
   if (!encoded || !window.MSI_MEMORY_VIZ || !window.DecompressionStream) {
     throw new Error('MemoryViz local assets or gzip support are missing');
@@ -14,6 +15,12 @@
     new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip')),
   ).arrayBuffer();
   window.MSI_MEMORY_VIZ.add_snapshot_buffer('snapshot.pickle', buffer, viewName);
+  window.addEventListener('msi-memory-interval-stats', (event) => {
+    window.parent.postMessage({type: 'msi-memory-interval-stats', view: viewName, ...event.detail}, '*');
+  });
+  window.addEventListener('msi-memory-view-modified', (event) => {
+    window.parent.postMessage({type: 'msi-memory-view-modified', view: viewName, ...event.detail}, '*');
+  });
 
   window.addEventListener('msi-memory-link-selection', (event) => {
     window.parent.postMessage({
@@ -80,9 +87,14 @@
       root.style.setProperty('--msi-viz-foreground', event.data.foreground);
       root.style.setProperty('--msi-viz-scrollbar-thumb', event.data.border);
       root.style.setProperty('--msi-viz-scrollbar-thumb-hover', event.data.muted);
-      event.data.palette?.forEach((color, index) => {
-        root.style.setProperty(`--msi-trace-${String(index + 1).padStart(2, '0')}-bg`, color);
+      memoryHues.forEach((hue, index) => {
+        const lightness = event.data.theme === 'dark' ? '67%' : '75%';
+        root.style.setProperty(`--msi-memory-${String(index + 1).padStart(2, '0')}-bg`, `oklch(${lightness} .135 ${hue})`);
       });
+      return;
+    }
+    if (event.data?.type === 'msi-memory-reset-view') {
+      window.MSI_MEMORY_VIZ.reset_view();
       return;
     }
     if (event.data?.type === 'msi-memory-link-target') {
@@ -107,6 +119,10 @@
     if (control === 'range') watchOutputs();
   });
   window.parent.postMessage({type: 'msi-memory-ready', view: viewName}, '*');
+  if (viewName === 'Active Memory Timeline') {
+    const stats = window.MSI_MEMORY_VIZ.get_interval_stats();
+    if (stats) window.parent.postMessage({type: 'msi-memory-interval-stats', view: viewName, ...stats}, '*');
+  }
   function focusView() {
     window.parent.postMessage({type: 'msi-memory-focus', view: viewName}, '*');
   }

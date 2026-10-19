@@ -1,18 +1,22 @@
 <main class="msi-analysis-stage msi-overview" id="msiOverviewPanel" role="tabpanel" aria-label="性能概览">
               <div class="msi-ov-runtime-insight">
                 <div class="msi-ov-runtime-insight-main">
-                  <div class="msi-ov-runtime-insight-copy"><strong>专家建议</strong><span>Rank 6 / 7 的计算耗时比其余 Rank 高约 51%，各 Rank 最大计算差异为 <b id="msiOvRuntimeGap">3.11 s</b>；建议优先均衡末级负载，减少 Rank 0–5 每步约 3.77 s 的通信等待，并开启计算通信重叠。</span></div>
+                  <div class="msi-ov-runtime-insight-copy"><strong>性能诊断</strong><span>Rank 6 / 7 的计算耗时比其余 Rank 高约 51%，各 Rank 最大计算差异为 <b id="msiOvRuntimeGap">3.11 s</b>；建议优先均衡末级负载，减少 Rank 0–5 每步约 3.77 s 的通信等待，并开启计算通信重叠。</span></div>
                 </div>
 
                 <div class="msi-ov-watch-grid">
                   <article class="msi-ov-watch-tile msi-ov-watch-health">
-                    <div class="msi-ov-watch-rings" role="img" aria-label="性能健康度 75 分，计算 64，通信 93，调度 71">
-                      <i class="msi-ov-watch-ring msi-ov-watch-ring--outer"></i>
-                      <i class="msi-ov-watch-ring msi-ov-watch-ring--middle"></i>
-                      <i class="msi-ov-watch-ring msi-ov-watch-ring--inner"></i>
-                      <strong>75</strong>
+                    <div class="msi-ov-watch-radar-wrap">
+                      <svg class="msi-ov-watch-radar" viewBox="0 0 58 58" role="img" tabindex="0" aria-label="性能分项雷达图：计算 64 分，通信 93 分，调度 71 分，内存 85 分，均衡 67 分">
+                      <path class="msi-ov-radar-axis" d="M29 29V5 M29 29L51.8 21.6 M29 29L43.1 48.4 M29 29L14.9 48.4 M29 29L6.2 21.6"/>
+                      <polygon class="msi-ov-radar-grid" points="29,17 40.4,25.3 36.1,38.7 21.9,38.7 17.6,25.3"/>
+                      <polygon class="msi-ov-radar-grid" points="29,5 51.8,21.6 43.1,48.4 14.9,48.4 6.2,21.6"/>
+                      <polygon class="msi-ov-radar-data" points="29,13.6 50.2,22.1 39,42.8 17,45.5 13.7,24"/>
+                      <circle class="msi-ov-radar-point" cx="29" cy="13.6" r="2"/><circle class="msi-ov-radar-point" cx="50.2" cy="22.1" r="2"/><circle class="msi-ov-radar-point" cx="39" cy="42.8" r="2"/><circle class="msi-ov-radar-point" cx="17" cy="45.5" r="2"/><circle class="msi-ov-radar-point" cx="13.7" cy="24" r="2"/>
+                      </svg>
+                      <div class="msi-ov-radar-tooltip" role="tooltip"><strong>性能分项</strong><span>计算 <b>64</b></span><span>通信 <b>93</b></span><span>调度 <b>71</b></span><span>内存 <b>85</b></span><span>均衡 <b>67</b></span></div>
                     </div>
-                    <div class="msi-ov-watch-copy"><span>性能健康度</span><strong>A级</strong><small>优化后预计 85</small></div>
+                    <div class="msi-ov-watch-copy"><span>性能健康度</span><strong>75 分 · B级</strong><small>优化后预计 85</small></div>
                   </article>
                   <article class="msi-ov-watch-tile msi-ov-watch-conclusion">
                     <div class="msi-ov-watch-kicker">核心瓶颈</div>

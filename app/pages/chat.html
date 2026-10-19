@@ -36,6 +36,10 @@
   <section class="pto-ide-frame" data-host="standalone" aria-label="智能对话工作台">
     <header class="pto-ide-frame__topbar pto-ide-frame__standalone-chrome">
       <div class="pto-ide-frame__topbar-left">
+        <button class="msi-sidebar-menu" id="msiSidebarMenu" type="button" aria-controls="msiSidebar" aria-expanded="false" aria-label="展开工程树侧栏" title="展开工程树侧栏" hidden>
+          <svg class="msi-sidebar-menu-bars" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          <svg class="msi-sidebar-menu-restore" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path><path class="msi-sidebar-direction" d="M7.25 8.75 10.75 12 7.25 15.25"></path></svg>
+        </button>
         <a class="msi-brand" data-ide-slot="host-chip" href="chat.html" aria-label="返回概览页" title="返回概览页">
           <img class="msi-brand-logo" src="../../src/pic/icon/MSInsight.ico" alt="">
           <span class="msi-brand-name">MindStudio Insight</span>
@@ -72,16 +76,18 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="7" height="16" rx="1.5"></rect><path d="M14 4h7v16h-7z"></path><path d="M14 9h7M14 15h7"></path></svg>
             <span>对比</span>
           </button>
-          <button class="msi-side-icon msi-side-normal-action" type="button" title="设置" aria-label="设置">
+          <button class="msi-side-icon msi-side-normal-action" id="msiManageBtn" type="button" title="管理工程树" aria-label="管理工程树">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
           </button>
-          <button class="msi-side-icon msi-side-normal-action" type="button" title="收起侧栏" aria-label="收起侧栏">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path></svg>
+          <button class="msi-side-icon msi-side-normal-action" id="msiSidebarFold" type="button" title="收起侧栏" aria-label="收起侧栏">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path><path class="msi-sidebar-direction" d="M10.75 8.75 7.25 12 10.75 15.25"></path></svg>
           </button>
           <button class="msi-compare-back" id="msiCompareBack" type="button" title="退出对比" aria-label="退出对比" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path></svg>
           </button>
           <span class="msi-compare-heading" id="msiCompareHeading" hidden>对比</span>
+          <label class="msi-manage-select-all" id="msiManageSelectAllLabel" hidden><input id="msiManageSelectAll" type="checkbox"><span>全选</span></label>
+          <button class="msi-manage-delete" id="msiManageDelete" type="button" disabled hidden>批量删除</button>
         </div>
         <div class="msi-tree" id="msiTree" role="tree" aria-label="性能任务"></div>
       </aside>
@@ -107,26 +113,28 @@
               <button class="msi-tab" data-analysis-tab="timeline" type="button" role="tab" aria-selected="false" aria-controls="msiTimelinePanel">时间线</button>
               <button class="msi-tab" data-analysis-tab="memory" type="button" role="tab" aria-selected="false" aria-controls="msiMemoryPanel">内存</button>
               <button class="msi-tab msi-tab--normal-only" type="button" role="tab" aria-selected="false">通信</button>
-              <button class="msi-tab msi-tab--normal-only" type="button" role="tab" aria-selected="false">计算图</button>
-              <button class="msi-tab msi-tab--normal-only" type="button" role="tab" aria-selected="false">耗时统计</button>
-              <button class="msi-tab msi-tab--compare-only" data-analysis-tab="operator" type="button" role="tab" aria-selected="false" hidden>算子</button>
+              <button class="msi-tab" data-analysis-tab="operator" type="button" role="tab" aria-selected="false" aria-controls="msiOperatorPanel">算子</button>
             </nav>
 
             <main class="msi-analysis-stage msi-overview" id="msiOverviewPanel" role="tabpanel" aria-label="性能概览">
               <div class="msi-ov-runtime-insight">
                 <div class="msi-ov-runtime-insight-main">
-                  <div class="msi-ov-runtime-insight-copy"><strong>专家建议</strong><span>Rank 6 / 7 的计算耗时比其余 Rank 高约 51%，各 Rank 最大计算差异为 <b id="msiOvRuntimeGap">3.11 s</b>；建议优先均衡末级负载，减少 Rank 0–5 每步约 3.77 s 的通信等待，并开启计算通信重叠。</span></div>
+                  <div class="msi-ov-runtime-insight-copy"><strong>性能诊断</strong><span>Rank 6 / 7 的计算耗时比其余 Rank 高约 51%，各 Rank 最大计算差异为 <b id="msiOvRuntimeGap">3.11 s</b>；建议优先均衡末级负载，减少 Rank 0–5 每步约 3.77 s 的通信等待，并开启计算通信重叠。</span></div>
                 </div>
 
                 <div class="msi-ov-watch-grid">
                   <article class="msi-ov-watch-tile msi-ov-watch-health">
-                    <div class="msi-ov-watch-rings" role="img" aria-label="性能健康度 75 分，计算 64，通信 93，调度 71">
-                      <i class="msi-ov-watch-ring msi-ov-watch-ring--outer"></i>
-                      <i class="msi-ov-watch-ring msi-ov-watch-ring--middle"></i>
-                      <i class="msi-ov-watch-ring msi-ov-watch-ring--inner"></i>
-                      <strong>75</strong>
+                    <div class="msi-ov-watch-radar-wrap">
+                      <svg class="msi-ov-watch-radar" viewBox="0 0 58 58" role="img" tabindex="0" aria-label="性能分项雷达图：计算 64 分，通信 93 分，调度 71 分，内存 85 分，均衡 67 分">
+                      <path class="msi-ov-radar-axis" d="M29 29V5 M29 29L51.8 21.6 M29 29L43.1 48.4 M29 29L14.9 48.4 M29 29L6.2 21.6"/>
+                      <polygon class="msi-ov-radar-grid" points="29,17 40.4,25.3 36.1,38.7 21.9,38.7 17.6,25.3"/>
+                      <polygon class="msi-ov-radar-grid" points="29,5 51.8,21.6 43.1,48.4 14.9,48.4 6.2,21.6"/>
+                      <polygon class="msi-ov-radar-data" points="29,13.6 50.2,22.1 39,42.8 17,45.5 13.7,24"/>
+                      <circle class="msi-ov-radar-point" cx="29" cy="13.6" r="2"/><circle class="msi-ov-radar-point" cx="50.2" cy="22.1" r="2"/><circle class="msi-ov-radar-point" cx="39" cy="42.8" r="2"/><circle class="msi-ov-radar-point" cx="17" cy="45.5" r="2"/><circle class="msi-ov-radar-point" cx="13.7" cy="24" r="2"/>
+                      </svg>
+                      <div class="msi-ov-radar-tooltip" role="tooltip"><strong>性能分项</strong><span>计算 <b>64</b></span><span>通信 <b>93</b></span><span>调度 <b>71</b></span><span>内存 <b>85</b></span><span>均衡 <b>67</b></span></div>
                     </div>
-                    <div class="msi-ov-watch-copy"><span>性能健康度</span><strong>A级</strong><small>优化后预计 85</small></div>
+                    <div class="msi-ov-watch-copy"><span>性能健康度</span><strong>75 分 · B级</strong><small>优化后预计 85</small></div>
                   </article>
                   <article class="msi-ov-watch-tile msi-ov-watch-conclusion">
                     <div class="msi-ov-watch-kicker">核心瓶颈</div>
@@ -357,15 +365,48 @@
   </div>
   <div class="msi-memory-charts">
     <section class="msi-memory-chart-group" aria-labelledby="msiMemoryTimelineTitle">
-      <div class="msi-memory-chart-head"><h3 id="msiMemoryTimelineTitle">Active Memory Timeline</h3></div>
+      <div class="msi-memory-chart-head">
+        <h3 id="msiMemoryTimelineTitle">内存生命周期</h3>
+        <button class="msi-memory-reset" type="button" data-memory-reset="timeline" aria-label="重置内存生命周期视图" title="重置视图" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 1-2.4-5.7M20 4v5h-5"></path></svg>
+        </button>
+        <div class="msi-memory-zoom-control" data-memory-zoom="timeline">
+          <button class="msi-memory-zoom-toggle" type="button" aria-label="缩放手势说明" aria-describedby="msiMemoryTimelineZoomPopover" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 5 5M7.5 10.5h6M10.5 7.5v6"></path></svg>
+          </button>
+          <div class="msi-memory-zoom-popover" id="msiMemoryTimelineZoomPopover" role="tooltip">
+            <div class="msi-memory-zoom-tip">横向缩放<span class="msi-memory-zoom-gesture">（<svg viewBox="0 0 18 18" aria-hidden="true"><rect x="3.5" y="1.5" width="11" height="15" rx="5.5"></rect><rect class="msi-memory-wheel" x="8" y="4" width="2" height="4" rx="1"></rect></svg>滚动）</span></div>
+            <div class="msi-memory-zoom-tip">等比缩放<span class="msi-memory-zoom-gesture">（Ctrl+<svg viewBox="0 0 18 18" aria-hidden="true"><rect x="3.5" y="1.5" width="11" height="15" rx="5.5"></rect><rect class="msi-memory-wheel" x="8" y="4" width="2" height="4" rx="1"></rect></svg>滚动）</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="msi-memory-summary" aria-label="当前可视区间未释放内存统计" title="统计在可视区间内分配、到区间右端仍未释放的内存块；KB 按 1024 字节换算。">
+        <div class="msi-memory-summary-item"><span>区间未释放总量（KB）</span><strong id="msiMemoryUnfreedTotal">—</strong></div>
+        <div class="msi-memory-summary-item"><span>区间未释放最大块（KB）</span><strong id="msiMemoryUnfreedMax">—</strong></div>
+        <div class="msi-memory-summary-item"><span>区间未释放最小块（KB）</span><strong id="msiMemoryUnfreedMin">—</strong></div>
+      </div>
       <div class="msi-memory-chart">
-        <iframe id="msiMemoryTimelineFrame" class="msi-memory-frame" title="PyTorch Active Memory Timeline" data-src="../memory-viz.html#timeline"></iframe>
+        <iframe id="msiMemoryTimelineFrame" class="msi-memory-frame" title="内存生命周期" data-src="../memory-viz.html#timeline"></iframe>
       </div>
     </section>
     <section class="msi-memory-chart-group" aria-labelledby="msiMemoryAllocatorTitle">
-      <div class="msi-memory-chart-head"><h3 id="msiMemoryAllocatorTitle">Allocator State History</h3></div>
+      <div class="msi-memory-chart-head">
+        <h3 id="msiMemoryAllocatorTitle">内存池状态</h3>
+        <button class="msi-memory-reset" type="button" data-memory-reset="allocator" aria-label="重置内存池状态视图" title="重置视图" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 1-2.4-5.7M20 4v5h-5"></path></svg>
+        </button>
+        <div class="msi-memory-zoom-control" data-memory-zoom="allocator">
+          <button class="msi-memory-zoom-toggle" type="button" aria-label="缩放手势说明" aria-describedby="msiMemoryAllocatorZoomPopover" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 5 5M7.5 10.5h6M10.5 7.5v6"></path></svg>
+          </button>
+          <div class="msi-memory-zoom-popover" id="msiMemoryAllocatorZoomPopover" role="tooltip">
+            <div class="msi-memory-zoom-tip">横向缩放<span class="msi-memory-zoom-gesture">（<svg viewBox="0 0 18 18" aria-hidden="true"><rect x="3.5" y="1.5" width="11" height="15" rx="5.5"></rect><rect class="msi-memory-wheel" x="8" y="4" width="2" height="4" rx="1"></rect></svg>滚动）</span></div>
+            <div class="msi-memory-zoom-tip">等比缩放<span class="msi-memory-zoom-gesture">（Ctrl+<svg viewBox="0 0 18 18" aria-hidden="true"><rect x="3.5" y="1.5" width="11" height="15" rx="5.5"></rect><rect class="msi-memory-wheel" x="8" y="4" width="2" height="4" rx="1"></rect></svg>滚动）</span></div>
+          </div>
+        </div>
+      </div>
       <div class="msi-memory-chart">
-        <iframe id="msiMemoryAllocatorFrame" class="msi-memory-frame" title="PyTorch Allocator State History" data-src="../memory-viz.html#allocator"></iframe>
+        <iframe id="msiMemoryAllocatorFrame" class="msi-memory-frame" title="内存池状态" data-src="../memory-viz.html#allocator"></iframe>
       </div>
     </section>
   </div>
@@ -380,6 +421,10 @@
     <div class="msi-memory-foot-body" id="msiMemoryFootBody"><div class="msi-memory-detail" id="msiMemoryDetail" aria-live="polite"></div></div>
   </footer>
 </section>
+
+                        <section class="msi-analysis-stage msi-operator" id="msiOperatorPanel" role="tabpanel" aria-label="算子分析" hidden>
+              <div class="msi-operator-empty">暂无可展示的算子数据</div>
+            </section>
           </section>
         </section>
       <!-- 内容区 ↔ 智能对话面板 的分隔条:往左拖把对话面板拉宽、往右拖收窄,双击回到 480px。

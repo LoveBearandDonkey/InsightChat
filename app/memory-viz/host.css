@@ -19,6 +19,9 @@ svg text {
   font: 11px 'Inter', 'Source Han Sans SC', 'PingFang SC', 'Noto Sans SC', sans-serif;
 }
 svg .domain, svg .tick line { stroke: currentColor; }
+.msi-memory-time-axis text { font-size: 9px; }
+.msi-memory-time-axis .domain, .msi-memory-time-axis .tick line { stroke-width: .8; }
+.msi-memory-time-axis-title { position: absolute; bottom: 7px; left: 9px; color: var(--msi-viz-foreground, #24292f); font: 9px/1 sans-serif; pointer-events: none; }
 .msi-memory-selected-block {
   stroke-linejoin: round;
   filter: drop-shadow(0 0 2px var(--msi-viz-accent, #0077ff));
@@ -115,15 +118,35 @@ div[style*="grid-column: 1; grid-row: 3;"] { display: none !important; }
   height: 16px;
   padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: 2px;
   background: transparent;
   color: var(--msi-viz-foreground, #24292f);
   font: 12px/1 sans-serif;
   cursor: pointer;
 }
-.msi-memory-event-jump:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--msi-viz-accent, #0077ff) 12%, transparent);
+.msi-memory-event-jump-symbol,
+.msi-memory-event-jump-arrow { grid-area: 1 / 1; transition: opacity .16s ease, transform .16s ease; }
+.msi-memory-event-jump-arrow { opacity: 0; transform: translateY(3px) scale(.65); font-size: 16px; }
+.msi-memory-event-jump[data-direction="down"] .msi-memory-event-jump-arrow { transform: translateY(-3px) scale(.65); }
+.msi-memory-event-jump:hover:not(:disabled) .msi-memory-event-jump-symbol,
+.msi-memory-event-jump:focus-visible .msi-memory-event-jump-symbol { opacity: 0; transform: scale(.55); }
+.msi-memory-event-jump:hover:not(:disabled) .msi-memory-event-jump-arrow,
+.msi-memory-event-jump:focus-visible .msi-memory-event-jump-arrow { opacity: 1; transform: translateY(0) scale(1); }
+.msi-memory-event-jump-tooltip {
+  position: fixed;
+  z-index: 20;
+  max-width: 260px;
+  padding: 5px 8px;
+  border: 1px solid color-mix(in srgb, var(--msi-viz-foreground, #24292f) 25%, transparent);
+  border-radius: 5px;
+  background: var(--msi-viz-background, #fff);
+  color: var(--msi-viz-foreground, #24292f);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .16);
+  font: 11px/1.35 sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
 }
+.msi-memory-event-jump-tooltip[hidden] { display: none; }
 .msi-memory-event-jump:focus-visible { outline: 2px solid var(--msi-viz-accent, #0077ff); }
 .msi-memory-event-jump:disabled { opacity: .35; cursor: default; }
 @media (max-width: 720px) {

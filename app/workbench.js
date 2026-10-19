@@ -114,6 +114,11 @@
   let selected = { task: selectedTask };
   let compareMode = false;
   let compareTasks = [];
+  let manageMode = false;
+  const managedTasks = new Set();
+  const managedRanks = new Set();
+  const deletedTasks = new Set();
+  const deletedRanks = new Set();
   const pinnedLaneIds = new Set();
   window.MSI_ANCHOR_NAME = selected.task.name;
 
@@ -182,11 +187,34 @@
   /* ══ 3. 左树渲染 ═════════════════════════════════════════════════ */
   const CARET = '<svg class="msi-tree-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>';
   const FILE_ICON = '<svg class="msi-tree-file-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"></path><path d="M14 3v5h4"></path></svg>';
+  const rankKey = (taskIndex, rankIndex) => taskIndex + ':' + rankIndex;
+  const visibleRanks = (task, taskIndex) => task.ranks.map((_, index) => index)
+    .filter((index) => !deletedRanks.has(rankKey(taskIndex, index)));
+
+  function managementCheck(checked, mixed = false) {
+    return '<span class="msi-tree-check" data-manage-check="1" role="checkbox"' +
+      ' aria-checked="' + (mixed ? 'mixed' : String(checked)) + '"' +
+      ' title="' + (mixed ? '部分采集项已选' : (checked ? '取消选择' : '选择删除项')) + '">' +
+      (mixed ? '−' : (checked ? '✓' : '')) + '</span>';
+  }
+
+  function syncManageControls() {
+    const button = document.getElementById('msiManageDelete');
+    if (button) button.disabled = !managedTasks.size && !managedRanks.size;
+    const selectAll = document.getElementById('msiManageSelectAll');
+    if (!selectAll) return;
+    const remaining = PROF_TASKS.map((_, index) => index).filter((index) => !deletedTasks.has(index));
+    const allSelected = remaining.length > 0 && remaining.every((index) => managedTasks.has(index));
+    selectAll.disabled = !remaining.length;
+    selectAll.checked = allSelected;
+    selectAll.indeterminate = !allSelected && (managedTasks.size > 0 || managedRanks.size > 0);
+  }
 
   function renderTree() {
     const host = document.getElementById('msiTree');
     if (!host) return;
     host.classList.toggle('is-compare-mode', compareMode);
+    host.classList.toggle('is-manage-mode', manageMode);
     const rows = [];
     const taskRow = (task, taskIndex) => {
       const checked = compareTasks.includes(task);
@@ -196,6 +224,11 @@
       const on = selected.task === task;
       const roleIndex = compareTasks.indexOf(task);
       const roleName = roleIndex === 0 ? '基线' : (roleIndex === 1 ? '对比' : '');
+      const ranks = visibleRanks(task, taskIndex);
+      const selectedRanks = ranks.filter((index) => managedRanks.has(rankKey(taskIndex, index))).length;
+      const manageCheck = manageMode
+        ? managementCheck(managedTasks.has(taskIndex), selectedRanks > 0 && !managedTasks.has(taskIndex))
+        : '';
       const check = compareMode
         ? '<span class="msi-tree-check" data-compare-check="1" role="checkbox"' +
             ' aria-checked="' + (checked ? 'true' : 'false') + '"' +
@@ -214,7 +247,7 @@
         ' data-task="' + taskIndex + '" aria-expanded="' + (task.open ? 'true' : 'false') + '"' +
         ' aria-selected="' + (on ? 'true' : 'false') + '" aria-label="' + esc(task.name) + '"' +
         ' title="' + esc(task.dir) + '">' +
-          check + CARET +
+          check + manageCheck + CARET +
           '<img class="msi-tree-mark" src="../../src/pic/icon/folder.svg" alt="">' +
           nameHtml(task.name) + role +
         '</button>';
@@ -224,15 +257,18 @@
       ' data-task="' + taskIndex + '" data-rank="' + rankIndex + '"' +
       ' aria-selected="false" aria-label="' + esc(rank.name) + '"' +
       ' title="' + esc(rank.rootDir) + '">' +
+        (manageMode ? managementCheck(managedTasks.has(taskIndex) || managedRanks.has(rankKey(taskIndex, rankIndex))) : '') +
         CARET.replace('msi-tree-caret', 'msi-tree-caret msi-tree-caret--placeholder') +
         FILE_ICON +
         nameHtml(rank.name) +
       '</button>';
 
     PROF_TASKS.forEach((task, ti) => {
+      if (deletedTasks.has(ti)) return;
       rows.push(taskRow(task, ti));
       if (!task.open) return;
       task.ranks.forEach((rank, ri) => {
+        if (deletedRanks.has(rankKey(ti, ri))) return;
         rows.push(rankRow(rank, ti, ri));
       });
     });
@@ -248,6 +284,12 @@
       if (!row) return;
       const task = PROF_TASKS[Number(row.dataset.task)];
       if (!task) return;
+      const manageCheck = e.target.closest('[data-manage-check]');
+      if (manageMode && manageCheck) {
+        if (row.dataset.rank === undefined) toggleManageTask(Number(row.dataset.task));
+        else toggleManageRank(Number(row.dataset.task), Number(row.dataset.rank));
+        return;
+      }
       const role = e.target.closest('.msi-tree-compare-role');
       if (role) {
         if (role.getAttribute('aria-disabled') !== 'true') swapCompareRoles();
@@ -259,7 +301,7 @@
         return;
       }
       if (row.dataset.rank === undefined) {
-        if (compareMode || e.target.closest('.msi-tree-caret')) {
+        if (compareMode || manageMode || e.target.closest('.msi-tree-caret')) {
           task.open = !task.open;
           renderTree();
         } else {
@@ -278,8 +320,85 @@
     document.fonts?.ready.then(updateTreeNames);
   }
 
+  function toggleManageTask(taskIndex) {
+    if (managedTasks.has(taskIndex)) managedTasks.delete(taskIndex);
+    else {
+      managedTasks.add(taskIndex);
+      visibleRanks(PROF_TASKS[taskIndex], taskIndex).forEach((index) => managedRanks.delete(rankKey(taskIndex, index)));
+    }
+    renderTree();
+    syncManageControls();
+  }
+
+  function toggleManageRank(taskIndex, rankIndex) {
+    const key = rankKey(taskIndex, rankIndex);
+    const ranks = visibleRanks(PROF_TASKS[taskIndex], taskIndex);
+    if (managedTasks.delete(taskIndex)) {
+      ranks.forEach((index) => { if (index !== rankIndex) managedRanks.add(rankKey(taskIndex, index)); });
+    } else if (managedRanks.has(key)) managedRanks.delete(key);
+    else managedRanks.add(key);
+    renderTree();
+    syncManageControls();
+  }
+
+  function toggleManageAll(checked) {
+    if (!manageMode) return;
+    managedTasks.clear();
+    managedRanks.clear();
+    if (checked) PROF_TASKS.forEach((_, index) => {
+      if (!deletedTasks.has(index)) managedTasks.add(index);
+    });
+    renderTree();
+    syncManageControls();
+  }
+
+  function setManageMode(active) {
+    manageMode = active;
+    managedTasks.clear();
+    managedRanks.clear();
+    document.querySelectorAll('#msiSideToolbar .msi-side-normal-action').forEach((el) => { el.hidden = active; });
+    const back = document.getElementById('msiCompareBack');
+    if (back) {
+      back.hidden = !active;
+      back.title = active ? '退出管理' : '退出对比';
+      back.setAttribute('aria-label', back.title);
+    }
+    const heading = document.getElementById('msiCompareHeading');
+    if (heading) {
+      heading.hidden = !active;
+      heading.textContent = active ? '管理' : '对比';
+    }
+    const selectAllLabel = document.getElementById('msiManageSelectAllLabel');
+    if (selectAllLabel) selectAllLabel.hidden = !active;
+    const deleteButton = document.getElementById('msiManageDelete');
+    if (deleteButton) deleteButton.hidden = !active;
+    syncManageControls();
+    renderTree();
+  }
+
+  function deleteManagedItems() {
+    if (!manageMode || (!managedTasks.size && !managedRanks.size)) return;
+    managedTasks.forEach((index) => deletedTasks.add(index));
+    managedRanks.forEach((key) => deletedRanks.add(key));
+    managedTasks.clear();
+    managedRanks.clear();
+    syncManageControls();
+    const nextTask = PROF_TASKS.find((_, index) => !deletedTasks.has(index));
+    if (deletedTasks.has(PROF_TASKS.indexOf(selected.task))) {
+      if (nextTask) selectTask(nextTask);
+      else {
+        renderTree();
+        renderContentTitle();
+        document.getElementById('contentCard')?.classList.add('has-no-tasks');
+      }
+    } else {
+      renderTree();
+      renderContentTitle();
+    }
+  }
+
   function selectTask(task) {
-    if (!task) return;
+    if (!task || deletedTasks.has(PROF_TASKS.indexOf(task))) return;
     selected = { task };
     task.open = true;
     applySelection();
@@ -288,8 +407,13 @@
   function renderContentTitle() {
     const title = document.getElementById('msiContentTitle');
     if (!title) return;
+    if (PROF_TASKS.every((_, index) => deletedTasks.has(index))) {
+      title.textContent = '暂无任务';
+      return;
+    }
     if (!compareMode) {
       const options = PROF_TASKS.map((task, taskIndex) => {
+        if (deletedTasks.has(taskIndex)) return '';
         const current = task === selected.task;
         return '<button class="msi-title-picker-option' + (current ? ' is-current' : '') + '" type="button"' +
           ' role="option" aria-selected="' + (current ? 'true' : 'false') + '" data-title-task="' + taskIndex + '">' +
@@ -344,11 +468,12 @@
 
   function setCompareMode(active) {
     compareMode = active;
-    compareTasks = active ? [selected.task] : [];
+    compareTasks = active ? [deletedTasks.has(PROF_TASKS.indexOf(selected.task))
+      ? PROF_TASKS.find((_, index) => !deletedTasks.has(index))
+      : selected.task].filter(Boolean) : [];
     pinnedLaneIds.clear();
     document.querySelectorAll('.msi-side-normal-action').forEach((el) => { el.hidden = active; });
     document.querySelectorAll('.msi-tab--normal-only').forEach((el) => { el.hidden = active; });
-    document.querySelectorAll('.msi-tab--compare-only').forEach((el) => { el.hidden = !active; });
     const visibleActiveTab = document.querySelector('.msi-tab.is-active:not([hidden])');
     if (!visibleActiveTab) {
       activateAnalysisTab('timeline');
@@ -381,7 +506,14 @@
 
   function initCompareMode() {
     document.getElementById('msiCompareBtn')?.addEventListener('click', () => setCompareMode(true));
-    document.getElementById('msiCompareBack')?.addEventListener('click', () => setCompareMode(false));
+    document.getElementById('msiManageBtn')?.addEventListener('click', () => setManageMode(true));
+    document.getElementById('msiManageSelectAll')?.addEventListener('change', (event) =>
+      toggleManageAll(event.target.checked));
+    document.getElementById('msiManageDelete')?.addEventListener('click', deleteManagedItems);
+    document.getElementById('msiCompareBack')?.addEventListener('click', () => {
+      if (manageMode) setManageMode(false);
+      else setCompareMode(false);
+    });
     document.getElementById('msiContentTitle')?.addEventListener('click', (e) => {
       const swap = e.target.closest('.msi-compare-swap');
       if (swap) {
@@ -413,8 +545,83 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeTitlePicker(); });
   }
 
+  function initSidebarDrawer() {
+    const frame = document.querySelector('.pto-ide-frame');
+    const sidebar = document.getElementById('msiSidebar');
+    const menu = document.getElementById('msiSidebarMenu');
+    const fold = document.getElementById('msiSidebarFold');
+    if (!frame || !sidebar || !menu || !fold) return;
+    let closeTimer;
+    const isCollapsed = () => frame.classList.contains('is-sidebar-collapsed');
+    const clearCloseTimer = () => { window.clearTimeout(closeTimer); };
+    const setDrawerOpen = (open) => {
+      if (!isCollapsed()) return;
+      clearCloseTimer();
+      frame.classList.toggle('is-sidebar-drawer-open', open);
+      menu.setAttribute('aria-expanded', String(open));
+      menu.setAttribute('aria-label', open ? '固定工程树侧栏' : '展开工程树侧栏');
+      menu.title = menu.getAttribute('aria-label');
+      sidebar.setAttribute('aria-hidden', String(!open));
+    };
+    const scheduleClose = () => {
+      clearCloseTimer();
+      closeTimer = window.setTimeout(() => {
+        if (menu.matches(':hover') || sidebar.matches(':hover')) return;
+        if (sidebar.contains(document.activeElement)) menu.focus({ preventScroll: true });
+        setDrawerOpen(false);
+      }, 160);
+    };
+    const restore = () => {
+      clearCloseTimer();
+      frame.classList.remove('is-sidebar-collapsed', 'is-sidebar-drawer-open');
+      sidebar.removeAttribute('aria-hidden');
+      menu.setAttribute('aria-expanded', 'false');
+      menu.hidden = true;
+      fold.title = '收起侧栏';
+      fold.setAttribute('aria-label', fold.title);
+      const focusTarget = fold.hidden ? sidebar.querySelector('button:not([hidden])') : fold;
+      requestAnimationFrame(() => focusTarget?.focus({ preventScroll: true }));
+    };
+    fold.addEventListener('click', () => {
+      if (isCollapsed()) {
+        restore();
+        return;
+      }
+      frame.classList.add('is-sidebar-collapsed');
+      menu.hidden = false;
+      fold.title = '固定工程树侧栏';
+      fold.setAttribute('aria-label', fold.title);
+      setDrawerOpen(false);
+      menu.focus({ preventScroll: true });
+    });
+    menu.addEventListener('pointerenter', () => setDrawerOpen(true));
+    menu.addEventListener('pointerleave', scheduleClose);
+    sidebar.addEventListener('pointerenter', clearCloseTimer);
+    sidebar.addEventListener('pointerleave', scheduleClose);
+    sidebar.addEventListener('focusout', () => {
+      window.setTimeout(() => {
+        if (!sidebar.contains(document.activeElement) && !menu.matches(':hover') &&
+          !sidebar.matches(':hover')) setDrawerOpen(false);
+      }, 0);
+    });
+    menu.addEventListener('click', restore);
+    menu.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowDown' || !isCollapsed()) return;
+      event.preventDefault();
+      setDrawerOpen(true);
+      sidebar.querySelector('button:not([hidden])')?.focus();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !isCollapsed() ||
+        !frame.classList.contains('is-sidebar-drawer-open')) return;
+      setDrawerOpen(false);
+      menu.focus({ preventScroll: true });
+    });
+  }
+
   // 选中一级任务后，内容区、标题下拉与对话锚点统一挂到该任务目录。
   function applySelection() {
+    document.getElementById('contentCard')?.classList.remove('has-no-tasks');
     selected.task.open = true;
     renderTree();
     renderContentTitle();
@@ -2289,7 +2496,7 @@
   }
 
   function activateAnalysisTab(name) {
-    if (!['overview', 'timeline', 'memory'].includes(name)) return false;
+    if (!['overview', 'timeline', 'memory', 'operator'].includes(name)) return false;
     if (name === 'overview' && (compareMode || selected.task.name !== 'profile_dir')) return false;
     document.querySelectorAll('.msi-tab').forEach((tab) => {
       const active = tab.dataset.analysisTab === name;
@@ -2299,9 +2506,11 @@
     const overview = document.getElementById('msiOverviewPanel');
     const timeline = document.getElementById('msiTimelinePanel');
     const memory = document.getElementById('msiMemoryPanel');
+    const operator = document.getElementById('msiOperatorPanel');
     if (overview) overview.hidden = name !== 'overview';
     if (timeline) timeline.hidden = name !== 'timeline';
     if (memory) memory.hidden = name !== 'memory';
+    if (operator) operator.hidden = name !== 'operator';
     if (name === 'memory') ensureMemoryFrames();
     if (name === 'overview') ensureOverview().catch((error) => {
       const detail = document.getElementById('msiOvIssueDetail');
@@ -2325,7 +2534,7 @@
     if (!available && tab.classList.contains('is-active')) activateAnalysisTab('timeline');
   }
 
-  function renderMemoryDetail(container, raw) {
+  function renderMemoryDetail(container, raw, pathMode = 'key', onPathModeChange = () => {}) {
     if (!container) return;
     const text = (raw || '').trim();
     container.replaceChildren();
@@ -2442,12 +2651,52 @@
 
     const path = node('section', 'msi-memory-detail-path');
     const framesCount = groups.reduce((sum, item) => sum + item.frames.length, 0);
+    const stackGroups = groups.filter(item => item.frames.length).map((item) => {
+      const ordered = [...item.frames].reverse();
+      const appFrames = ordered.filter(frame => /\.py$/i.test(frame.file) &&
+        !/[\\/]site-packages[\\/]|[\\/]lib[\\/]python/i.test(frame.file));
+      const keyFrames = new Set([...appFrames.slice(-3), ...item.frames.slice(0, 4)]);
+      const featured = ordered.length <= 7 ? ordered : ordered.filter(frame => keyFrames.has(frame));
+      return {title: item.title, full: ordered, key: featured.length ? featured : ordered.slice(-5)};
+    });
+    const keyCount = stackGroups.reduce((sum, item) => sum + item.key.length, 0);
     const pathHead = node('div', 'msi-memory-detail-path-head');
-    pathHead.append(node('strong', '', '调用路径'),
-      node('span', '', framesCount ? `${framesCount} 层 · 关键节点` : '暂无调用栈'));
-    path.append(pathHead);
-    const frameList = (frames, full = false) => {
-      const list = node('ol', `msi-memory-detail-stack${full ? ' msi-memory-detail-stack--full' : ''}`);
+    pathHead.setAttribute('role', 'tablist');
+    pathHead.setAttribute('aria-label', '调用路径');
+    const panels = {
+      key: node('div', 'msi-memory-detail-path-panel'),
+      full: node('div', 'msi-memory-detail-path-panel'),
+    };
+    const tabs = {};
+    for (const [mode, label, count] of [['key', '关键调用路径', keyCount], ['full', '完整调用路径', framesCount]]) {
+      const tab = node('button', 'msi-memory-detail-path-tab', `${label}（${count}）`);
+      tab.type = 'button';
+      tab.id = `msiMemoryPathTab-${mode}`;
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-controls', `msiMemoryPathPanel-${mode}`);
+      tabs[mode] = tab;
+      pathHead.append(tab);
+      panels[mode].id = `msiMemoryPathPanel-${mode}`;
+      panels[mode].setAttribute('role', 'tabpanel');
+      panels[mode].setAttribute('aria-labelledby', tab.id);
+    }
+    const setPathMode = (mode) => {
+      for (const name of ['key', 'full']) {
+        tabs[name].setAttribute('aria-selected', String(name === mode));
+        panels[name].hidden = name !== mode;
+      }
+      onPathModeChange(mode);
+    };
+    for (const mode of ['key', 'full']) tabs[mode].addEventListener('click', () => setPathMode(mode));
+    pathHead.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+      event.preventDefault();
+      const next = tabs.key.getAttribute('aria-selected') === 'true' ? 'full' : 'key';
+      setPathMode(next);
+      tabs[next].focus();
+    });
+    const frameList = (frames) => {
+      const list = node('ol', 'msi-memory-detail-stack');
       for (const [index, frame] of frames.entries()) {
         const entry = node('li', 'msi-memory-detail-frame');
         const file = frame.file.split(/[\\/]/).pop() || '运行时';
@@ -2466,25 +2715,20 @@
       }
       return list;
     };
-    for (const item of groups.filter(item => item.frames.length)) {
-      if (groups.filter(group => group.frames.length).length > 1) {
-        path.append(node('div', 'msi-memory-detail-stack-label', item.title));
+    for (const mode of ['key', 'full']) {
+      const panel = panels[mode];
+      for (const item of stackGroups) {
+        if (stackGroups.length > 1) panel.append(node('div', 'msi-memory-detail-stack-label', item.title));
+        panel.append(frameList(item[mode]));
       }
-      const ordered = [...item.frames].reverse();
-      const appFrames = ordered.filter(frame => /\.py$/i.test(frame.file) &&
-        !/[\\/]site-packages[\\/]|[\\/]lib[\\/]python/i.test(frame.file));
-      const keyFrames = new Set([...appFrames.slice(-3), ...item.frames.slice(0, 4)]);
-      const featured = ordered.length <= 7 ? ordered : ordered.filter(frame => keyFrames.has(frame));
-      path.append(frameList(featured.length ? featured : ordered.slice(-5)));
-      if (featured.length < ordered.length) {
-        const full = node('details', 'msi-memory-detail-raw msi-memory-detail-full-stack');
-        full.append(node('summary', '', `展开完整调用路径 · ${ordered.length} 层`),
-          frameList(ordered, true));
-        path.append(full);
-      }
+      if (!framesCount) panel.append(node('p', 'msi-memory-detail-no-stack', '这条记录没有可用的调用栈。'));
+      const original = node('details', 'msi-memory-detail-raw');
+      original.open = true;
+      original.append(node('summary', '', '原始详情'), node('pre', '', text));
+      panel.append(original);
     }
-    if (!framesCount) path.append(node('p', 'msi-memory-detail-no-stack',
-      '这条记录没有可用的调用栈。'));
+    path.append(pathHead, panels.key, panels.full);
+    setPathMode(pathMode === 'full' ? 'full' : 'key');
     if (notes.length) {
       const extra = node('details', 'msi-memory-detail-raw');
       if (!framesCount) extra.open = true;
@@ -2492,10 +2736,6 @@
         node('pre', '', notes.join('\n')));
       path.append(extra);
     }
-    const original = node('details', 'msi-memory-detail-raw');
-    original.open = true;
-    original.append(node('summary', '', '原始详情'), node('pre', '', text));
-    path.append(original);
     container.append(overview, path);
   }
 
@@ -2508,7 +2748,29 @@
       'Active Memory Timeline': document.getElementById('msiMemoryTimelineFrame'),
       'Allocator State History': document.getElementById('msiMemoryAllocatorFrame'),
     };
+    const memoryResetButtons = {
+      'Active Memory Timeline': document.querySelector('[data-memory-reset="timeline"]'),
+      'Allocator State History': document.querySelector('[data-memory-reset="allocator"]'),
+    };
+    const memoryZoomControls = {
+      'Active Memory Timeline': document.querySelector('[data-memory-zoom="timeline"]'),
+      'Allocator State History': document.querySelector('[data-memory-zoom="allocator"]'),
+    };
     const memoryReady = new Set();
+    Object.values(memoryZoomControls).forEach((control) => {
+      if (!control) return;
+      const toggle = control.querySelector('.msi-memory-zoom-toggle');
+      const setExpanded = (expanded) => toggle?.setAttribute('aria-expanded', String(expanded));
+      control.addEventListener('pointerenter', () => setExpanded(true));
+      control.addEventListener('pointerleave', () => setExpanded(control.contains(document.activeElement)));
+      control.addEventListener('focusin', () => setExpanded(true));
+      control.addEventListener('focusout', () => requestAnimationFrame(() =>
+        setExpanded(control.matches(':hover') || control.contains(document.activeElement))));
+    });
+    Object.entries(memoryResetButtons).forEach(([view, button]) => {
+      button?.addEventListener('click', () =>
+        memoryFrames[view]?.contentWindow?.postMessage({type: 'msi-memory-reset-view'}, '*'));
+    });
     const pendingMemoryLink = {};
     function syncMemoryTheme() {
       const theme = document.documentElement.dataset.theme;
@@ -2520,10 +2782,8 @@
       const foreground = styles.getPropertyValue('--foreground').trim();
       const border = styles.getPropertyValue('--border-default').trim();
       const muted = styles.getPropertyValue('--foreground-muted').trim();
-      const palette = Array.from({length: 18}, (_, index) =>
-        styles.getPropertyValue(`--msi-trace-${String(index + 1).padStart(2, '0')}-bg`).trim());
       Object.values(memoryFrames).forEach((frame) => {
-        if (frame?.getAttribute('src')) frame.contentWindow?.postMessage({type: 'msi-memory-theme', theme, accent, tint, danger, purple, foreground, border, muted, palette}, '*');
+        if (frame?.getAttribute('src')) frame.contentWindow?.postMessage({type: 'msi-memory-theme', theme, accent, tint, danger, purple, foreground, border, muted}, '*');
       });
     }
     Object.values(memoryFrames).forEach((frame) => frame?.addEventListener('load', syncMemoryTheme));
@@ -2538,6 +2798,11 @@
     const memoryFrameSearch = document.getElementById('msiMemoryFrameSearch');
     const memoryAddressMatches = document.getElementById('msiMemoryAddressMatches');
     const memoryFrameMatches = document.getElementById('msiMemoryFrameMatches');
+    const memoryUnfreed = {
+      total: document.getElementById('msiMemoryUnfreedTotal'),
+      max: document.getElementById('msiMemoryUnfreedMax'),
+      min: document.getElementById('msiMemoryUnfreedMin'),
+    };
     const details = {};
     let focusedView = 'Active Memory Timeline';
     function setMemoryDetailExpanded(expanded) {
@@ -2575,14 +2840,16 @@
       const count = Number.parseInt(value, 10);
       return Number.isNaN(count) ? '' : `${count} 项`;
     }
+    let memoryPathMode = 'key';
     function showMemoryDetail() {
-      renderMemoryDetail(memoryDetail, details[focusedView]);
+      renderMemoryDetail(memoryDetail, details[focusedView], memoryPathMode, (mode) => { memoryPathMode = mode; });
     }
     window.addEventListener('message', (event) => {
       const view = event.data?.view;
       if (!Object.hasOwn(memoryFrames, view) || event.source !== memoryFrames[view]?.contentWindow) return;
       if (event.data.type === 'msi-memory-ready') {
         memoryReady.add(view);
+        syncMemoryTheme();
         if (pendingMemoryLink[view]) {
           memoryFrames[view].contentWindow.postMessage({
             type: 'msi-memory-link-target',
@@ -2590,6 +2857,21 @@
           }, '*');
           delete pendingMemoryLink[view];
         }
+        return;
+      }
+      if (event.data.type === 'msi-memory-view-modified') {
+        const button = memoryResetButtons[view];
+        if (button) {
+          button.dataset.viewModified = String(event.data.modified);
+          button.disabled = !event.data.modified;
+        }
+        return;
+      }
+      if (event.data.type === 'msi-memory-interval-stats' && view === 'Active Memory Timeline') {
+        const formatKB = (bytes) => Number.isFinite(bytes) ? (bytes / 1024).toFixed(3) : '—';
+        if (memoryUnfreed.total) memoryUnfreed.total.textContent = formatKB(event.data.total);
+        if (memoryUnfreed.max) memoryUnfreed.max.textContent = formatKB(event.data.max);
+        if (memoryUnfreed.min) memoryUnfreed.min.textContent = formatKB(event.data.min);
         return;
       }
       if (event.data.type === 'msi-memory-link-selection') {
@@ -2635,6 +2917,7 @@
     if (swimStack && baselineSwim) ensurePinnedCard(swimStack, baselineSwim);
     initTree();
     initCompareMode();
+    initSidebarDrawer();
     initZoom();
     initMouseModes();
     initSwimlanes();

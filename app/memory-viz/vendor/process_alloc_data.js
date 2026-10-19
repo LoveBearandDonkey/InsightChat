@@ -1000,6 +1000,7 @@ function process_alloc_data(snapshot, device, plot_segments, max_entries, includ
   const current = [];      // stack of element indices (bottom to top)
   const current_data = []; // parallel array of visualization data objects
   const data = [];         // all data objects (including completed ones)
+  const allocation_lifetimes = elements.map(e => ({size: e.size, start: null, stop: Infinity}));
   let max_size = 0;
 
   let total_mem = 0;
@@ -1213,6 +1214,7 @@ function process_alloc_data(snapshot, device, plot_segments, max_entries, includ
   // For non-pool blocks: added to the global stack (draw_elem) or global
   // summarized band.
   for (const elem of initially_allocated) {
+    allocation_lifetimes[elem].start = 0;
     if (include_private_inactive && get_pool_key(elem)) {
       const pk = get_pool_key(elem);
       const size = elements[elem].size;
@@ -1413,6 +1415,7 @@ function process_alloc_data(snapshot, device, plot_segments, max_entries, includ
         if (envelope_target > pool.max) {
           grow_pool_envelope(pool, pool_key, envelope_target);
         }
+        allocation_lifetimes[elem].start = timestep;
 
         if (elem in draw_elem) {
           const inner_offset = pool.drawn_active;
@@ -1440,6 +1443,7 @@ function process_alloc_data(snapshot, device, plot_segments, max_entries, includ
       } else {
         // Pool free: end stripe, shift stripes above down within the pool.
         // The envelope stays at its high-water mark (never shrinks).
+        allocation_lifetimes[elem].stop = timestep + 1;
         const pool = pools[pool_key];
         const block_idx = pool.block_stack.findIndex(b => b.elem === elem);
         if (block_idx >= 0) {
@@ -1486,10 +1490,12 @@ function process_alloc_data(snapshot, device, plot_segments, max_entries, includ
     if (!(elem in draw_elem)) {
       // Too small to render individually — goes into the summarized band
       if (elem in summarized_elems) {
+        allocation_lifetimes[elem].stop = timestep + 1;
         advance(1);
         total_summarized_mem -= size;
         summarized_elems[elem] = null;
       } else {
+        allocation_lifetimes[elem].start = timestep;
         total_summarized_mem += size;
         summarized_elems[elem] = true;
         advance(1);
@@ -1499,11 +1505,13 @@ function process_alloc_data(snapshot, device, plot_segments, max_entries, includ
     const idx = current.findLastIndex(x => x === elem);
     if (idx === -1) {
       // First appearance → alloc
+      allocation_lifetimes[elem].start = timestep;
       add_allocation(elem);
       advance(1);
     } else {
       // Second appearance → free: remove from stack, shift elements above down
       advance(1);
+      allocation_lifetimes[elem].stop = timestep;
       const removed = current_data[idx];
       removed.timesteps.push(timestep);
       removed.offsets.push(removed.offsets.at(-1));
@@ -1558,6 +1566,7 @@ function process_alloc_data(snapshot, device, plot_segments, max_entries, includ
   return {
     max_size,
     allocations_over_time: data,
+    allocation_lifetimes,
     max_at_time,
     summarized_mem,
     elements_length: elements.length,

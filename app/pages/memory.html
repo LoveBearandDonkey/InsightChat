@@ -18,15 +18,48 @@
   </div>
   <div class="msi-memory-charts">
     <section class="msi-memory-chart-group" aria-labelledby="msiMemoryTimelineTitle">
-      <div class="msi-memory-chart-head"><h3 id="msiMemoryTimelineTitle">Active Memory Timeline</h3></div>
+      <div class="msi-memory-chart-head">
+        <h3 id="msiMemoryTimelineTitle">内存生命周期</h3>
+        <button class="msi-memory-reset" type="button" data-memory-reset="timeline" aria-label="重置内存生命周期视图" title="重置视图" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 1-2.4-5.7M20 4v5h-5"></path></svg>
+        </button>
+        <div class="msi-memory-zoom-control" data-memory-zoom="timeline">
+          <button class="msi-memory-zoom-toggle" type="button" aria-label="缩放手势说明" aria-describedby="msiMemoryTimelineZoomPopover" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 5 5M7.5 10.5h6M10.5 7.5v6"></path></svg>
+          </button>
+          <div class="msi-memory-zoom-popover" id="msiMemoryTimelineZoomPopover" role="tooltip">
+            <div class="msi-memory-zoom-tip">横向缩放<span class="msi-memory-zoom-gesture">（<svg viewBox="0 0 18 18" aria-hidden="true"><rect x="3.5" y="1.5" width="11" height="15" rx="5.5"></rect><rect class="msi-memory-wheel" x="8" y="4" width="2" height="4" rx="1"></rect></svg>滚动）</span></div>
+            <div class="msi-memory-zoom-tip">等比缩放<span class="msi-memory-zoom-gesture">（Ctrl+<svg viewBox="0 0 18 18" aria-hidden="true"><rect x="3.5" y="1.5" width="11" height="15" rx="5.5"></rect><rect class="msi-memory-wheel" x="8" y="4" width="2" height="4" rx="1"></rect></svg>滚动）</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="msi-memory-summary" aria-label="当前可视区间未释放内存统计" title="统计在可视区间内分配、到区间右端仍未释放的内存块；KB 按 1024 字节换算。">
+        <div class="msi-memory-summary-item"><span>区间未释放总量（KB）</span><strong id="msiMemoryUnfreedTotal">—</strong></div>
+        <div class="msi-memory-summary-item"><span>区间未释放最大块（KB）</span><strong id="msiMemoryUnfreedMax">—</strong></div>
+        <div class="msi-memory-summary-item"><span>区间未释放最小块（KB）</span><strong id="msiMemoryUnfreedMin">—</strong></div>
+      </div>
       <div class="msi-memory-chart">
-        <iframe id="msiMemoryTimelineFrame" class="msi-memory-frame" title="PyTorch Active Memory Timeline" data-src="../memory-viz.html#timeline"></iframe>
+        <iframe id="msiMemoryTimelineFrame" class="msi-memory-frame" title="内存生命周期" data-src="../memory-viz.html#timeline"></iframe>
       </div>
     </section>
     <section class="msi-memory-chart-group" aria-labelledby="msiMemoryAllocatorTitle">
-      <div class="msi-memory-chart-head"><h3 id="msiMemoryAllocatorTitle">Allocator State History</h3></div>
+      <div class="msi-memory-chart-head">
+        <h3 id="msiMemoryAllocatorTitle">内存池状态</h3>
+        <button class="msi-memory-reset" type="button" data-memory-reset="allocator" aria-label="重置内存池状态视图" title="重置视图" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 1-2.4-5.7M20 4v5h-5"></path></svg>
+        </button>
+        <div class="msi-memory-zoom-control" data-memory-zoom="allocator">
+          <button class="msi-memory-zoom-toggle" type="button" aria-label="缩放手势说明" aria-describedby="msiMemoryAllocatorZoomPopover" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 5 5M7.5 10.5h6M10.5 7.5v6"></path></svg>
+          </button>
+          <div class="msi-memory-zoom-popover" id="msiMemoryAllocatorZoomPopover" role="tooltip">
+            <div class="msi-memory-zoom-tip">横向缩放<span class="msi-memory-zoom-gesture">（<svg viewBox="0 0 18 18" aria-hidden="true"><rect x="3.5" y="1.5" width="11" height="15" rx="5.5"></rect><rect class="msi-memory-wheel" x="8" y="4" width="2" height="4" rx="1"></rect></svg>滚动）</span></div>
+            <div class="msi-memory-zoom-tip">等比缩放<span class="msi-memory-zoom-gesture">（Ctrl+<svg viewBox="0 0 18 18" aria-hidden="true"><rect x="3.5" y="1.5" width="11" height="15" rx="5.5"></rect><rect class="msi-memory-wheel" x="8" y="4" width="2" height="4" rx="1"></rect></svg>滚动）</span></div>
+          </div>
+        </div>
+      </div>
       <div class="msi-memory-chart">
-        <iframe id="msiMemoryAllocatorFrame" class="msi-memory-frame" title="PyTorch Allocator State History" data-src="../memory-viz.html#allocator"></iframe>
+        <iframe id="msiMemoryAllocatorFrame" class="msi-memory-frame" title="内存池状态" data-src="../memory-viz.html#allocator"></iframe>
       </div>
     </section>
   </div>

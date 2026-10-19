@@ -59,7 +59,7 @@
 'use strict';
 
 import * as d3 from "d3";
-import {axisLeft} from "d3-axis";
+import {axisBottom, axisLeft} from "d3-axis";
 import {scaleLinear} from "d3-scale";
 import {zoom, zoomIdentity} from "d3-zoom";
 import {brushX} from "d3-brush";
@@ -84,6 +84,22 @@ function getTraceInteractionMode() {
 }
 
 let linkedSelectionHandler = null;
+let resetViewHandler = null;
+let intervalStats = null;
+const viewModifiedSources = new Set();
+function setViewModified(source, modified) {
+  const wasModified = viewModifiedSources.size > 0;
+  if (modified) viewModifiedSources.add(source);
+  else viewModifiedSources.delete(source);
+  const isModified = viewModifiedSources.size > 0;
+  if (isModified !== wasModified) {
+    window.dispatchEvent(new CustomEvent('msi-memory-view-modified', {detail: {modified: isModified}}));
+  }
+}
+function resetViewModified() {
+  setViewModified('plot', false);
+  setViewModified('mini', false);
+}
 window.addEventListener('msi-memory-link-target', event => {
   linkedSelectionHandler?.(event.detail);
 });
@@ -91,12 +107,23 @@ function publishLinkedSelection(selection) {
   window.dispatchEvent(new CustomEvent('msi-memory-link-selection', {detail: selection}));
 }
 
-// Share the timeline's 18 operator hues. CSS variables keep existing plots in
-// sync when the parent switches theme, without rebuilding the snapshot.
+// The memory charts share a vivid palette independent of the main timeline.
 const tracePaletteHues = [4, 155, 285, 46, 212, 342, 125, 265, 32, 198, 325, 88, 245, 18, 185, 305, 58, 228];
 const tracePalette = tracePaletteHues.map((hue, index) =>
-  `var(--msi-trace-${String(index + 1).padStart(2, '0')}-bg, oklch(82% .095 ${hue}))`,
+  `var(--msi-memory-${String(index + 1).padStart(2, '0')}-bg, oklch(75% .135 ${hue}))`,
 );
+export function reset_view() {
+  resetViewHandler?.();
+}
+export function get_interval_stats() {
+  return intervalStats;
+}
+function useUniformZoom(event) {
+  return event.sourceEvent?.type === 'wheel' && event.sourceEvent.ctrlKey;
+}
+function memoryWheelDelta(event) {
+  return -event.deltaY * (event.deltaMode === 1 ? 0.05 : event.deltaMode ? 1 : 0.002);
+}
 
 function version_space() {
   const version = {};
@@ -201,14 +228,20 @@ function EventSelector(outer, events, stack_info, memory_view) {
           const target = pairedEventIndex(event, event.idx);
           const isAllocation = event.action === 'alloc';
           const label = isAllocation ? '跳转到对应的 free 记录' : '跳转到对应的 alloc 记录';
-          row.append('button')
+          const direction = target == null ? null : target > event.idx ? 'down' : 'up';
+          const jump = row.append('button')
             .attr('type', 'button')
             .attr('class', 'msi-memory-event-jump')
             .attr('data-target-event', target == null ? null : target)
-            .attr('aria-label', target == null ? `${label}（未记录）` : label)
-            .attr('title', target == null ? '快照中没有对应记录' : `${label} · 第 ${target + 1} 条`)
-            .property('disabled', target == null)
+            .attr('data-direction', direction)
+            .attr('data-tooltip', target == null ? null : `${label} · 第 ${target + 1} 条 · 向${direction === 'down' ? '下' : '上'}滚动`)
+            .attr('aria-label', target == null ? `${label}（未记录）` : `${label}，向${direction === 'down' ? '下' : '上'}滚动`)
+            .attr('title', target == null ? '快照中没有对应记录' : '')
+            .property('disabled', target == null);
+          jump.append('span').attr('class', 'msi-memory-event-jump-symbol').attr('aria-hidden', 'true')
             .text(isAllocation ? '○' : '●');
+          if (direction) jump.append('span').attr('class', 'msi-memory-event-jump-arrow').attr('aria-hidden', 'true')
+            .text(direction === 'down' ? '↓' : '↑');
         }
       });
     topSpacer.style('height', `${start * rowHeight}px`);
@@ -287,9 +320,73 @@ function EventSelector(outer, events, stack_info, memory_view) {
     }
   });
 
+  const jumpTooltip = d3.select(document.body).append('div')
+    .attr('id', 'msiMemoryEventJumpTooltip')
+    .attr('class', 'msi-memory-event-jump-tooltip')
+    .attr('role', 'tooltip');
+  jumpTooltip.node().hidden = true;
+  let activeJump = null;
+  let jumpHintTimer = null;
+  function hideJumpHint() {
+    if (jumpHintTimer !== null) window.clearTimeout(jumpHintTimer);
+    jumpHintTimer = null;
+    if (activeJump) {
+      activeJump.removeAttribute('aria-describedby');
+    }
+    activeJump = null;
+    jumpTooltip.node().hidden = true;
+  }
+  function showJumpHint(button) {
+    if (activeJump !== button || !button.isConnected) return;
+    const tooltip = jumpTooltip.node();
+    tooltip.textContent = button.dataset.tooltip;
+    tooltip.hidden = false;
+    const buttonRect = button.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+    const roomRight = window.innerWidth - buttonRect.right;
+    const left = roomRight >= tooltipRect.width + 16
+      ? buttonRect.right + 8 : buttonRect.left - tooltipRect.width - 8;
+    tooltip.style.left = `${Math.max(8, left)}px`;
+    tooltip.style.top = `${Math.max(8, Math.min(window.innerHeight - tooltipRect.height - 8,
+      buttonRect.top + (buttonRect.height - tooltipRect.height) / 2))}px`;
+    button.setAttribute('aria-describedby', tooltip.id);
+  }
+  function scheduleJumpHint(button, immediate = false) {
+    if (!button || button.disabled || !button.dataset.tooltip) return;
+    if (activeJump === button) {
+      if (immediate && jumpHintTimer !== null) {
+        window.clearTimeout(jumpHintTimer);
+        jumpHintTimer = null;
+        showJumpHint(button);
+      }
+      return;
+    }
+    hideJumpHint();
+    activeJump = button;
+    if (immediate) showJumpHint(button);
+    else jumpHintTimer = window.setTimeout(() => {
+      jumpHintTimer = null;
+      showJumpHint(button);
+    }, 550);
+  }
+  events_div
+    .on('pointerover.msi-memory-jump-hint', function (event) {
+      scheduleJumpHint(event.target.closest('.msi-memory-event-jump'));
+    })
+    .on('pointerout.msi-memory-jump-hint', function (event) {
+      const button = event.target.closest('.msi-memory-event-jump');
+      if (button === activeJump && !button.contains(event.relatedTarget)) hideJumpHint();
+    })
+    .on('focusin.msi-memory-jump-hint', function (event) {
+      scheduleJumpHint(event.target.closest('.msi-memory-event-jump'), true);
+    })
+    .on('focusout.msi-memory-jump-hint', function (event) {
+      if (activeJump && !activeJump.contains(event.relatedTarget)) hideJumpHint();
+    });
   events_div.on('click.msi-memory-jump', function (event) {
     const button = event.target.closest('.msi-memory-event-jump');
     if (!button || !this.contains(button) || button.disabled) return;
+    hideJumpHint();
     event.stopPropagation();
     es.select(Number(button.dataset.targetEvent), true, null, true);
   });
@@ -301,6 +398,7 @@ function EventSelector(outer, events, stack_info, memory_view) {
 
   let scrollFrame = null;
   events_div.on('scroll.msi-memory-rows', () => {
+    hideJumpHint();
     if (scrollFrame !== null) return;
     scrollFrame = window.requestAnimationFrame(() => {
       scrollFrame = null;
@@ -373,6 +471,10 @@ function hashCode(num) {
   return hash;
 }
 
+function blockPaletteColor(addr, version) {
+  return tracePalette[Math.abs(hashCode(`${addr}:${version ?? 0}`)) % tracePalette.length];
+}
+
 function addStroke(d) {
   d.attr('stroke', 'var(--msi-viz-accent, #0077ff)')
     .attr('stroke-width', '2')
@@ -425,11 +527,14 @@ function MemoryView(outer, stack_info, snapshot, device, onSelectBlock) {
     .attr('viewBox', '0 0 200 100')
     .attr('preserveAspectRatio', 'none');
   const g = svg.append('g');
-  const seg_zoom = zoom();
+  const seg_zoom = zoom().wheelDelta(memoryWheelDelta);
   seg_zoom.on('zoom', (event) => {
-    g.attr('transform', event.transform);
+    const t = event.transform;
+    g.attr('transform', useUniformZoom(event) ? t : `translate(${t.x}, 0) scale(${t.k}, 1)`);
+    setViewModified('plot', Math.abs(t.k - 1) > 1e-6 || Math.abs(t.x) > 1e-3 || Math.abs(t.y) > 1e-3);
   });
   svg.call(seg_zoom);
+  resetViewHandler = () => svg.call(seg_zoom.transform, zoomIdentity);
 
   const sorted_segments = [];
   const block_map = {};
@@ -799,13 +904,10 @@ function MemoryView(outer, stack_info, snapshot, device, onSelectBlock) {
         .attr('y', x => yScale(x.segment.row))
         .attr('width', x => xScale(x.requested_size))
         .attr('height', yScale(4 / 5))
-        .style('fill', (x, _i) =>
-          x.free_requested
-            ? 'var(--msi-viz-danger, #d62f35)'
-            : tracePalette[
-                Math.abs(hashCode(x.addr)) % tracePalette.length
-              ],
-        );
+        .style('fill', x => blockPaletteColor(x.addr, x.version))
+        .attr('stroke', x => x.free_requested ? 'var(--msi-viz-danger, #d62f35)' : null)
+        .attr('stroke-width', x => x.free_requested ? 1.5 : null)
+        .attr('vector-effect', 'non-scaling-stroke');
       drawnBlocks = block_selection;
 
       stack_info.register(
@@ -836,7 +938,11 @@ function MemoryView(outer, stack_info, snapshot, device, onSelectBlock) {
             forward_frames_str
           );
         },
-        removeStroke,
+        d => {
+          const pendingFree = d.datum().free_requested;
+          d.attr('stroke', pendingFree ? 'var(--msi-viz-danger, #d62f35)' : null)
+            .attr('stroke-width', pendingFree ? 1.5 : null);
+        },
         d => {
           const block = d.datum();
           const selection = {
@@ -1016,6 +1122,7 @@ function StackInfo(outer) {
 }
 
 function create_segment_view(dst, snapshot, device) {
+  resetViewModified();
   const outer = dst
     .append('div')
     .attr('class', 'msi-memory-allocator-grid')
@@ -1163,11 +1270,13 @@ function annotate_snapshot(snapshot) {
 function MemoryPlot(
   svg,
   axis_svg,
+  time_axis_svg,
   data,
   axis_gutter,
   width,
   height,
   colors = tracePalette,
+  colorByBlock = false,
 ) {
   function format_points(d) {
     const size = d.size;
@@ -1217,9 +1326,14 @@ function MemoryPlot(
     .enter()
     .append('polygon')
     .attr('points', format_points)
-    .style('fill', d => data.grouped_segments && d.elem === 'summarized'
-      ? 'var(--msi-viz-summary, #d1d5db)'
-      : colors[d.color % colors.length])
+    .style('fill', d => {
+      if (data.grouped_segments && d.elem === 'summarized') return 'var(--msi-viz-summary, #d1d5db)';
+      if (colorByBlock && typeof d.elem === 'number') {
+        const block = data.element_for_id(d.elem);
+        return blockPaletteColor(block.addr, block.version);
+      }
+      return colors[d.color % colors.length];
+    })
     .attr('opacity', d => d.opacity ?? 1)
     .attr('stroke', d => typeof d.elem === 'string' && d.elem.startsWith('pool:') ? 'var(--msi-viz-foreground, #24292f)' : null)
     .attr('stroke-width', d => typeof d.elem === 'string' && d.elem.startsWith('pool:') ? 3 : null)
@@ -1263,33 +1377,76 @@ function MemoryPlot(
   new ResizeObserver(drawAxis).observe(axis_svg.node());
   drawAxis();
 
-  function handleZoom(event) {
-    const t = event.transform;
-    zoom_group.attr('transform', t);
-    axis_domain = event.transform.rescaleY(yscale).domain();
-    drawAxis();
+  let scrubScale = 1;
+  let scrubTranslate = 0;
+  const timeAxis = time_axis_svg.append('g');
+  const visibleStep = (x, transform) =>
+    xscale.invert((x - transform.x) / (transform.k * scrubScale) - scrubTranslate);
+  function drawTimeAxis() {
+    const bounds = time_axis_svg.node().getBoundingClientRect();
+    if (!bounds.width || !max_timestep) return;
+    const transform = d3.zoomTransform(plot_outer.node());
+    const from = Math.max(0, Math.min(max_timestep, visibleStep(0, transform)));
+    const to = Math.max(0, Math.min(max_timestep, visibleStep(plot_width, transform)));
+    const scale = scaleLinear().domain([from, to]).range([0, bounds.width]);
+    const ticks = d3.ticks(from, to, Math.max(2, Math.floor(bounds.width / 85)))
+      .filter(Number.isInteger);
+    timeAxis.call(axisBottom(scale).tickValues(ticks).tickSize(3)
+      .tickFormat(value => value.toLocaleString('en-US')));
+  }
+  new ResizeObserver(drawTimeAxis).observe(time_axis_svg.node());
+  drawTimeAxis();
+  let lastInterval = '';
+  function publishIntervalStats(transform) {
+    if (!data.allocation_lifetimes || !max_timestep) return;
+    const from = Math.max(0, Math.min(max_timestep, Math.floor(visibleStep(0, transform))));
+    const to = Math.max(0, Math.min(max_timestep, Math.ceil(visibleStep(plot_width, transform))));
+    const signature = `${from}:${to}`;
+    if (signature === lastInterval) return;
+    lastInterval = signature;
+    let total = 0;
+    let max = null;
+    let min = null;
+    let count = 0;
+    for (const allocation of data.allocation_lifetimes) {
+      if (!Number.isFinite(allocation.start) || !Number.isFinite(allocation.size) || allocation.size <= 0 ||
+          allocation.start < from || allocation.start >= to || allocation.stop <= to) continue;
+      total += allocation.size;
+      max = max === null ? allocation.size : Math.max(max, allocation.size);
+      min = min === null ? allocation.size : Math.min(min, allocation.size);
+      count++;
+    }
+    intervalStats = {from, to, count, total, max, min};
+    window.dispatchEvent(new CustomEvent('msi-memory-interval-stats', {detail: intervalStats}));
   }
 
-  const thezoom = zoom().on('zoom', handleZoom);
+  function handleZoom(event) {
+    const t = event.transform;
+    const uniform = useUniformZoom(event);
+    zoom_group.attr('transform', uniform ? t : `translate(${t.x}, 0) scale(${t.k}, 1)`);
+    setViewModified('plot', Math.abs(t.k - 1) > 1e-6 || Math.abs(t.x) > 1e-3 || Math.abs(t.y) > 1e-3);
+    axis_domain = uniform ? t.rescaleY(yscale).domain() : yscale.domain();
+    drawAxis();
+    drawTimeAxis();
+    publishIntervalStats(t);
+  }
+
+  const thezoom = zoom().wheelDelta(memoryWheelDelta).on('zoom', handleZoom);
   plot_outer.call(thezoom);
 
   return {
-    select_window: (stepbegin, stepend, max) => {
+    select_window: (stepbegin, stepend) => {
       const begin = xscale(stepbegin);
       const size = xscale(stepend) - xscale(stepbegin);
       const scale = plot_width / size;
       const translate = -begin;
-      const yscale = max_size / max;
+      scrubScale = scale;
+      scrubTranslate = translate;
       scrub_group.attr(
         'transform',
-        `scale(${scale / yscale}, 1) translate(${translate}, 0)`,
+        `scale(${scrubScale}, 1) translate(${scrubTranslate}, 0)`,
       );
-      plot_outer.call(
-        thezoom.transform,
-        zoomIdentity
-          .scale(yscale)
-          .translate(0, -(plot_height - plot_height / yscale)),
-      );
+      plot_outer.call(thezoom.transform, zoomIdentity);
     },
     set_delegate: delegate => {
       function timestep_at(event) {
@@ -1506,6 +1663,8 @@ function MiniMap(mini_svg, plot, data, left_pad, width, height = 60) {
   ]);
   brush.on('brush', function (event) {
     if (!event.selection) return;
+    setViewModified('mini', Math.abs(event.selection[0] - previewLeft) > 1e-3 ||
+      Math.abs(event.selection[1] - previewRight) > 1e-3);
     const [begin, end] = event.selection.map(x => x - previewLeft);
 
     const stepbegin = Math.max(0, Math.floor(xscale.invert(begin)));
@@ -1524,6 +1683,7 @@ function MiniMap(mini_svg, plot, data, left_pad, width, height = 60) {
   });
   mini_svg.call(brush);
   if (max_at_time.length) mini_svg.call(brush.move, [previewLeft, previewRight]);
+  resetViewHandler = () => mini_svg.call(brush.move, [previewLeft, previewRight]);
 }
 
 function Legend(plot_svg, categories) {
@@ -1563,6 +1723,7 @@ function create_trace_view(
   include_private_inactive = false,
   segment_options = {grouped: true},
 ) {
+  resetViewModified();
   const axis_gutter = 64;
   const data = process_alloc_data(snapshot, device, plot_segments, max_entries, include_private_inactive, segment_options);
   dst.selectAll('svg').remove();
@@ -1656,7 +1817,7 @@ function create_trace_view(
     .append('div')
     .attr(
       'style',
-      'position: relative; grid-column: 1; grid-row: 1; box-sizing: border-box; width: 100%; height: 100%; min-height: 0; padding: 16px 8px; overflow: hidden;',
+      'position: relative; grid-column: 1; grid-row: 1; box-sizing: border-box; width: 100%; height: 100%; min-height: 0; padding: 16px 8px 26px; overflow: hidden;',
     );
   const plot_svg = plot_container
     .append('svg')
@@ -1669,10 +1830,19 @@ function create_trace_view(
     .attr('display', 'block')
     .attr(
       'style',
-      'position: absolute; top: 16px; left: 8px; width: calc(100% - 16px); height: calc(100% - 32px); overflow: visible; pointer-events: none;',
+      'position: absolute; top: 16px; left: 8px; width: calc(100% - 16px); height: calc(100% - 42px); overflow: visible; pointer-events: none;',
     );
 
-  const plot = MemoryPlot(plot_svg, axis_svg, data, axis_gutter, 1024, 576);
+  const time_axis_svg = plot_container
+    .append('svg')
+    .attr('class', 'msi-memory-time-axis')
+    .attr('role', 'img')
+    .attr('aria-label', '时间步（事件序号）')
+    .attr('style', `position: absolute; bottom: 4px; left: ${axis_gutter + 8}px; width: calc(100% - ${axis_gutter + 16}px); height: 18px; overflow: visible; pointer-events: none;`);
+  plot_container.append('span').attr('class', 'msi-memory-time-axis-title').text('时间步');
+
+  const plot = MemoryPlot(plot_svg, axis_svg, time_axis_svg, data, axis_gutter, 1024, 576,
+    tracePalette, !snapshot.categories.length && !data.grouped_segments);
 
   if (snapshot.categories.length !== 0 && !data.grouped_segments) {
     Legend(plot_svg.append('g'), snapshot.categories);
