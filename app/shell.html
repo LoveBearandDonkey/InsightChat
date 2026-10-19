@@ -68,7 +68,7 @@
            一级任务负责切换内容页，二级 rank 只展示该任务包含的采集项。 -->
       <aside class="msi-sidebar pto-ide-frame__standalone-chrome" id="msiSidebar" data-ide-slot="explorer" aria-label="性能数据">
         <div class="msi-side-toolbar" id="msiSideToolbar">
-          <button class="msi-side-btn msi-side-btn--primary msi-side-normal-action" type="button" title="导入性能数据">
+          <button class="msi-side-btn msi-side-btn--primary msi-side-normal-action" id="msiImportBtn" type="button" title="导入性能数据" aria-haspopup="dialog" aria-controls="msiImportDialog">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg>
             <span>导入</span>
           </button>
@@ -339,7 +339,36 @@
     </div>
   </section>
 
+  <dialog class="msi-import-dialog" id="msiImportDialog" aria-labelledby="msiImportTitle">
+    <div class="msi-import-head">
+      <h2 id="msiImportTitle">选择或拖入文件</h2>
+      <button class="msi-import-close" id="msiImportClose" type="button" aria-label="关闭导入弹窗" title="关闭">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"></path></svg>
+      </button>
+    </div>
+    <div class="msi-import-body">
+      <div class="msi-import-path-wrap">
+        <label class="msi-import-path-label" for="msiImportPath">文件路径</label>
+        <div class="msi-import-path-field">
+          <textarea id="msiImportPath" rows="2" maxlength="4096" placeholder="输入文件夹路径" spellcheck="false">D:\</textarea>
+          <button class="msi-import-clear" id="msiImportClear" type="button" aria-label="清空路径" title="清空路径" hidden>
+            <span class="wzh-chat-clean-icon" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+      <div class="msi-import-browser" id="msiImportBrowser" role="tree" aria-label="D 盘或已选择目录的内容">
+        <p class="msi-import-empty" id="msiImportEmpty">D:\ 尚未授权。点击此处在系统窗口中选择 D 盘或其子目录，也可拖入文件或文件夹。</p>
+      </div>
+      <input id="msiImportFolderInput" type="file" webkitdirectory directory multiple hidden>
+    </div>
+    <div class="msi-import-foot">
+      <button class="msi-import-confirm" id="msiImportConfirm" type="button">确认</button>
+      <button class="msi-import-cancel" id="msiImportCancel" type="button">取消</button>
+    </div>
+  </dialog>
+
   <script defer src="../theme.js"></script>
+  <script defer src="../import-dialog.js"></script>
   <script defer src="../timeline-colors.js"></script>
 
   <!-- ── MindStudio Insight 工作台:左树(采集目录) + 内容区(泳道树 + 泳道) ── -->

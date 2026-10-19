@@ -243,7 +243,8 @@
             ' data-compare-swap="1" aria-disabled="' + (compareTasks.length < 2 ? 'true' : 'false') + '"' +
             ' title="' + (compareTasks.length < 2 ? roleName : '点击互换基线和对比') + '">' + roleName + '</span>'
         : '';
-      return '<button class="msi-tree-row msi-tree-row--folder' + (on ? ' is-selected' : '') + '" type="button" role="treeitem"' +
+      return '<button class="msi-tree-row msi-tree-row--folder' + (on ? ' is-selected' : '') +
+        (role ? ' has-compare-role' : '') + '" type="button" role="treeitem"' +
         ' data-task="' + taskIndex + '" aria-expanded="' + (task.open ? 'true' : 'false') + '"' +
         ' aria-selected="' + (on ? 'true' : 'false') + '" aria-label="' + esc(task.name) + '"' +
         ' title="' + esc(task.dir) + '">' +
@@ -651,6 +652,70 @@
   const DUR_MS = 1200; // 示意任务的完整时间范围始终不变
   const ZOOM_SCALES = [1, 1.5, 2, 3, 4, 6, 8];
   let zoomIdx = 0; // 默认完整时间范围刚好适配泳道宽度
+  let autoHeightEnabled = false;
+  let timelineToolStateDirty = false;
+  let resetMouseTools = () => {};
+  let boxTimeSelection = null;
+
+  function clearBoxTimeSelection() {
+    boxTimeSelection?.overlay.remove();
+    boxTimeSelection = null;
+    updateTimelineResetButton();
+  }
+
+  function clearBoxSelection() {
+    document.querySelectorAll('#msiTimelineSwims .is-box-selected')
+      .forEach((bar) => bar.classList.remove('is-box-selected'));
+    clearBoxTimeSelection();
+  }
+
+  function updateBoxTimeSelection() {
+    if (!boxTimeSelection) return;
+    const { panel, overlay, start, end } = boxTimeSelection;
+    const body = panel.querySelector('.msi-swim-body');
+    const head = panel.querySelector('.msi-swim-head');
+    const corner = panel.querySelector('.msi-swim-corner');
+    const ruler = panel.querySelector('.msi-swim-ruler');
+    if (!body || !head || !corner || !ruler || !body.clientWidth) return;
+    const panelRect = panel.getBoundingClientRect();
+    const bodyRect = body.getBoundingClientRect();
+    const headRect = head.getBoundingClientRect();
+    const width = Math.max(0, body.clientWidth - corner.offsetWidth);
+    const left = start * ruler.clientWidth - body.scrollLeft;
+    const right = end * ruler.clientWidth - body.scrollLeft;
+    const clamp = (x) => Math.max(0, Math.min(width, x));
+    Object.assign(overlay.style, {
+      left: (bodyRect.left - panelRect.left + corner.offsetWidth) + 'px',
+      top: (headRect.top - panelRect.top) + 'px',
+      width: width + 'px',
+      height: (bodyRect.bottom - headRect.top) + 'px',
+    });
+    overlay.style.setProperty('--msi-time-mask-top', headRect.height + 'px');
+    const leftMask = overlay.querySelector('.msi-time-selection-mask--left');
+    const rightMask = overlay.querySelector('.msi-time-selection-mask--right');
+    leftMask.style.width = clamp(left) + 'px';
+    rightMask.style.left = clamp(right) + 'px';
+    rightMask.style.width = (width - clamp(right)) + 'px';
+    [[overlay.querySelector('.msi-time-selection-line--start'), left],
+     [overlay.querySelector('.msi-time-selection-line--end'), right]].forEach(([line, x]) => {
+      line.hidden = x < 0 || x > width;
+      line.style.left = x + 'px';
+    });
+  }
+
+  function showBoxTimeSelection(panel, start, end) {
+    const overlay = document.createElement('div');
+    overlay.className = 'msi-time-selection-overlay';
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.innerHTML = '<div class="msi-time-selection-mask msi-time-selection-mask--left"></div>' +
+      '<div class="msi-time-selection-mask msi-time-selection-mask--right"></div>' +
+      '<div class="msi-time-selection-line msi-time-selection-line--start"></div>' +
+      '<div class="msi-time-selection-line msi-time-selection-line--end"></div>';
+    panel.appendChild(overlay);
+    boxTimeSelection = { panel, overlay, start, end };
+    updateBoxTimeSelection();
+    updateTimelineResetButton();
+  }
 
   // NPU Metrics 与任务条共用同一套主题色。面积图只保存基色；填充透明度和
   // 描边明度由 areaTrack 结合当前主题生成，避免深色主题继续使用浅色粉彩。
@@ -739,6 +804,14 @@
   }
 
   let LANES = buildLanes();
+  const DEFAULT_LANE_OPEN = new Map();
+  function rememberDefaultLaneState(nodes) {
+    nodes.forEach((lane) => {
+      if (lane.group) DEFAULT_LANE_OPEN.set(lane.id, lane.open);
+      if (lane.children) rememberDefaultLaneState(lane.children);
+    });
+  }
+  rememberDefaultLaneState(LANES);
   function findLane(laneId, nodes = LANES) {
     for (const lane of nodes) {
       if (lane.id === laneId) return lane;
@@ -773,7 +846,8 @@
     return walk(nodes, parents) || [];
   }
   // 当前选中的泳道行,点任意一行切换;真实样例的 Device 任务集中在 Stream 2。
-  let selectedLaneId = 'stream-2';
+  const DEFAULT_SELECTED_LANE_ID = 'stream-2';
+  let selectedLaneId = DEFAULT_SELECTED_LANE_ID;
 
   /* 从 rank_0/trace_view.json 的 ProfilerStep#13 起始窗口抽取。
      每行依次是：序号、Python 算子及时间、CANN launch 时间、Device 算子及时间、
@@ -996,9 +1070,8 @@
         '%;width:' + w.toFixed(2) + '%;background:' + c.bg + ';color:' + c.fg + '"' +
         ' data-preview-id="' + lane.id + '-' + barIndex++ + '"' +
         ' data-op="' + esc(name) + '" data-dur="' + ms + '"' +
-        // data-label 是"这条上本来要写的字"的原件。条上显示的可能是中间省略后的结果,
-        // 窗口一宽还要能还原回去,所以原文必须单独留一份,不能只靠 textContent。
-        (text ? ' data-label="' + esc(text) + '"' : '') +
+        // 保留完整名称，初始没有文字的窄条也能在缩放后补上标签。
+        ' data-label="' + esc(name) + '"' +
         ' title="' + esc(name) + ' · ' + ms + 'ms">' + (text ? esc(text) : '') + '</span>';
     };
 
@@ -1006,7 +1079,7 @@
     let x = rnd() * 3;
     while (x < 99) {
       if (rnd() < 0.3) {
-        // 宽条:写得下就写算子名,写不下退化成无字色块
+        // 初始窄条先不写字，放大后的文字由 fitBarLabels 补上。
         const w = Math.min(5 + rnd() * 17, 99 - x);
         if (w < 0.5) break;
         const name = WIDE_NAMES[Math.floor(rnd() * WIDE_NAMES.length)];
@@ -1116,7 +1189,7 @@
         : '<span class="msi-lane-caret-slot" aria-hidden="true"></span>');
     return (
       '<div class="msi-lane-row' + (lane.id === selectedLaneId ? ' is-selected' : '') +
-        '" data-lane="' + lane.id + '" style="height:calc(' + h + 'px * var(--msi-row-scale, 1))">' +
+        '" data-lane="' + lane.id + '" style="height:' + h + 'px">' +
         '<div class="msi-lane-label" style="padding-left:' + (12 + depth * 18) + 'px"' +
         ' title="' + esc(lane.label) + '">' +
           caret +
@@ -1150,12 +1223,11 @@
         const taskName = compareTasks[taskIndex].name;
         if (label) label.title = role + ' · ' + taskName + ' | ' + lane.label;
         const name = clone.querySelector('.msi-lane-text');
-        name.textContent = taskName + ' | ' + lane.label;
-        const badge = document.createElement('span');
-        badge.className = 'msi-tree-compare-role msi-tree-compare-role--' +
-          (taskIndex === 0 ? 'baseline' : 'compare');
-        badge.textContent = role;
-        name.before(badge);
+        name.dataset.fullName = taskName + ' | ' + lane.label;
+        name.innerHTML = '<span class="msi-pinned-task-name">' + esc(taskName) + '</span>' +
+          '<span class="msi-tree-compare-role msi-tree-compare-role--' +
+          (taskIndex === 0 ? 'baseline' : 'compare') + '">' + role + '</span>' +
+          '<span class="msi-pinned-lane-name"> | ' + esc(lane.label) + '</span>';
         const track = clone.querySelector('.msi-lane-track');
         if (track) {
           const domain = document.createElement('div');
@@ -1192,6 +1264,10 @@
       '<div class="msi-swim-head msi-pinned-head">' +
         '<div class="msi-swim-corner"></div>' +
         '<div class="msi-swim-ruler" id="msiPinnedRuler" aria-label="同名泳道共用时间尺"></div>' +
+        '<button class="msi-timeline-reset" id="msiPinnedTimelineReset" type="button"' +
+        ' aria-label="复原时间线视图" title="复原视图" hidden>' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 1-2.4-5.7M20 4v5h-5"></path></svg>' +
+        '</button>' +
       '</div>' +
       '<div class="msi-swim-body msi-pinned-body" id="msiPinnedBody"></div>';
     stack.insertBefore(card, upper);
@@ -1375,7 +1451,8 @@
     setSelectionPanelCollapsed(false);
     activateFootTab('chain');
     const metrics = previewBarMetrics(bar);
-    const lane = row.querySelector('.msi-lane-text')?.textContent || row.dataset.lane;
+    const laneName = row.querySelector('.msi-lane-text');
+    const lane = laneName?.dataset.fullName || laneName?.textContent || row.dataset.lane;
     const path = lanePath(row.dataset.lane).map((item) => item.label).join(' / ') || lane;
     const titleBar = '<span class="msi-basic-taskbar" style="background:' + bar.style.background +
       ';color:' + bar.style.color + '">' + esc(metrics.name) + '</span>';
@@ -1630,6 +1707,7 @@
       const paths = item.querySelector('.msi-link-paths');
       if (paths) paths.innerHTML = '';
     });
+    updateTimelineResetButton();
   }
 
   function drawTraceTaskLinks() {
@@ -1720,6 +1798,7 @@
       revealTraceComponent(taskId);
       centerTraceTaskInView(taskId, false);
     }
+    updateTimelineResetButton();
   }
 
   function selectPreviewBar(bar, body, keepSelected = false) {
@@ -1734,6 +1813,7 @@
     renderSelectionDetail();
     drawPreviewTaskLinks();
     if (!keepSelected) centerBarInView(body, bar, false);
+    updateTimelineResetButton();
   }
 
   // 把任务条滚到泳道可视区正中(只动泳道自己的滚动容器,不用 scrollIntoView 免得整页跟着滚)。
@@ -1771,6 +1851,7 @@
   }
 
   function renderSwimlanes() {
+    clearBoxSelection();
     const stack = document.getElementById('msiTimelineSwims');
     const upper = document.getElementById('msiSwim');
     const lower = document.getElementById('msiSwimCompare');
@@ -1790,9 +1871,9 @@
       if (!selectedTraceTaskId) body.classList.remove('has-task-focus');
       const name = task?.name || '请勾选对比项';
       title.innerHTML = role
-        ? '<span class="msi-tree-compare-role msi-tree-compare-role--' +
-          (role === '基线' ? 'baseline' : 'compare') + '">' + role + '</span>' +
-          '<span class="msi-swim-title-name" title="' + esc(name) + '">' + esc(name) + '</span>'
+        ? '<span class="msi-swim-title-name" title="' + esc(name) + '">' + esc(name) + '</span>' +
+          '<span class="msi-tree-compare-role msi-tree-compare-role--' +
+          (role === '基线' ? 'baseline' : 'compare') + '">' + role + '</span>'
         : '<span class="msi-swim-title-name">' + esc(name) + '</span>';
       panel.setAttribute('aria-label', (role ? role + ' · ' : '') + name);
       if (!task) {
@@ -1831,6 +1912,7 @@
     }
     if (selectedTraceTaskId) requestAnimationFrame(drawTraceTaskLinks);
     else if (selectedPreviewBar) requestAnimationFrame(drawPreviewTaskLinks);
+    updateTimelineResetButton();
   }
 
   /* ══ 色块的左键选中 + 右键菜单 ═══════════════════════════════════
@@ -1998,7 +2080,8 @@
       openMenu(e.clientX, e.clientY, {
         op: bar.dataset.op || '未命名事件',
         dur: bar.dataset.dur || '0',
-        lane: row ? (row.querySelector('.msi-lane-text')?.textContent || '') : '',
+        lane: row ? (row.querySelector('.msi-lane-text')?.dataset.fullName ||
+          row.querySelector('.msi-lane-text')?.textContent || '') : '',
         taskName: task?.name,
       }, bar.dataset.taskId ? (body.querySelector('.msi-bar[data-task-id="' + bar.dataset.taskId + '"]') || bar) : bar);
     });
@@ -2075,6 +2158,7 @@
       // 只切 class 不重画:同一个种子重画结果完全一样,白白再生成一遍
       bodies.forEach((item) => item.querySelectorAll('.msi-lane-row.is-selected').forEach((el) => el.classList.remove('is-selected')));
       row.classList.add('is-selected');
+      updateTimelineResetButton();
     });
     body.addEventListener('contextmenu', (e) => {
       if (e.target.closest('.msi-bar')) return;
@@ -2109,6 +2193,7 @@
     selectedLaneId = laneId;
     body.querySelectorAll('.msi-lane-row.is-selected').forEach((el) => el.classList.remove('is-selected'));
     row.classList.add('is-selected');
+    updateTimelineResetButton();
 
     // 不能用 scrollIntoView:它会连带把整个页面滚起来。这里只动泳道自己的滚动容器,
     // 位置按 rect 差算而不是 offsetTop —— .msi-swim-body 不一定是 offsetParent。
@@ -2174,6 +2259,10 @@
 
   function renderRuler() {
     syncSwimScale();
+    ['msiSwimBody', 'msiSwimBodyCompare', 'msiPinnedBody'].forEach((id) => {
+      const body = document.getElementById(id);
+      if (body) fitBarLabels(body);
+    });
     [[document.getElementById('msiRuler'), compareMode ? compareTasks[0] : selected.task],
      [document.getElementById('msiRulerCompare'), compareTasks[1]]].forEach(([host, task]) => {
       if (!host) return;
@@ -2187,6 +2276,9 @@
       fitRulerLabels(pinnedRuler);
     }
     syncPinnedTimeDomain();
+    updateAutoHeight();
+    updateBoxTimeSelection();
+    updateTimelineResetButton();
   }
 
   function fitRulerLabels(host) {
@@ -2224,6 +2316,94 @@
     return (Number.isInteger(s) ? s : s.toFixed(1)) + 's';
   }
 
+  function isLaneExpansionModified(nodes = LANES) {
+    return nodes.some((lane) =>
+      (lane.group && lane.open !== DEFAULT_LANE_OPEN.get(lane.id)) ||
+      (lane.children && isLaneExpansionModified(lane.children)));
+  }
+
+  function updateTimelineResetButton() {
+    const bodies = ['msiSwimBody', 'msiSwimBodyCompare', 'msiPinnedBody']
+      .map((id) => document.getElementById(id)).filter(Boolean);
+    const modified = !!(zoomIdx > 0 || timelineToolStateDirty || boxTimeSelection ||
+      selectedTraceTaskId || selectedPreviewBar || selectedLaneId !== DEFAULT_SELECTED_LANE_ID ||
+      pinnedLaneIds.size || isLaneExpansionModified() ||
+      bodies.some((body) => body.scrollLeft || body.scrollTop ||
+        body.querySelector('.is-box-selected')));
+    ['msiTimelineReset', 'msiPinnedTimelineReset'].forEach((id) => {
+      const button = document.getElementById(id);
+      if (button) button.hidden = !modified;
+    });
+  }
+
+  function resetTimelineView() {
+    zoomIdx = 0;
+    selectedLaneId = DEFAULT_SELECTED_LANE_ID;
+    LANES = buildLanes();
+    pinnedLaneIds.clear();
+    clearBoxSelection();
+    clearTraceTaskFocus();
+    resetMouseTools();
+    ['msiSwimBody', 'msiSwimBodyCompare', 'msiPinnedBody'].forEach((id) => {
+      const body = document.getElementById(id);
+      if (body) { body.scrollLeft = 0; body.scrollTop = 0; }
+    });
+    setSelectionPanelCollapsed(true);
+    renderSwimlanes();
+    syncTimelineControls();
+    updateTimelineResetButton();
+  }
+
+  function updateAutoHeight() {
+    let changed = false;
+    ['msiSwimBody', 'msiSwimBodyCompare'].forEach((id) => {
+      const body = document.getElementById(id);
+      if (!body) return;
+      const rows = [...body.querySelectorAll(':scope > .msi-lane-row')];
+      const previouslyHidden = new Set(rows.filter((row) => row.classList.contains('is-auto-empty')));
+      rows.forEach((row) => row.classList.remove('is-auto-empty'));
+      if (!autoHeightEnabled || body.parentElement.hidden || !body.clientWidth) {
+        if (previouslyHidden.size) changed = true;
+        return;
+      }
+      const corner = body.parentElement.querySelector('.msi-swim-corner');
+      const ruler = body.parentElement.querySelector('.msi-swim-ruler');
+      if (!corner || !ruler?.clientWidth) {
+        if (previouslyHidden.size) changed = true;
+        return;
+      }
+      const visibleStart = body.scrollLeft / ruler.clientWidth;
+      const visibleEnd = (body.scrollLeft + body.clientWidth - corner.offsetWidth) / ruler.clientWidth;
+      const rowsByLane = new Map(rows.map((row) => [row.dataset.lane, row]));
+      const keepLane = (lane) => {
+        const row = rowsByLane.get(lane.id);
+        if (!row) return false;
+        // Existing collapsed branches stay as the user's baseline.
+        if (lane.group && !lane.open) return true;
+        let hasVisibleChild = false;
+        if (lane.group && lane.children) lane.children.forEach((child) => {
+          hasVisibleChild = keepLane(child) || hasVisibleChild;
+        });
+        const hasVisibleBar = [...row.querySelectorAll('.msi-bar')].some((bar) => {
+          const start = parseFloat(bar.style.left) / 100;
+          const end = start + parseFloat(bar.style.width) / 100;
+          return end > visibleStart && start < visibleEnd;
+        });
+        // Summary and metric tracks carry content without operator bars.
+        const keep = hasVisibleBar || hasVisibleChild || lane.staticCollapsed ||
+          !!row.querySelector('.msi-lane-track svg');
+        row.classList.toggle('is-auto-empty', !keep);
+        return keep;
+      };
+      LANES.forEach(keepLane);
+      if (rows.some((row) => previouslyHidden.has(row) !== row.classList.contains('is-auto-empty'))) changed = true;
+    });
+    if (changed) {
+      if (selectedTraceTaskId) requestAnimationFrame(drawTraceTaskLinks);
+      else if (selectedPreviewBar?.bar.isConnected) requestAnimationFrame(drawPreviewTaskLinks);
+    }
+  }
+
   function syncSwimScale() {
     ['msiSwim', 'msiSwimCompare', 'msiPinnedCard'].forEach((id) => {
       const panel = document.getElementById(id);
@@ -2240,6 +2420,7 @@
 
   function applyZoom() {
     syncTimelineControls();
+    updateTimelineResetButton();
     if (selectedTraceTaskId) requestAnimationFrame(drawTraceTaskLinks);
     else if (selectedPreviewBar?.bar.isConnected) requestAnimationFrame(drawPreviewTaskLinks);
   }
@@ -2268,16 +2449,42 @@
     const inc = document.getElementById('msiZoomIn');
     if (out) out.addEventListener('click', () => { if (zoomIdx > 0) { zoomIdx--; applyZoom(); } });
     if (inc) inc.addEventListener('click', () => { if (zoomIdx < ZOOM_SCALES.length - 1) { zoomIdx++; applyZoom(); } });
-    ['msiSwimBody', 'msiSwimBodyCompare', 'msiPinnedBody'].forEach((id) => {
-      const body = document.getElementById(id);
-      body?.addEventListener('scroll', () => {
-        document.querySelectorAll('#msiTimelineSwims .msi-swim-body').forEach((other) => {
-          if (other !== body && other.scrollLeft !== body.scrollLeft) other.scrollLeft = body.scrollLeft;
-          const ruler = other.parentElement?.querySelector('.msi-swim-ruler');
-          if (ruler) ruler.style.transform = 'translateX(-' + other.scrollLeft + 'px)';
-        });
+    const bodies = ['msiSwimBody', 'msiSwimBodyCompare', 'msiPinnedBody']
+      .map((id) => document.getElementById(id)).filter(Boolean);
+    const syncHorizontalScroll = (body) => {
+      bodies.forEach((other) => {
+        if (other !== body && other.scrollLeft !== body.scrollLeft) other.scrollLeft = body.scrollLeft;
+        const ruler = other.parentElement?.querySelector('.msi-swim-ruler');
+        if (ruler) ruler.style.transform = 'translateX(-' + other.scrollLeft + 'px)';
       });
-    });
+      updateAutoHeight();
+      updateBoxTimeSelection();
+      updateTimelineResetButton();
+    };
+    bodies.forEach((body) => body.addEventListener('scroll', () => syncHorizontalScroll(body)));
+    ['msiTimelineReset', 'msiPinnedTimelineReset'].forEach((id) =>
+      document.getElementById(id)?.addEventListener('click', resetTimelineView));
+    swims?.addEventListener('wheel', (event) => {
+      if (!event.ctrlKey || !event.deltaY) return;
+      const panel = event.target.closest('.msi-swim, .msi-pinned-card');
+      if (!panel) return;
+      const body = panel.querySelector('.msi-swim-body');
+      const corner = panel.querySelector('.msi-swim-corner');
+      if (!body || !corner || !body.clientWidth) return;
+      event.preventDefault();
+      const nextIdx = Math.max(0, Math.min(ZOOM_SCALES.length - 1,
+        zoomIdx + (event.deltaY < 0 ? 1 : -1)));
+      if (nextIdx === zoomIdx) return;
+      const trackWidth = Math.max(0, body.clientWidth - corner.offsetWidth);
+      const anchorX = Math.max(0, Math.min(trackWidth,
+        event.clientX - body.getBoundingClientRect().left - corner.offsetWidth));
+      const nextScrollLeft = (body.scrollLeft + anchorX) *
+        ZOOM_SCALES[nextIdx] / ZOOM_SCALES[zoomIdx] - anchorX;
+      zoomIdx = nextIdx;
+      applyZoom();
+      body.scrollLeft = nextScrollLeft;
+      syncHorizontalScroll(body);
+    }, { passive: false });
     applyZoom();
   }
 
@@ -2290,8 +2497,9 @@
     const collapse = document.getElementById('msiMouseToolsCollapse');
     const grip = document.getElementById('msiMouseToolsGrip');
     if (!tools || !stack) return;
-    let mode = 'select';
-    let rowScale = 1;
+    let primaryMode = 'select';
+    let boxEnabled = false;
+    let allowBoxClick = false;
     let drag = null;
     const bodies = ['msiSwimBody', 'msiSwimBodyCompare', 'msiPinnedBody']
       .map((id) => document.getElementById(id)).filter(Boolean);
@@ -2329,19 +2537,46 @@
         }).observe(tools.parentElement);
       }
     }
-    const setMode = (next) => {
-      mode = next;
-      stack.dataset.mouseMode = next;
+    const syncToolState = (message) => {
+      timelineToolStateDirty = primaryMode !== 'select' || boxEnabled || autoHeightEnabled;
+      stack.dataset.mouseMode = boxEnabled ? 'box' : primaryMode;
       tools.querySelectorAll('[data-mouse-mode]').forEach((button) => {
-        const active = button.dataset.mouseMode === next;
+        const tool = button.dataset.mouseMode;
+        const active = tool === primaryMode ||
+          (tool === 'box' && boxEnabled) || (tool === 'adaptive' && autoHeightEnabled);
         button.classList.toggle('is-active', active);
         button.setAttribute('aria-pressed', String(active));
       });
-      announce(({ select: '选择模式', pan: '拖拽模式', height: '泳道高度模式', box: '框选模式' })[next]);
+      announce(message);
+      updateTimelineResetButton();
+    };
+    const chooseTool = (next) => {
+      const wasBoxEnabled = boxEnabled;
+      if (next === 'adaptive') {
+        autoHeightEnabled = !autoHeightEnabled;
+        updateAutoHeight();
+      } else if (next === 'box') {
+        boxEnabled = !boxEnabled;
+        if (boxEnabled) primaryMode = 'select';
+      } else if (next === 'select' || next === 'pan') {
+        primaryMode = next;
+        boxEnabled = false;
+      }
+      if (wasBoxEnabled && !boxEnabled) clearBoxTimeSelection();
+      const label = ({ select: '选择模式', pan: '拖拽模式', adaptive: '高度自适应', box: '框选模式' })[next];
+      const enabled = next === 'adaptive' ? autoHeightEnabled : next === 'box' ? boxEnabled : true;
+      syncToolState(label + (enabled ? '已开启' : '已关闭'));
+    };
+    resetMouseTools = () => {
+      primaryMode = 'select';
+      boxEnabled = false;
+      autoHeightEnabled = false;
+      updateAutoHeight();
+      syncToolState('选择模式已开启');
     };
     tools.addEventListener('click', (event) => {
       const button = event.target.closest('[data-mouse-mode]');
-      if (button) { setMode(button.dataset.mouseMode); return; }
+      if (button) { chooseTool(button.dataset.mouseMode); return; }
       if (event.target.closest('#msiMouseHelpToggle')) {
         help.hidden = !help.hidden;
         helpToggle.setAttribute('aria-expanded', String(!help.hidden));
@@ -2371,24 +2606,26 @@
     });
 
     bodies.forEach((body) => {
-      // Non-selection modes act only on the timeline track; lane disclosure controls stay usable.
+      // Track drags use the active gesture; a click still selects an event while box selection is on.
       body.addEventListener('click', (event) => {
-        if (mode !== 'select' && event.target.closest('.msi-lane-track')) {
+        if (!allowBoxClick && (boxEnabled || primaryMode === 'pan') && event.target.closest('.msi-lane-track')) {
           event.preventDefault();
           event.stopImmediatePropagation();
         }
       }, true);
       body.addEventListener('pointerdown', (event) => {
-        if (mode === 'select' || event.button !== 0 || !event.target.closest('.msi-lane-track')) return;
+        const gesture = boxEnabled ? 'box' : primaryMode;
+        if (gesture === 'select' || event.button !== 0 || !event.target.closest('.msi-lane-track')) return;
+        const row = event.target.closest('.msi-lane-row');
+        if (gesture === 'box' && !row) return;
         event.preventDefault();
         body.setPointerCapture(event.pointerId);
         body.classList.add('is-mouse-dragging');
         drag = {
-          body, pointerId: event.pointerId, x: event.clientX, y: event.clientY,
-          scrollLeft: body.scrollLeft, scrollTop: body.scrollTop, scale: rowScale,
+          body, kind: gesture, pointerId: event.pointerId, x: event.clientX, y: event.clientY,
+          scrollLeft: body.scrollLeft, scrollTop: body.scrollTop, row, clickTarget: event.target,
         };
-        if (mode === 'box') {
-          body.querySelectorAll('.is-box-selected').forEach((bar) => bar.classList.remove('is-box-selected'));
+        if (gesture === 'box') {
           const selection = document.createElement('div');
           selection.className = 'msi-mouse-selection';
           body.appendChild(selection);
@@ -2399,56 +2636,74 @@
         if (!drag || drag.body !== body || drag.pointerId !== event.pointerId) return;
         const dx = event.clientX - drag.x;
         const dy = event.clientY - drag.y;
-        if (mode === 'pan') {
+        if (drag.kind === 'pan') {
           body.scrollLeft = drag.scrollLeft - dx;
           body.scrollTop = drag.scrollTop - dy;
-        } else if (mode === 'height') {
-          rowScale = Math.max(.65, Math.min(2.4, drag.scale + dy / 180));
-          stack.style.setProperty('--msi-row-scale', rowScale.toFixed(2));
-        } else if (mode === 'box' && drag.selection) {
+        } else if (drag.kind === 'box' && drag.selection) {
+          if (!drag.started && Math.abs(dx) > 3) {
+            clearBoxSelection();
+            drag.started = true;
+          }
           const rect = body.getBoundingClientRect();
-          const laneWidth = body.querySelector('.msi-lane-label')?.getBoundingClientRect().width || 0;
+          const laneWidth = body.parentElement.querySelector('.msi-swim-corner')?.offsetWidth || 0;
           const minX = rect.left + laneWidth;
           const x1 = Math.max(minX, Math.min(rect.right, drag.x));
           const x2 = Math.max(minX, Math.min(rect.right, event.clientX));
-          const y1 = Math.max(rect.top, Math.min(rect.bottom, drag.y));
-          const y2 = Math.max(rect.top, Math.min(rect.bottom, event.clientY));
+          const rowRect = drag.row.getBoundingClientRect();
           Object.assign(drag.selection.style, {
             left: (Math.min(x1, x2) - rect.left + body.scrollLeft) + 'px',
-            top: (Math.min(y1, y2) - rect.top + body.scrollTop) + 'px',
-            width: Math.abs(x2 - x1) + 'px', height: Math.abs(y2 - y1) + 'px',
+            top: (rowRect.top - rect.top + body.scrollTop) + 'px',
+            width: Math.abs(x2 - x1) + 'px', height: rowRect.height + 'px',
           });
         }
       });
       const finish = (event) => {
         if (!drag || drag.body !== body || drag.pointerId !== event.pointerId) return;
-        if (mode === 'box' && drag.selection) {
+        let clickTarget = null;
+        if (drag.kind === 'box' && drag.selection) {
           const rect = drag.selection.getBoundingClientRect();
           let count = 0;
-          if (rect.width > 3 && rect.height > 3 && event.type !== 'pointercancel') {
-            body.querySelectorAll('.msi-bar').forEach((bar) => {
+          if (drag.started && rect.width > 3 && rect.height > 3 && event.type !== 'pointercancel') {
+            drag.row.querySelectorAll('.msi-bar').forEach((bar) => {
               const r = bar.getBoundingClientRect();
-              if (r.left < rect.right && r.right > rect.left && r.top < rect.bottom && r.bottom > rect.top) {
+              if (r.left < rect.right && r.right > rect.left) {
                 bar.classList.add('is-box-selected');
                 count++;
               }
             });
+            const panel = body.parentElement;
+            const corner = panel.querySelector('.msi-swim-corner');
+            const ruler = panel.querySelector('.msi-swim-ruler');
+            if (corner && ruler?.clientWidth) {
+              const start = (parseFloat(drag.selection.style.left) - corner.offsetWidth) / ruler.clientWidth;
+              const end = (parseFloat(drag.selection.style.left) + rect.width - corner.offsetWidth) / ruler.clientWidth;
+              showBoxTimeSelection(panel, Math.max(0, Math.min(1, start)), Math.max(0, Math.min(1, end)));
+            }
+            announce('已框选 ' + count + ' 个事件');
+            updateTimelineResetButton();
+          } else if (!drag.started && event.type !== 'pointercancel') {
+            clickTarget = drag.clickTarget;
           }
           drag.selection.remove();
-          announce('已框选 ' + count + ' 个事件');
-        } else if (mode === 'height') {
-          announce('泳道高度 ' + Math.round(rowScale * 100) + '%');
-          if (selectedTraceTaskId) drawTraceTaskLinks();
-          else if (selectedPreviewBar?.bar.isConnected) drawPreviewTaskLinks();
         }
         body.classList.remove('is-mouse-dragging');
         if (body.hasPointerCapture(event.pointerId)) body.releasePointerCapture(event.pointerId);
         drag = null;
+        if (clickTarget?.isConnected) {
+          allowBoxClick = true;
+          try {
+            clickTarget.dispatchEvent(new MouseEvent('click', {
+              bubbles: true, cancelable: true, clientX: event.clientX, clientY: event.clientY,
+            }));
+          } finally {
+            allowBoxClick = false;
+          }
+        }
       };
       body.addEventListener('pointerup', finish);
       body.addEventListener('pointercancel', finish);
     });
-    setMode('select');
+    syncToolState('选择模式已开启');
   }
 
   /* ══ 7. 视图切换；概览逻辑按需加载 ════════════════════════════════ */

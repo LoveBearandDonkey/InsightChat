@@ -904,6 +904,7 @@ function MemoryView(outer, stack_info, snapshot, device, onSelectBlock) {
         .data(blocks)
         .enter()
         .append('rect')
+        .attr('class', 'msi-memory-color-block')
         .attr('x', x => xScale(x.segment.offset + Number(x.addr - x.segment.addr)))
         .attr('y', x => yScale(x.segment.row))
         .attr('width', x => xScale(x.requested_size))
@@ -1329,6 +1330,7 @@ function MemoryPlot(
     .data(data.allocations_over_time)
     .enter()
     .append('polygon')
+    .attr('class', d => data.grouped_segments && d.elem === 'summarized' ? null : 'msi-memory-color-block')
     .attr('points', format_points)
     .style('fill', d => {
       if (data.grouped_segments && d.elem === 'summarized') return 'var(--msi-viz-summary, #d1d5db)';
@@ -1843,7 +1845,6 @@ function create_trace_view(
     .attr('role', 'img')
     .attr('aria-label', '时间步（事件序号）')
     .attr('style', `position: absolute; bottom: 4px; left: ${axis_gutter + 8}px; width: calc(100% - ${axis_gutter + 16}px); height: 18px; overflow: visible; pointer-events: none;`);
-  plot_container.append('span').attr('class', 'msi-memory-time-axis-title').text('时间步');
 
   const plot = MemoryPlot(plot_svg, axis_svg, time_axis_svg, data, axis_gutter, 1024, 576,
     tracePalette, !snapshot.categories.length && !data.grouped_segments);
