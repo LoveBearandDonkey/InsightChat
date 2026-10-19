@@ -2,7 +2,6 @@
 (async function () {
   'use strict';
   const viewName = location.hash === '#allocator' ? 'Allocator State History' : 'Active Memory Timeline';
-  const memoryHues = [4, 155, 285, 46, 212, 342, 125, 265, 32, 198, 325, 88, 245, 18, 185, 305, 58, 228];
   const encoded = window.MSI_MEMORY_SNAPSHOT_GZIP_BASE64;
   if (!encoded || !window.MSI_MEMORY_VIZ || !window.DecompressionStream) {
     throw new Error('MemoryViz local assets or gzip support are missing');
@@ -33,17 +32,26 @@
   let detail = null;
   let lastDetail = null;
   let lastToolbar = null;
+  function detailBlockColor(value) {
+    const headline = value.split(/\r?\n/).find((line) => !/^\(.*allocated \/ .*reserved\)$/.test(line)) || '';
+    if (/\bsegment\b|\bsegment_|mapped range|cached segment/i.test(headline)) return '';
+    const address = /\bb'?([0-9a-f]+)(?:_(\d+))?'?(?=[\s,]|$)/i.exec(headline);
+    if (!address) return '';
+    const index = window.MSI_MEMORY_VIZ.get_block_palette_index(BigInt(`0x${address[1]}`), Number(address[2] ?? 0));
+    return getComputedStyle(document.documentElement)
+      .getPropertyValue(`--msi-memory-${String(index).padStart(2, '0')}-bg`).trim();
+  }
   function findDetail() {
     return viewName === 'Active Memory Timeline'
       ? document.querySelector('div[style*="grid-column: 1; grid-row: 3;"]')
       : document.querySelector('pre[style*="grid-column: 1 / 3; grid-row: 2"]');
   }
-  function publishDetail() {
+  function publishDetail(force = false) {
     if (!detail?.isConnected) detail = findDetail();
     const value = detail?.textContent || '';
-    if (value === lastDetail) return;
+    if (!force && value === lastDetail) return;
     lastDetail = value;
-    window.parent.postMessage({type: 'msi-memory-detail', view: viewName, text: value}, '*');
+    window.parent.postMessage({type: 'msi-memory-detail', view: viewName, text: value, color: detailBlockColor(value)}, '*');
   }
   function publishToolbar() {
     if (viewName !== 'Active Memory Timeline') return;
@@ -62,7 +70,7 @@
     lastToolbar = signature;
     window.parent.postMessage({type: 'msi-memory-toolbar', view: viewName, ...state}, '*');
   }
-  const detailObserver = new MutationObserver(publishDetail);
+  const detailObserver = new MutationObserver(() => publishDetail());
   const toolbarObserver = new MutationObserver(publishToolbar);
   function watchOutputs() {
     detailObserver.disconnect();
@@ -87,10 +95,7 @@
       root.style.setProperty('--msi-viz-foreground', event.data.foreground);
       root.style.setProperty('--msi-viz-scrollbar-thumb', event.data.border);
       root.style.setProperty('--msi-viz-scrollbar-thumb-hover', event.data.muted);
-      memoryHues.forEach((hue, index) => {
-        const lightness = event.data.theme === 'dark' ? '67%' : '75%';
-        root.style.setProperty(`--msi-memory-${String(index + 1).padStart(2, '0')}-bg`, `oklch(${lightness} .135 ${hue})`);
-      });
+      publishDetail(true);
       return;
     }
     if (event.data?.type === 'msi-memory-reset-view') {

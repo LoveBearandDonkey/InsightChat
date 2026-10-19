@@ -2534,7 +2534,7 @@
     if (!available && tab.classList.contains('is-active')) activateAnalysisTab('timeline');
   }
 
-  function renderMemoryDetail(container, raw, pathMode = 'key', onPathModeChange = () => {}) {
+  function renderMemoryDetail(container, raw, color = '', pathMode = 'key', onPathModeChange = () => {}) {
     if (!container) return;
     const text = (raw || '').trim();
     container.replaceChildren();
@@ -2580,9 +2580,10 @@
       return match?.[1]?.trim() || '';
     };
     const addressRaw = field('Addr', 'Size') ||
+      /^b'?[0-9a-f]+(?:_\d+)?'?(?=\s|$)/i.exec(headline)?.[0] ||
       (action && action !== 'oom' && action !== 'snapshot'
         ? /^\S+\s+(\S+)/.exec(headline)?.[1] : '') || '';
-    const addressParts = /^b'([0-9a-f]+)(?:_(\d+))?'?$/i.exec(addressRaw);
+    const addressParts = /^b'?([0-9a-f]+)(?:_(\d+))?'?$/i.exec(addressRaw);
     const address = addressParts ? `0x${addressParts[1]}` : addressRaw;
     const version = addressParts?.[2];
     const sizeRaw = field('Size', 'Total memory used after allocation|Cached capacity|Compile context|stream|pool_id|timestamp') ||
@@ -2639,7 +2640,13 @@
     const fields = node('dl', 'msi-memory-detail-fields');
     if (address) {
       const addressValue = node('dd', 'msi-memory-detail-address-value');
-      addressValue.append(node('span', '', address));
+      if (color) {
+        const dot = node('span', 'msi-memory-detail-color-dot');
+        dot.style.backgroundColor = color;
+        dot.setAttribute('aria-hidden', 'true');
+        addressValue.append(dot);
+      }
+      addressValue.append(node('span', 'msi-memory-detail-address-text', address));
       if (version != null) addressValue.append(node('small', '', `版本${version}`));
       fields.append(node('dt', '', '内存地址'), addressValue);
     }
@@ -2789,6 +2796,7 @@
     Object.values(memoryFrames).forEach((frame) => frame?.addEventListener('load', syncMemoryTheme));
     new MutationObserver(syncMemoryTheme).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme', 'data-brand']});
     const memoryDetail = document.getElementById('msiMemoryDetail');
+    const memoryPanel = document.getElementById('msiMemoryPanel');
     const memoryFoot = document.getElementById('msiMemoryFoot');
     const memoryToggle = document.getElementById('msiMemoryDetailToggle');
     const memoryTitle = document.getElementById('msiMemoryDetailTitle');
@@ -2806,6 +2814,7 @@
     const details = {};
     let focusedView = 'Active Memory Timeline';
     function setMemoryDetailExpanded(expanded) {
+      memoryPanel?.classList.toggle('is-detail-expanded', expanded);
       memoryFoot?.classList.toggle('is-collapsed', !expanded);
       memoryFoot?.setAttribute('aria-expanded', String(expanded));
       memoryTitle?.setAttribute('aria-expanded', String(expanded));
@@ -2815,6 +2824,10 @@
         memoryToggle.setAttribute('aria-label', label);
         memoryToggle.title = label;
       }
+      if (expanded && memoryPanel) requestAnimationFrame(() => {
+        if (memoryPanel.classList.contains('is-detail-expanded')) memoryPanel.scrollTop = memoryPanel.scrollHeight;
+      });
+      else if (memoryPanel) memoryPanel.scrollTop = 0;
     }
     memoryFoot?.querySelector('.msi-foot-head')?.addEventListener('click', () =>
       setMemoryDetailExpanded(memoryFoot.classList.contains('is-collapsed')));
@@ -2842,7 +2855,8 @@
     }
     let memoryPathMode = 'key';
     function showMemoryDetail() {
-      renderMemoryDetail(memoryDetail, details[focusedView], memoryPathMode, (mode) => { memoryPathMode = mode; });
+      const detail = details[focusedView];
+      renderMemoryDetail(memoryDetail, detail?.text, detail?.color, memoryPathMode, (mode) => { memoryPathMode = mode; });
     }
     window.addEventListener('message', (event) => {
       const view = event.data?.view;
@@ -2902,7 +2916,7 @@
         return;
       }
       if (event.data.type === 'msi-memory-focus') focusedView = view;
-      else if (event.data.type === 'msi-memory-detail') details[view] = event.data.text;
+      else if (event.data.type === 'msi-memory-detail') details[view] = {text: event.data.text, color: event.data.color};
       else return;
       if (view === focusedView) showMemoryDetail();
     });

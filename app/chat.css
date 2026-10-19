@@ -7262,23 +7262,30 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
-.msi-memory-search { flex: 0 1 220px; }
+.msi-memory-search { flex: 1 1 150px; }
 .msi-memory-search input:disabled { cursor: default; }
 .msi-memory-matches { flex: 0 0 auto; color: var(--foreground-muted); font-size: 11px; white-space: nowrap; }
 .msi-memory-charts {
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(260px, 1.1fr) minmax(210px, 1fr);
+  grid-template-rows: minmax(300px, 1.35fr) minmax(190px, 1fr);
   gap: 10px;
   margin: 0 16px;
   overflow: auto;
 }
+.msi-memory.is-detail-expanded { overflow-y: auto; }
+.msi-memory.is-detail-expanded .msi-memory-charts {
+  flex: 1 0 540px;
+  min-height: 540px;
+  grid-template-rows: minmax(300px, 1.35fr) minmax(230px, 1fr);
+  overflow: visible;
+}
 .msi-memory-chart-group {
-  min-height: 210px;
+  min-height: 190px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 .msi-memory-chart {
   flex: 1 1 auto;
@@ -7356,7 +7363,7 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 .msi-memory-zoom-gesture svg { display: inline-block; width: 15px; height: 15px; margin: 0 1px; vertical-align: -3px; fill: none; stroke: currentColor; stroke-width: 1.5; }
 .msi-memory-zoom-gesture .msi-memory-wheel { fill: var(--msi-accent); stroke: var(--msi-accent); }
 .msi-memory-summary { display: grid; grid-template-columns: repeat(3, minmax(150px, 1fr)); gap: 8px; overflow-x: auto; scrollbar-width: thin; }
-.msi-memory-summary-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 6px 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--surface-1); }
+.msi-memory-summary-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 4px 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--surface-1); }
 .msi-memory-summary-item span { color: var(--foreground-muted); font-size: 11px; white-space: nowrap; }
 .msi-memory-summary-item strong { color: var(--foreground); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.2; }
 .msi-memory-frame { display: block; flex: 1 1 auto; width: 100%; min-height: 0; border: 0; background: var(--surface-1); }
@@ -7371,13 +7378,13 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 .msi-content-foot.msi-memory-foot.is-collapsed { margin-top: 10px; }
 .msi-memory-foot .msi-foot-head { flex: 0 0 40px; display: flex; align-items: center; cursor: pointer; }
 .msi-memory-foot .msi-foot-close { margin: 0 8px 0 auto; }
-.msi-memory-foot-title { color: var(--foreground); font-size: 13px; font-weight: 600; }
+.msi-content-foot.msi-memory-foot .msi-memory-foot-title { color: var(--foreground); font-size: 12px; font-weight: 600; }
 .msi-content-foot.msi-memory-foot .msi-foot-title { cursor: pointer; }
 .msi-memory-foot-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 14px 14px; }
 .msi-memory-foot.is-collapsed .msi-memory-foot-body { display: none; }
 .msi-memory-detail {
   display: grid;
-  grid-template-columns: minmax(181px, min(calc(34% - 24px), 360px)) minmax(0, 1fr);
+  grid-template-columns: minmax(181px, min(calc(34% - 24px), 300px)) minmax(0, 1fr);
   gap: 18px;
   align-items: start;
   color: var(--foreground);
@@ -7398,7 +7405,7 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   top: 0;
   box-sizing: border-box;
   min-width: 0;
-  max-width: 360px;
+  max-width: 300px;
   padding: 4px 17px 4px 0;
   border-right: 1px solid var(--border-subtle);
   background: var(--surface-1);
@@ -7415,7 +7422,8 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 .msi-memory-detail-fields dt { color: var(--foreground-muted); white-space: nowrap; }
 .msi-memory-detail-fields dd { min-width: 0; margin: 0; color: var(--foreground); overflow-wrap: anywhere; }
 .msi-memory-detail-address-value { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px; }
-.msi-memory-detail-address-value > span { min-width: 0; font-family: var(--text-mono); overflow-wrap: anywhere; }
+.msi-memory-detail-address-text { min-width: 0; font-family: var(--text-mono); overflow-wrap: anywhere; }
+.msi-memory-detail-color-dot { flex: 0 0 10px; width: 10px; height: 10px; align-self: center; border: 1px solid color-mix(in srgb, currentColor 18%, transparent); border-radius: 50%; }
 .msi-memory-detail-address-value small { padding: 1px 6px; border-radius: var(--radius-pill); background: var(--surface-2); color: var(--foreground-muted); font-size: 10px; white-space: nowrap; }
 .msi-memory-detail-mono { font-family: var(--text-mono); }
 .msi-memory-detail-path { min-width: 0; padding: 3px 0 0; }

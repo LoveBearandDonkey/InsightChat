@@ -8,11 +8,50 @@ html, body {
   color: var(--msi-viz-foreground, #24292f);
   font: 12px/1.4 'Inter', 'Source Han Sans SC', 'PingFang SC', 'Noto Sans SC', sans-serif;
 }
+:root {
+  /* Shared block palette for both memory charts, tuned toward the overview chart. */
+  --msi-memory-01-bg: oklch(65% .180 4);
+  --msi-memory-02-bg: oklch(62% .125 155);
+  --msi-memory-03-bg: oklch(59% .180 285);
+  --msi-memory-04-bg: oklch(66% .160 46);
+  --msi-memory-05-bg: oklch(64% .120 212);
+  --msi-memory-06-bg: oklch(70% .155 342);
+  --msi-memory-07-bg: oklch(70% .130 125);
+  --msi-memory-08-bg: oklch(56% .180 265);
+  --msi-memory-09-bg: oklch(68% .180 32);
+  --msi-memory-10-bg: oklch(67% .110 198);
+  --msi-memory-11-bg: oklch(63% .160 325);
+  --msi-memory-12-bg: oklch(75% .135 88);
+  --msi-memory-13-bg: oklch(60% .165 245);
+  --msi-memory-14-bg: oklch(59% .170 18);
+  --msi-memory-15-bg: oklch(58% .130 185);
+  --msi-memory-16-bg: oklch(68% .145 305);
+  --msi-memory-17-bg: oklch(75% .140 58);
+  --msi-memory-18-bg: oklch(73% .135 228);
+}
 html[data-theme="dark"], html[data-theme="glass"] {
   --msi-viz-background: #161616;
   --msi-viz-foreground: #e6e6e6;
   --msi-viz-summary: #414752;
   --msi-viz-preview-opacity: .46;
+  --msi-memory-01-bg: oklch(72% .165 4);
+  --msi-memory-02-bg: oklch(70% .115 155);
+  --msi-memory-03-bg: oklch(68% .165 285);
+  --msi-memory-04-bg: oklch(74% .145 46);
+  --msi-memory-05-bg: oklch(72% .110 212);
+  --msi-memory-06-bg: oklch(76% .140 342);
+  --msi-memory-07-bg: oklch(76% .120 125);
+  --msi-memory-08-bg: oklch(65% .165 265);
+  --msi-memory-09-bg: oklch(76% .165 32);
+  --msi-memory-10-bg: oklch(74% .100 198);
+  --msi-memory-11-bg: oklch(71% .145 325);
+  --msi-memory-12-bg: oklch(78% .125 88);
+  --msi-memory-13-bg: oklch(68% .150 245);
+  --msi-memory-14-bg: oklch(68% .155 18);
+  --msi-memory-15-bg: oklch(67% .120 185);
+  --msi-memory-16-bg: oklch(75% .130 305);
+  --msi-memory-17-bg: oklch(78% .130 58);
+  --msi-memory-18-bg: oklch(78% .120 228);
 }
 svg text {
   fill: currentColor;

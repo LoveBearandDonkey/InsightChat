@@ -110,7 +110,7 @@ function publishLinkedSelection(selection) {
 // The memory charts share a vivid palette independent of the main timeline.
 const tracePaletteHues = [4, 155, 285, 46, 212, 342, 125, 265, 32, 198, 325, 88, 245, 18, 185, 305, 58, 228];
 const tracePalette = tracePaletteHues.map((hue, index) =>
-  `var(--msi-memory-${String(index + 1).padStart(2, '0')}-bg, oklch(75% .135 ${hue}))`,
+  `var(--msi-memory-${String(index + 1).padStart(2, '0')}-bg, oklch(75% .130 ${hue}))`,
 );
 export function reset_view() {
   resetViewHandler?.();
@@ -471,8 +471,12 @@ function hashCode(num) {
   return hash;
 }
 
+export function get_block_palette_index(addr, version) {
+  return Math.abs(hashCode(`${addr}:${version ?? 0}`)) % tracePalette.length + 1;
+}
+
 function blockPaletteColor(addr, version) {
-  return tracePalette[Math.abs(hashCode(`${addr}:${version ?? 0}`)) % tracePalette.length];
+  return tracePalette[get_block_palette_index(addr, version) - 1];
 }
 
 function addStroke(d) {

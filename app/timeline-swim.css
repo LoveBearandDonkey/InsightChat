@@ -28,11 +28,16 @@
   width: 26px; height: 14px; padding: 0;
   display: flex; align-items: center; justify-content: center;
   border: 0; border-radius: 4px; background: transparent;
-  color: var(--foreground-muted); cursor: ns-resize; touch-action: none;
+  color: var(--border-default); cursor: ns-resize; touch-action: none;
 }
-.msi-mouse-tools-grip:hover { background: var(--state-hover); color: var(--foreground); }
+.msi-mouse-tools-grip:hover { background: var(--state-hover); color: color-mix(in srgb, var(--msi-accent) 62%, transparent); }
 .msi-mouse-tools-grip:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
-.msi-mouse-tools-grip span { width: 14px; height: 5px; border-top: 1px solid currentColor; border-bottom: 1px solid currentColor; }
+.msi-mouse-tools-grip span {
+  width: 3px; height: 3px;
+  border-radius: var(--radius-pill, 999px);
+  background: currentColor;
+  box-shadow: -7px 0 0 currentColor, 7px 0 0 currentColor;
+}
 .msi-mouse-tools-main { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .msi-mouse-tool {
   display: flex; align-items: center; justify-content: center;
