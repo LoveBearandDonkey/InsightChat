@@ -1221,13 +1221,14 @@
         label?.removeAttribute('style');
         const role = taskIndex === 0 ? '基线' : '对比';
         const taskName = compareTasks[taskIndex].name;
-        if (label) label.title = role + ' · ' + taskName + ' | ' + lane.label;
+        if (label) label.title = role + '：' + taskName + ' / ' + lane.label;
         const name = clone.querySelector('.msi-lane-text');
-        name.dataset.fullName = taskName + ' | ' + lane.label;
-        name.innerHTML = '<span class="msi-pinned-task-name">' + esc(taskName) + '</span>' +
-          '<span class="msi-tree-compare-role msi-tree-compare-role--' +
-          (taskIndex === 0 ? 'baseline' : 'compare') + '">' + role + '</span>' +
-          '<span class="msi-pinned-lane-name"> | ' + esc(lane.label) + '</span>';
+        name.dataset.fullName = taskName + ' / ' + lane.label;
+        name.innerHTML = '<span class="msi-tree-compare-role msi-tree-compare-role--' +
+          (taskIndex === 0 ? 'baseline' : 'compare') + '">' +
+          '<span class="msi-pinned-role-name">' + role + '：</span>' +
+          '<span class="msi-pinned-task-name">' + esc(taskName) + '</span></span>' +
+          '<span class="msi-pinned-lane-name"> / ' + esc(lane.label) + '</span>';
         const track = clone.querySelector('.msi-lane-track');
         if (track) {
           const domain = document.createElement('div');

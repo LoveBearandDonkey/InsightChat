@@ -6490,8 +6490,6 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 }
 /* 渲染时按可用宽度保留名称两端；CSS 在脚本执行前处理溢出。 */
 .msi-tree-name { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.msi-tree-row.has-compare-role .msi-tree-name { flex: 0 1 auto; }
-.msi-tree-row.has-compare-role .msi-tree-compare-role { margin-left: 0; }
 .msi-tree-compare-role {
   height: 18px; flex: 0 0 auto;
   display: inline-flex; align-items: center;
