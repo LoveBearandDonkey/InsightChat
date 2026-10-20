@@ -1437,7 +1437,14 @@ function MemoryPlot(
     publishIntervalStats(t);
   }
 
-  const thezoom = zoom().wheelDelta(memoryWheelDelta).on('zoom', handleZoom);
+  // Memory blocks are selection targets: slight movement during a press or a
+  // rapid second click must not pan or zoom the chart.
+  const thezoom = zoom()
+    .wheelDelta(memoryWheelDelta)
+    .filter(event =>
+      (!event.ctrlKey || event.type === 'wheel') && !event.button &&
+      !(['mousedown', 'dblclick'].includes(event.type) && event.target.closest('polygon')))
+    .on('zoom', handleZoom);
   plot_outer.call(thezoom);
 
   return {
