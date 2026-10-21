@@ -3390,11 +3390,69 @@ ${issuesText || '（暂无）'}
     // 锚定到左树当前选中文件所属的采集目录(window.MSI_ANCHOR_NAME 由 msi-workbench 维护),
     // 树里换一个文件、chip 上的目录名跟着换;左树没渲染出来时退回训练任务名。
     if (nameEl) nameEl.textContent = window.MSI_ANCHOR_NAME || CHAT_TASK_NAME;
+    const contextChips = $('trainChatContextChips');
+    const anchorChip = $('trainChatAnchorChip');
+    const codeAddBtn = $('trainChatCodeAddBtn');
+    const codeChip = $('trainChatCodeChip');
+    const codePath = $('trainChatCodePath');
+    const localCodePath = $('trainChatLocalCodePath');
+    const syncContextChips = () => {
+      if (contextChips) contextChips.hidden = !!anchorChip?.hidden && !!codeAddBtn?.hidden && !!codeChip?.hidden;
+    };
+    let fitCodePath = () => {};
+    if (codePath) {
+      const fullPath = codePath.dataset.fullPath || '';
+      const context = document.createElement('canvas').getContext('2d');
+      fitCodePath = () => {
+        const width = codePath.clientWidth;
+        if (!width || !context) return;
+        context.font = getComputedStyle(codePath).font;
+        const fits = (value) => context.measureText(value).width <= width - 2;
+        if (fits(fullPath)) {
+          codePath.textContent = fullPath;
+          return;
+        }
+        let start = 3;
+        let end = 3;
+        const middle = () => fullPath.slice(0, start) + '…' + fullPath.slice(-end);
+        if (!fits(middle())) {
+          codePath.textContent = '…';
+          return;
+        }
+        while (start + end < fullPath.length) {
+          const moreStart = fullPath.slice(0, start + 1) + '…' + fullPath.slice(-end);
+          const moreEnd = fullPath.slice(0, start) + '…' + fullPath.slice(-(end + 1));
+          const startFits = fits(moreStart);
+          const endFits = fits(moreEnd);
+          if (!startFits && !endFits) break;
+          if (startFits && (!endFits || start <= end)) start++;
+          else end++;
+        }
+        codePath.textContent = middle();
+      };
+      if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fitCodePath).observe(codePath);
+      else window.addEventListener('resize', fitCodePath);
+      document.fonts?.ready.then(fitCodePath);
+    }
+    codeAddBtn?.addEventListener('click', () => {
+      codeAddBtn.hidden = true;
+      if (codeChip) codeChip.hidden = false;
+      if (localCodePath) localCodePath.value = codePath?.dataset.fullPath || '';
+      syncContextChips();
+      requestAnimationFrame(fitCodePath);
+    });
     // 取消锚定:整条 chip 撤掉,输入框自然收窄一行;焦点还给输入框,别停在已消失的按钮上
     $('trainChatAnchorCloseBtn')?.addEventListener('click', () => {
-      const chip = $('trainChatAnchorChip');
-      if (chip) chip.hidden = true;
+      if (anchorChip) anchorChip.hidden = true;
+      syncContextChips();
       focusChatInput();
+    });
+    $('trainChatCodeCloseBtn')?.addEventListener('click', () => {
+      if (codeChip) codeChip.hidden = true;
+      if (codeAddBtn) codeAddBtn.hidden = false;
+      if (localCodePath) localCodePath.value = '';
+      syncContextChips();
+      codeAddBtn?.focus({ preventScroll: true });
     });
   }
 

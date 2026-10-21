@@ -280,7 +280,100 @@
   function initTree() {
     const host = document.getElementById('msiTree');
     if (!host) return;
+    const menu = document.createElement('div');
+    menu.className = 'msi-ctxmenu msi-tree-ctxmenu';
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', '工程树任务操作');
+    menu.hidden = true;
+    document.body.appendChild(menu);
+    let menuAnchor = null;
+
+    const closeTreeMenu = () => {
+      menu.hidden = true;
+      menuAnchor = null;
+    };
+    const startTreeComparison = (baseline, other) => {
+      selectTask(baseline);
+      setCompareMode(true);
+      if (other) toggleCompareTask(other);
+      activateAnalysisTab('timeline');
+    };
+
+    host.addEventListener('contextmenu', (event) => {
+      const row = event.target.closest('.msi-tree-row[data-task]:not([data-rank])');
+      if (!row || !host.contains(row) || manageMode) {
+        closeTreeMenu();
+        return;
+      }
+      const taskIndex = Number(row.dataset.task);
+      const task = PROF_TASKS[taskIndex];
+      if (!task || deletedTasks.has(taskIndex)) return;
+      event.preventDefault();
+      closeMenu();
+      menu.replaceChildren();
+      const addItem = (label, action, disabled = false, title = '', folderIcon = false) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'msi-ctxmenu-item';
+        item.setAttribute('role', 'menuitem');
+        if (folderIcon) {
+          const icon = document.createElement('img');
+          icon.className = 'msi-tree-ctxmenu-folder';
+          icon.src = '../../src/pic/icon/folder.svg';
+          icon.alt = '';
+          item.appendChild(icon);
+        }
+        const text = document.createElement('span');
+        text.textContent = label;
+        item.appendChild(text);
+        item.disabled = disabled;
+        if (title) item.title = title;
+        item.addEventListener('click', () => {
+          closeTreeMenu();
+          action();
+        });
+        menu.appendChild(item);
+      };
+      addItem('设置为基线数据', () => startTreeComparison(task));
+      addItem('在文件资源管理器中打开', () => document.getElementById('msiImportBtn')?.click());
+      const separator = document.createElement('div');
+      separator.className = 'msi-ctxmenu-sep';
+      separator.setAttribute('role', 'separator');
+      menu.appendChild(separator);
+      const heading = document.createElement('div');
+      heading.className = 'msi-tree-ctxmenu-heading';
+      heading.textContent = '发起对比';
+      menu.appendChild(heading);
+      PROF_TASKS.forEach((peer, peerIndex) => {
+        if (peer === task || deletedTasks.has(peerIndex)) return;
+        const compatible = peer.compareType === task.compareType;
+        addItem(peer.name, () => startTreeComparison(task, peer), !compatible,
+          compatible ? peer.dir : '非同类型任务，不支持对比', true);
+      });
+      menuAnchor = row;
+      menu.hidden = false;
+      menu.style.left = '0px';
+      menu.style.top = '0px';
+      const bounds = menu.getBoundingClientRect();
+      menu.style.left = Math.max(8, Math.min(event.clientX, window.innerWidth - bounds.width - 8)) + 'px';
+      menu.style.top = Math.max(8, Math.min(event.clientY, window.innerHeight - bounds.height - 8)) + 'px';
+    });
+    document.addEventListener('pointerdown', (event) => {
+      if (!menu.hidden && !menu.contains(event.target)) closeTreeMenu();
+    });
+    document.addEventListener('contextmenu', (event) => {
+      if (!menu.hidden && menu.contains(event.target)) event.preventDefault();
+      else if (!host.contains(event.target)) closeTreeMenu();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeTreeMenu();
+    });
+    window.addEventListener('scroll', (event) => {
+      if (menuAnchor && event.target instanceof Node && event.target.contains(menuAnchor)) closeTreeMenu();
+    }, true);
+    window.addEventListener('resize', closeTreeMenu);
     host.addEventListener('click', (e) => {
+      closeTreeMenu();
       const row = e.target.closest('.msi-tree-row');
       if (!row) return;
       const task = PROF_TASKS[Number(row.dataset.task)];
@@ -457,6 +550,15 @@
     renderTree();
     renderContentTitle();
     refreshCompareSwimlanes();
+    syncSmartCompareButton();
+  }
+
+  function syncSmartCompareButton() {
+    const button = document.getElementById('msiSmartCompareBtn');
+    if (!button) return;
+    button.hidden = !compareMode;
+    button.disabled = compareTasks.length !== 2;
+    button.title = button.disabled ? '请先选择两个任务' : '将对比分析请求置入智能对话';
   }
 
   function swapCompareRoles() {
@@ -465,6 +567,7 @@
     renderTree();
     renderContentTitle();
     refreshCompareSwimlanes();
+    syncSmartCompareButton();
   }
 
   function setCompareMode(active) {
@@ -487,6 +590,7 @@
     renderTree();
     renderContentTitle();
     refreshCompareSwimlanes();
+    syncSmartCompareButton();
   }
 
   function refreshCompareSwimlanes() {
@@ -507,6 +611,15 @@
 
   function initCompareMode() {
     document.getElementById('msiCompareBtn')?.addEventListener('click', () => setCompareMode(true));
+    document.getElementById('msiSmartCompareBtn')?.addEventListener('click', () => {
+      if (!compareMode || compareTasks.length !== 2) return;
+      const [baseline, comparison] = compareTasks;
+      const ref = window.WZH_CHIP_HASH || '# ';
+      const gap = window.WZH_CHIP_GAP || '   ';
+      sendToChat(ref + baseline.name + gap + ref + comparison.name + gap +
+        '请以 ' + baseline.name + ' 为基线，对比 ' + comparison.name +
+        ' 的整体耗时、计算与通信开销、关键算子和各 Rank 差异，找出主要性能回退并给出优化建议。');
+    });
     document.getElementById('msiManageBtn')?.addEventListener('click', () => setManageMode(true));
     document.getElementById('msiManageSelectAll')?.addEventListener('change', (event) =>
       toggleManageAll(event.target.checked));

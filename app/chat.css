@@ -5509,19 +5509,48 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       40% { opacity: .9; transform: scale(1); }
     }
 
-    /* 输入框锚定当前训练任务:与发送按钮同一行,贴左显示"任务图标 + 任务名",
-       提示用户提问时无需再报任务名,AI 已按此上下文作答。纯展示,不接收点击。 */
-    /* 取消锚定后整条 chip 移除,输入框跟着少一行(它是输入区的第一个流内元素) */
+    /* 输入区上方的任务和本地代码上下文。 */
+    .wzh-chat-context-chips {
+      display: flex; align-items: center; gap: 6px;
+      max-width: calc(100% - 4px);
+      margin: 4px 0 8px 4px;
+    }
+    .wzh-chat-context-chips[hidden] { display: none; }
     .wzh-chat-anchor-chip[hidden] { display: none; }
     .wzh-chat-anchor-chip {
       /* relative:关闭键绝对定位到右端,靠这一层定位 */
-      position: relative; margin: 4px 0 8px 4px;
+      position: relative; min-width: 0; flex: 0 1 auto;
       display: inline-flex; align-items: center; gap: 4px;
       max-width: 100%; overflow: hidden;
       padding: 3px 8px; border: 1px dashed var(--border-strong); border-radius: 8px;
       background: transparent;
       color: var(--foreground); font-size: 12px; font-weight: 400;
     }
+    .wzh-chat-context-chips #trainChatAnchorChip { max-width: 45%; }
+    .wzh-chat-local-code-add {
+      flex: 0 0 auto;
+      border-color: var(--border-subtle);
+      color: var(--foreground-muted);
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .wzh-chat-local-code-add:hover,
+    .wzh-chat-local-code-add:focus-visible {
+      border-color: var(--border-default);
+      background: var(--state-hover);
+      color: var(--foreground);
+    }
+    .wzh-chat-local-code-add svg {
+      width: 12px; height: 12px; flex-shrink: 0;
+      fill: none; stroke: currentColor; stroke-width: 1.5;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+    .wzh-chat-code-chip { flex: 1 1 0; max-width: 300px; }
+    .wzh-chat-code-icon {
+      width: 12px; height: 12px; flex-shrink: 0;
+      display: block;
+    }
+    .wzh-chat-code-path { min-width: 0; flex: 1 1 0; }
     .wzh-chat-anchor-chip img {
       width: 12px; height: 12px; flex-shrink: 0; display: block;
     }
@@ -6626,6 +6655,26 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   stroke-linecap: round; stroke-linejoin: round;
 }
 .msi-content-head-actions { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; }
+.msi-smart-compare {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: #fff;
+  color: #191919;
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.msi-smart-compare[hidden] { display: none; }
+.msi-smart-compare img { width: 16px; height: 16px; flex: 0 0 16px; }
+.msi-smart-compare:hover:not(:disabled) { background: color-mix(in srgb, #fff 94%, var(--mi-brand-blue)); }
+.msi-smart-compare:disabled { opacity: .45; cursor: default; }
+.msi-smart-compare:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .msi-more-btn {
   width: 28px; height: 28px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -7273,6 +7322,28 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   height: 1px;
   margin: 4px 0;
   background: var(--border-subtle);
+}
+.msi-tree-ctxmenu {
+  width: min(320px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+}
+.msi-tree-ctxmenu .msi-ctxmenu-item {
+  overflow: hidden;
+}
+.msi-tree-ctxmenu .msi-ctxmenu-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.msi-tree-ctxmenu .msi-ctxmenu-item:disabled span { opacity: .42; }
+.msi-tree-ctxmenu-folder { width: 16px; height: 16px; flex: 0 0 16px; }
+.msi-tree-ctxmenu-heading {
+  padding: 7px 14px 4px;
+  color: var(--foreground-muted);
+  opacity: .75;
+  font-size: 12px;
+  font-weight: 400;
 }
 
 /* ══ 概览页：profile_dir 多机多卡训练性能诊断报告 ══════════════════ */
