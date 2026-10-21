@@ -297,3 +297,12 @@
 }
 /* 细条太窄,留内边距会把它挤没 */
 .msi-bar--tick { padding: 0; border-radius: 1px; }
+.msi-projection-bar {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  min-width: 1px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  pointer-events: none;
+}

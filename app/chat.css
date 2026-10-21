@@ -6874,6 +6874,7 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 /* 右栏竖着排:内容吃掉整块高度,链条在剩余空间里居中。
    横线只画在本栏顶部(把页签和内容分开),左栏标题下方不画,免得像表头。 */
 .msi-foot-right {
+  position: relative;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -6881,6 +6882,45 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   padding: 14px 16px 16px;
   border-left: 1px solid var(--border-subtle);
   border-top: 1px solid var(--border-subtle);
+}
+.msi-chain-analyze {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  right: 16px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  padding: 0 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: #fff;
+  color: #191919;
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: width 180ms ease, opacity 180ms ease, background 180ms ease;
+}
+.msi-foot-right:hover .msi-chain-analyze,
+.msi-chain-analyze:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.msi-chain-analyze:hover,
+.msi-chain-analyze:focus-visible { width: 112px; background: #fff; }
+.msi-chain-analyze .msi-ctxmenu-icon { width: 16px; height: 16px; flex: 0 0 16px; }
+.msi-chain-analyze span { opacity: 0; transition: opacity 120ms ease; }
+.msi-chain-analyze:hover span,
+.msi-chain-analyze:focus-visible span { opacity: 1; transition-delay: 60ms; }
+.msi-chain-analyze:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .msi-chain-analyze, .msi-chain-analyze span { transition: none; }
 }
 /* 没选中 / 页签未实现时的占位:在本栏里居中,不再自带高度和上边框 */
 .msi-foot-placeholder,
@@ -7053,6 +7093,62 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 }
 .msi-chain-arrow svg { width: 38px; height: 28px; overflow: visible; }
 .msi-chain-arrow path { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+/* 多上游/多下游的调用链按层排节点，连线严格对应数据里的边。 */
+.msi-chain-graph {
+  position: relative;
+  width: max-content;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--msi-chain-node-w);
+  column-gap: 24px;
+  align-items: center;
+}
+.msi-chain-graph-column {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+.msi-chain-graph-node {
+  width: var(--msi-chain-node-w);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+}
+.msi-chain-graph-node .msi-chain-path { line-height: 13px; }
+.msi-chain-graph-node .msi-chain-dur { white-space: nowrap; }
+.msi-chain-graph-links {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.msi-chain-graph-link {
+  fill: none;
+  stroke: #8b73cf;
+  stroke-width: 1.7;
+  vector-effect: non-scaling-stroke;
+}
+.msi-chain-graph-link--operator { stroke: #8b73cf; }
+.msi-chain-graph-link--communication { stroke: #8b73cf; }
+.msi-chain-graph-link.is-selected-path { stroke: var(--msi-accent); stroke-width: 2.2; }
+.msi-chain-graph-link.is-inferred { stroke-dasharray: 5 4; }
+.msi-chain-graph-arrow {
+  fill: none;
+  stroke: #8b73cf;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.msi-chain-graph-arrow--operator { stroke: #8b73cf; }
+.msi-chain-graph-arrow--communication { stroke: #8b73cf; }
+.msi-chain-graph-arrow.is-selected-path { stroke: var(--msi-accent); stroke-width: 2.2; }
 .msi-chain-tail {
   width: var(--msi-chain-tail-w, var(--msi-chain-node-w));
   margin-left: var(--msi-chain-turn-left, 0px);
@@ -7106,7 +7202,7 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 }
 .msi-link-path {
   fill: none;
-  stroke: var(--msi-accent);
+  stroke: #8b73cf;
   stroke-width: 1.7;
   opacity: .92;
   vector-effect: non-scaling-stroke;
@@ -7115,21 +7211,24 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   stroke: #8b73cf;
   stroke-dasharray: 5 4;
 }
-.msi-link-path--communication { stroke: #d28a2e; }
+.msi-link-path--communication { stroke: #8b73cf; }
+.msi-link-path.is-selected-path { stroke: var(--msi-accent); stroke-width: 2.2; opacity: 1; }
 /* 箭头是线形 V,线宽、颜色和对应的连线同一套;marker 内容不继承引用它的 path 的样式,所以按类型各写一遍 */
 .msi-link-arrow {
   fill: none;
-  stroke: var(--msi-accent);
+  stroke: #8b73cf;
   stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
   opacity: .92;
 }
 .msi-link-arrow--operator { stroke: #8b73cf; }
-.msi-link-arrow--communication { stroke: #d28a2e; }
-.msi-link-dot { fill: var(--msi-accent); }
+.msi-link-arrow--communication { stroke: #8b73cf; }
+.msi-link-arrow.is-selected-path { stroke: var(--msi-accent); stroke-width: 2.2; opacity: 1; }
+.msi-link-dot { fill: #8b73cf; }
 .msi-link-dot--operator { fill: #8b73cf; }
-.msi-link-dot--communication { fill: #d28a2e; }
+.msi-link-dot--communication { fill: #8b73cf; }
+.msi-link-dot.is-selected-path { fill: var(--msi-accent); }
 .msi-swim-body.has-task-focus .msi-bar:not(.is-related) { opacity: .22; }
 .msi-swim-body.has-task-focus .msi-bar.is-related { z-index: 2; }
 .msi-swim-body.has-task-focus .msi-bar.is-picked { opacity: 1; z-index: 5; }

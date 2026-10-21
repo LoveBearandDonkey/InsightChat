@@ -340,6 +340,10 @@
                 <!-- 右栏:页签内容区。「调用链」有选中就画调用流,没选中显示「请选择泳道对象」;
                      其余三个页签还没做,统一显示「敬请期待」。文案由 activateFootTab 写入。 -->
                 <section class="msi-foot-right">
+                  <button class="msi-chain-analyze" id="msiChainAnalyze" type="button" aria-label="分析调用链" title="请先选择泳道对象">
+                    <img class="msi-ctxmenu-icon" src="../../src/pic/icon/msinsightbotAvatar.png" alt="">
+                    <span>分析调用链</span>
+                  </button>
                   <div class="msi-chain-flow" id="msiCallChain" hidden></div>
                   <div class="msi-foot-placeholder" id="msiFootPlaceholder" hidden></div>
                 </section>
@@ -675,6 +679,7 @@
   <script defer src="../theme.js"></script>
   <script defer src="../import-dialog.js"></script>
   <script defer src="../timeline-colors.js"></script>
+  <script defer src="../trace-context-sample.js"></script>
 
   <!-- ── MindStudio Insight 工作台:左树(采集目录) + 内容区(泳道树 + 泳道) ── -->
 

@@ -735,15 +735,13 @@
       { id: 'card-0', label: 'Card: 0 · rank0', group: true, open: true, children: [
         { id: 'proc', label: 'Process 3430895', group: true, open: true, children: [
           { id: 'thread-main', label: 'Thread 3430895', group: true, open: true, children: [
-            { id: 'proc-py', label: 'PyTorch (CPU)', group: true, open: true, track: 'bars', children: [
+            { id: 'proc-py', label: 'PyTorch (CPU)', group: true, open: true, children: [
+              { id: 'proc-py-ops', label: 'PyTorch Operators', track: 'bars' },
               { id: 'acl', label: 'acl', group: true, open: true, children: [
                 { id: 'proc-cann', label: 'runtime / CANN', track: 'bars' },
               ] },
             ] },
           ] },
-          { id: 'thread-3433310', label: 'Thread 3433310', track: 'dense', density: .34, staticCollapsed: true },
-          { id: 'thread-3433327', label: 'Thread 3433327', track: 'dense', density: .38, staticCollapsed: true },
-          { id: 'thread-3433329', label: 'Thread 3433329', track: 'dense', density: .32, staticCollapsed: true },
         ] },
         { id: 'ahw', label: 'Ascend Hardware', group: true, open: true, children: [
           { id: 'stream-0', label: 'Stream 0', track: 'bars' },
@@ -753,6 +751,7 @@
           { id: 'stream-5', label: 'Stream 5', track: 'bars' },
           { id: 'stream-6', label: 'Stream 6', track: 'bars' },
           { id: 'stream-7', label: 'Stream 7', track: 'bars' },
+          { id: 'stream-8', label: 'Stream 8', track: 'bars' },
         ] },
         { id: 'comm', label: 'Communication', group: true, open: true, children: [
           { id: 'comm-default', label: 'Default Group', group: true, open: false, track: 'dense', density: .55, children: [
@@ -761,20 +760,23 @@
             { id: 'comm-default-p2', label: 'Plane 2', track: 'dense', density: .35 },
             { id: 'comm-default-p3', label: 'Plane 3', track: 'dense', density: .35 },
           ] },
-          { id: 'comm-pp', label: 'PP Group / hcom_batchSendRecv', group: true, open: false, track: 'bars', children: [
+          { id: 'comm-pp', label: 'PP Group / hcom_batchSendRecv', group: true, open: true, children: [
+            { id: 'comm-pp-ops', label: 'HCCL Operations', track: 'bars' },
             { id: 'comm-pp-p0', label: 'Plane 0', track: 'dense', density: .5 },
             { id: 'comm-pp-p1', label: 'Plane 1', track: 'dense', density: .5 },
           ] },
-          { id: 'comm-ar', label: 'DP Group / hcom_allReduce', group: true, open: false, track: 'bars', children: [
+          { id: 'comm-ar', label: 'DP Group / hcom_allReduce', group: true, open: false, children: [
+            { id: 'comm-ar-ops', label: 'HCCL Operations', track: 'bars' },
             { id: 'comm-dp-p0', label: 'Plane 0', track: 'dense', density: .52 },
             { id: 'comm-dp-p1', label: 'Plane 1', track: 'dense', density: .52 },
           ] },
-          { id: 'comm-ag', label: 'Embedding Group / hcom_allGather', group: true, open: false, track: 'bars', children: [
+          { id: 'comm-ag', label: 'Embedding Group / hcom_allGather', group: true, open: false, children: [
+            { id: 'comm-ag-ops', label: 'HCCL Operations', track: 'bars' },
             { id: 'comm-emb-p0', label: 'Plane 0', track: 'dense', density: .46 },
             { id: 'comm-emb-p1', label: 'Plane 1', track: 'dense', density: .46 },
           ] },
         ] },
-        { id: 'ovl', label: 'Overlap Analysis', group: true, open: true, children: [
+        { id: 'ovl', label: 'Overlap Analysis', group: true, open: false, children: [
           { id: 'ovl-c', label: 'Computing', track: 'bars' },
           { id: 'ovl-comm', label: 'Communication', track: 'bars' },
           { id: 'ovl-nc', label: 'Communication (Not Overlapped)', track: 'bars' },
@@ -797,9 +799,15 @@
           ] },
         ] },
       ] },
-      { id: 'card-1', label: 'Card: 1', group: true, open: false, track: 'dense', density: .48, children: [] },
-      { id: 'card-2', label: 'Card: 2', group: true, open: false, track: 'dense', density: .48, children: [] },
-      { id: 'card-3', label: 'Card: 3', group: true, open: false, track: 'dense', density: .48, children: [] },
+      { id: 'card-1', label: 'Card: 1', group: true, open: false, children: [
+        { id: 'card-1-stream', label: 'Stream', track: 'dense', density: .48 },
+      ] },
+      { id: 'card-2', label: 'Card: 2', group: true, open: false, children: [
+        { id: 'card-2-stream', label: 'Stream', track: 'dense', density: .48 },
+      ] },
+      { id: 'card-3', label: 'Card: 3', group: true, open: false, children: [
+        { id: 'card-3-stream', label: 'Stream', track: 'dense', density: .48 },
+      ] },
     ];
   }
 
@@ -862,26 +870,27 @@
   TRACE_DISPATCH_ROWS.forEach((r) => {
     const [n, pyName, pyStart, pyDur, cannStart, cannDur, devName, devStart, devDur, taskId, connectionId, taskType] = r;
     REAL_TRACE_TASKS.push(
-      { id: 'py-' + n, laneId: 'proc-py', name: pyName, start: pyStart, dur: pyDur, kind: 'python' },
+      { id: 'py-' + n, laneId: 'proc-py-ops', name: pyName, start: pyStart, dur: pyDur, kind: 'python' },
       { id: 'cann-' + n, laneId: 'proc-cann', name: 'Node@launch', start: cannStart, dur: cannDur, kind: 'cann', connectionId },
       { id: 'dev-' + n, laneId: 'stream-2', name: devName, start: devStart, dur: devDur, kind: 'device', taskId, connectionId, taskType },
     );
     REAL_TRACE_EDGES.push(
       { source: 'py-' + n, target: 'dev-' + n, type: 'operator' },
-      { source: 'cann-' + n, target: 'dev-' + n, type: 'dispatch', connectionId },
+      // 该采样中的 CANN slice 比设备任务晚 5 μs，不能据此画成 CANN → Device。
+      { source: 'py-' + n, target: 'cann-' + n, type: 'dispatch', connectionId, demo: true },
     );
   });
 
-  // 同一 ProfilerStep 内各泳道的真实采样。每条泳道保留 3–4 个代表事件，
-  // 既避免 7.9 万条原始事件把单文件页面撑爆，也不会再出现大片空泳道。
+  // 同一 ProfilerStep 内可交互的代表事件；更多真实 X 事件以采样背景条补足密度。
+  // 保持数据量有限，避免把 7.9 万条原始事件全部塞进单页。
   const TRACE_CONTEXT_ROWS = [
     // Stream 0 在该 step 只有 metadata、没有 X 任务；用四段明确标注的 Idle 区间保留其结构位置。
     ['stream-0', 's0-a', 'Idle', 42, 36, 'idle', null, null, 'NO_DEVICE_TASK'],
     ['stream-0', 's0-b', 'Idle', 212, 48, 'idle', null, null, 'NO_DEVICE_TASK'],
     ['stream-0', 's0-c', 'Idle', 438, 42, 'idle', null, null, 'NO_DEVICE_TASK'],
     ['stream-0', 's0-d', 'Idle', 684, 54, 'idle', null, null, 'NO_DEVICE_TASK'],
-    ['proc-py', 'py-hccl-b', 'HcclBatchSendRecv', 154.95459, .00464, 'python', null, null, 'cpu_op'],
-    ['proc-py', 'py-hccl-c', 'HcclBatchSendRecv', 393.32875, .00637, 'python', null, null, 'cpu_op'],
+    ['proc-py-ops', 'py-hccl-b', 'HcclBatchSendRecv', 154.95459, .00464, 'python', null, null, 'cpu_op'],
+    ['proc-py-ops', 'py-hccl-c', 'HcclBatchSendRecv', 393.32875, .00637, 'python', null, null, 'cpu_op'],
     ['proc-cann', 'cann-hccl-a', 'AscendCL@hcom_batchSendRecv_', 74.02418, .36001, 'cann', null, 38717, 'HOST_HCCL'],
     ['proc-cann', 'cann-hccl-b', 'AscendCL@hcom_batchSendRecv_', 154.97541, .36031, 'cann', null, 44237, 'HOST_HCCL'],
     ['proc-cann', 'cann-hccl-c', 'AscendCL@hcom_batchSendRecv_', 393.357, .3941, 'cann', null, 48893, 'HOST_HCCL'],
@@ -918,16 +927,16 @@
     ['stream-9', 's9-b', 'EVENT_RECORD', 793.84425, .00002, 'device', 159, 57213, 'EVENT_RECORD'],
     ['stream-9', 's9-c', 'EVENT_RECORD', 794.571, .00002, 'device', 162, 57254, 'EVENT_RECORD'],
     ['stream-9', 's9-d', 'EVENT_RECORD', 796.19, .00002, 'device', 167, 57307, 'EVENT_RECORD'],
-    ['comm-pp', 'comm-pp-a', 'hcom_batchSendRecv', 74.311, .43614, 'communication', null, 38718, 'PAIRWISE'],
-    ['comm-pp', 'comm-pp-b', 'hcom_batchSendRecv__128_4_1', 155.2665, 158.55328, 'communication', null, 44238, 'PAIRWISE'],
-    ['comm-pp', 'comm-pp-c', 'hcom_batchSendRecv__128_5_1', 397.11425, 154.88838, 'communication', null, 48894, 'PAIRWISE'],
-    ['comm-ar', 'comm-ar-a', 'hcom_allReduce__170_1_1', 696.47675, 34.62392, 'communication', null, 53764, 'RING'],
-    ['comm-ar', 'comm-ar-b', 'hcom_allReduce__612_4_1', 742.913, .82084, 'communication', null, 55232, 'RING'],
-    ['comm-ar', 'comm-ar-c', 'hcom_allReduce__346_3_1', 790.71675, 3.12578, 'communication', null, 57196, 'RING'],
-    ['comm-ar', 'comm-ar-d', 'hcom_allReduce__612_6_1', 798.0305, .3655, 'communication', null, 57394, 'RING'],
-    ['comm-ag', 'comm-ag-a', 'hcom_allGather__097_6_1', 769.65725, 12.0179, 'communication', null, 57097, 'RING'],
-    ['comm-ag', 'comm-ag-b', 'hcom_allGather__097_7_1', 781.68, 8.4962, 'communication', null, 57144, 'RING'],
-    ['comm-ag', 'comm-ag-c', 'hcom_allGather__612_7_1', 799.61525, .54158, 'communication', null, 57448, 'RING'],
+    ['comm-pp-ops', 'comm-pp-a', 'hcom_batchSendRecv', 74.311, .43614, 'communication', null, 38718, 'PAIRWISE'],
+    ['comm-pp-ops', 'comm-pp-b', 'hcom_batchSendRecv__128_4_1', 155.2665, 158.55328, 'communication', null, 44238, 'PAIRWISE'],
+    ['comm-pp-ops', 'comm-pp-c', 'hcom_batchSendRecv__128_5_1', 397.11425, 154.88838, 'communication', null, 48894, 'PAIRWISE'],
+    ['comm-ar-ops', 'comm-ar-a', 'hcom_allReduce__170_1_1', 696.47675, 34.62392, 'communication', null, 53764, 'RING'],
+    ['comm-ar-ops', 'comm-ar-b', 'hcom_allReduce__612_4_1', 742.913, .82084, 'communication', null, 55232, 'RING'],
+    ['comm-ar-ops', 'comm-ar-c', 'hcom_allReduce__346_3_1', 790.71675, 3.12578, 'communication', null, 57196, 'RING'],
+    ['comm-ar-ops', 'comm-ar-d', 'hcom_allReduce__612_6_1', 798.0305, .3655, 'communication', null, 57394, 'RING'],
+    ['comm-ag-ops', 'comm-ag-a', 'hcom_allGather__097_6_1', 769.65725, 12.0179, 'communication', null, 57097, 'RING'],
+    ['comm-ag-ops', 'comm-ag-b', 'hcom_allGather__097_7_1', 781.68, 8.4962, 'communication', null, 57144, 'RING'],
+    ['comm-ag-ops', 'comm-ag-c', 'hcom_allGather__612_7_1', 799.61525, .54158, 'communication', null, 57448, 'RING'],
     ['ovl-comm', 'ovl-comm-a', 'Communication', 74.311, .43614, 'overlap', null, null, 'Communication'],
     ['ovl-comm', 'ovl-comm-b', 'Communication', 155.2665, 158.55328, 'overlap', null, null, 'Communication'],
     ['ovl-comm', 'ovl-comm-c', 'Communication', 397.11425, 154.88838, 'overlap', null, null, 'Communication'],
@@ -949,45 +958,80 @@
     REAL_TRACE_TASKS.push({ id, laneId, name, start, dur, kind, taskId, connectionId, taskType });
   });
   REAL_TRACE_TASKS.push(
-    { id: 'py-hcclbatchsendrecv', laneId: 'proc-py', name: 'hcclbatchsendrecv', start: 73.99492, dur: .00896, kind: 'python', connectionId: 38718 },
-  );
-  REAL_TRACE_EDGES.push(
-    { source: 'py-hcclbatchsendrecv', target: 'pp-ai-core', type: 'dispatch', connectionId: 38718 },
-    { source: 'pp-ai-core', target: 'comm-pp-a', type: 'communication', connectionId: 38718 },
+    { id: 'py-hcclbatchsendrecv', laneId: 'proc-py-ops', name: 'HcclBatchSendRecv', start: 73.99492, dur: .00896, kind: 'python', connectionId: 38718 },
   );
 
-  // 原始 trace 只有一部分事件带完整 flow。其余任务按时间与泳道关系构造稳定的推断链：
-  // 每条边优先满足“上游结束 <= 下游开始”，并避免同泳道自连。推断结果由数据排序决定，
-  // 因此刷新后不会变化；显式 PP 链保持独立，不会被推断边污染。
-  function addInferredTraceEdges() {
-    const occupied = new Set(REAL_TRACE_EDGES.flatMap((edge) => [edge.source, edge.target]));
-    const pool = REAL_TRACE_TASKS
-      .filter((task) => !occupied.has(task.id))
-      .sort((a, b) => a.start - b.start || a.id.localeCompare(b.id));
-
-    while (pool.length) {
-      const chain = [pool.shift()];
-      while (chain.length < 4 && pool.length) {
-        const prev = chain[chain.length - 1];
-        const prevEnd = prev.start + prev.dur;
-        let index = pool.findIndex((task) => task.laneId !== prev.laneId && task.start + 1e-9 >= prevEnd);
-        if (index < 0) break;
-        const next = pool.splice(index, 1)[0];
-        REAL_TRACE_EDGES.push({ source: prev.id, target: next.id, type: 'inferred', inferred: true });
-        chain.push(next);
-      }
-
-      // 时间窗末尾偶尔只剩一条：把它接到最近且已完成的异泳道上游，确保也可查看关系。
-      if (chain.length === 1) {
-        const target = chain[0];
-        const upstream = REAL_TRACE_TASKS
-          .filter((task) => !occupied.has(task.id) && task.id !== target.id && task.laneId !== target.laneId && task.start + task.dur <= target.start + 1e-9)
-          .sort((a, b) => (b.start + b.dur) - (a.start + a.dur))[0];
-        if (upstream) REAL_TRACE_EDGES.push({ source: upstream.id, target: target.id, type: 'inferred', inferred: true });
-      }
+  // 演示 communication 任务的 PyTorch 上游、同源 AI_CORE，以及 hcom 完成后的同步链。
+  // 原始 trace 中未提供这些 hcom 任务完整的 flow，所有新增边均标明为演示关系。
+  const HCOM_DEMO_GROUPS = {
+    'comm-pp-ops': { pythonName: 'HcclBatchSendRecv', stream: 'stream-7', planes: ['comm-pp-p0', 'comm-pp-p1'] },
+    'comm-ar-ops': { pythonName: 'HcclAllReduce', stream: 'stream-5', planes: ['comm-dp-p0', 'comm-dp-p1'] },
+    'comm-ag-ops': { pythonName: 'HcclAllGather', stream: 'stream-8', planes: ['comm-emb-p0', 'comm-emb-p1'] },
+  };
+  const HCOM_EXISTING_PYTHON = {
+    'comm-pp-a': 'py-hcclbatchsendrecv',
+    'comm-pp-b': 'py-hccl-b',
+    'comm-pp-c': 'py-hccl-c',
+  };
+  REAL_TRACE_TASKS.filter((task) => task.kind === 'communication' && task.name.startsWith('hcom')).forEach((hcom) => {
+    const group = HCOM_DEMO_GROUPS[hcom.laneId];
+    if (!group) return;
+    const pythonId = HCOM_EXISTING_PYTHON[hcom.id] || 'py-' + hcom.id;
+    if (!HCOM_EXISTING_PYTHON[hcom.id]) {
+      REAL_TRACE_TASKS.push({ id: pythonId, laneId: 'proc-py-ops', name: group.pythonName,
+        start: Math.max(0, hcom.start - .32), dur: .012, kind: 'python', taskType: 'cpu_op' });
     }
-  }
-  addInferredTraceEdges();
+    const aiId = hcom.id === 'comm-pp-a' ? 'pp-ai-core' : 'ai-' + hcom.id;
+    if (hcom.id !== 'comm-pp-a') {
+      REAL_TRACE_TASKS.push({ id: aiId, laneId: group.stream, name: 'AI_CORE',
+        start: hcom.start + .0002, dur: Math.min(.44, Math.max(.08, hcom.dur * .5)),
+        kind: 'device', connectionId: hcom.connectionId, taskType: 'AI_CORE' });
+    }
+    REAL_TRACE_EDGES.push(
+      { source: pythonId, target: hcom.id, type: 'communication', inferred: true, demo: true },
+      { source: pythonId, target: aiId, type: 'dispatch', inferred: true, demo: true },
+    );
+    const recordId = 'notify-record-' + hcom.id;
+    const waitId = 'notify-wait-' + hcom.id;
+    const recordStart = hcom.start + hcom.dur + .002;
+    REAL_TRACE_TASKS.push(
+      { id: recordId, laneId: group.planes[0], name: 'Notify_Record', start: recordStart,
+        dur: .003, kind: 'communication', connectionId: hcom.connectionId, taskType: 'Notify Record', demo: true },
+      { id: waitId, laneId: group.planes[1], name: 'Notify_Wait', start: recordStart + .006,
+        dur: .006, kind: 'communication', connectionId: hcom.connectionId, taskType: 'Notify Wait', demo: true },
+    );
+    REAL_TRACE_EDGES.push(
+      { source: hcom.id, target: recordId, type: 'communication', demo: true },
+      { source: recordId, target: waitId, type: 'communication', demo: true, vertical: true },
+    );
+  });
+
+  // level2 同一 ProfilerStep 的 X 事件作为可点击的密度样本；它们缺少此演示所需的
+  // flow 配对，下面按任务类型构造并明确标注一层上游，不把时间邻近误认为真实因果。
+  (window.MSI_TRACE_CONTEXT_SAMPLE || []).forEach(([sourceLaneId, name, start, dur], index) => {
+    if (sourceLaneId === 'thread-main') return;
+    const laneId = sourceLaneId === 'proc-py' ? 'proc-py-ops' : sourceLaneId;
+    const kind = laneId === 'proc-py-ops' ? 'python' : laneId === 'proc-cann' ? 'cann' : 'device';
+    REAL_TRACE_TASKS.push({ id: 'sample-' + index, laneId, name, start, dur,
+      kind, taskType: 'level2 X 采样事件', sample: true });
+  });
+
+  // 为 CANN 和设备演示任务补一层符合泳道职责的调用入口。只按任务类型构造，绝不把时间相邻
+  // 的任意两条采样事件当作真实 flow；分析区间与 Idle 也没有“下发者”。
+  const TRACE_DEMO_UPSTREAM = {
+    cann: { laneId: 'proc-py-ops', name: 'PyTorch 算子调用', kind: 'python', type: 'CPU 接口' },
+    device: { laneId: 'proc-cann', name: 'Node@launch', kind: 'cann', type: 'CANN 下发' },
+  };
+  const incomingTraceIds = new Set(REAL_TRACE_EDGES.map((edge) => edge.target));
+  [...REAL_TRACE_TASKS].forEach((task) => {
+    const caller = TRACE_DEMO_UPSTREAM[task.kind];
+    if (!caller || incomingTraceIds.has(task.id)) return;
+    const id = 'demo-caller-' + task.id;
+    REAL_TRACE_TASKS.push({ id, laneId: caller.laneId, name: caller.name,
+      start: Math.max(0, task.start - .04), dur: .008, kind: caller.kind,
+      taskType: caller.type, demo: true });
+    REAL_TRACE_EDGES.push({ source: id, target: task.id, type: 'dispatch', demo: true });
+  });
   const REAL_TRACE_TASK_BY_ID = Object.fromEntries(REAL_TRACE_TASKS.map((t) => [t.id, t]));
   const isRealTraceSelection = (task = (compareMode ? compareTasks[0] : selected.task)) => task?.name === 'profile_dir';
   const traceSwimBody = () => document.getElementById(
@@ -995,14 +1039,6 @@
   );
 
   // 算子任务条的配色:浅底 + 同色系深字,浅色/深色主题下都读得出来。
-  const BAR_COLORS = [
-    { bg: '#dbc8f7', fg: '#563a86' },
-    { bg: '#fbc3e0', fg: '#8a3d66' },
-    { bg: '#c0e6c7', fg: '#2c6a3d' },
-    { bg: '#c5d9fb', fg: '#2c5296' },
-    { bg: '#ffdab0', fg: '#875320' },
-    { bg: '#b9f0e3', fg: '#226d5c' },
-  ];
   // 宽条上写得下名字的那些:同步段和大算子,对应截图里的 EVENT_WAIT / AI_CORE / Notify Wait
   const WIDE_NAMES = [
     'AI_CORE', 'Notify Wait', 'EVENT_WAIT', 'AI_VECTOR_CORE',
@@ -1010,12 +1046,20 @@
     'SwiGlu', 'RmsNorm', 'FlashAttentionScore', 'aclnnAdd_AddAiCore_Add',
   ];
 
+  function colorForAdjacentTask(name, previous) {
+    if (previous?.name === name) return previous.color;
+    const base = window.MsiTraceColors.colorForName(name);
+    if (!previous || base.bg !== previous.color.bg) return base;
+    const slot = Number(base.bg.match(/--msi-trace-(\d+)-bg/)?.[1] || 1);
+    const next = String(slot % 18 + 1).padStart(2, '0');
+    return { bg: 'var(--msi-trace-' + next + '-bg)', fg: base.fg };
+  }
+
   /* —— 三种轨道画法 —— */
 
-  // 密集事件条:折叠的分组行用它概括下面那一堆事件。折叠态只是「这里有东西」的提示,
-  // 不承担分辨事件类型的职责,所以统一一个极淡的底色(见 .msi-dense-bar),不再逐条上色;
-  // 形状上仍然成团——团内细条只留 1px 缝连成一片,团与团之间才留白。参考 src/pic/截图.png。
-  const DENSE_EVENT_COLORS = ['#d9cdf5', '#c5d9fb', '#c0e6c7', '#f7d8b5', '#b9f0e3', '#fbc3e0'];
+  // 无显式任务数据的叶子泳道用密集事件条表达活动；父泳道折叠时再投影这些条的位置。
+  const DENSE_EVENT_COLORS = [1, 4, 7, 10, 13, 16]
+    .map((slot) => 'var(--msi-trace-' + String(slot).padStart(2, '0') + '-bg)');
   function denseTrack(rnd, density, colorful = false) {
     const W = 1000, H = ROW_H, Y = 4, BH = H - 8;
     const rect = (x, w, fill) => '<rect class="msi-dense-bar" x="' + x.toFixed(1) + '" y="' + Y +
@@ -1050,22 +1094,13 @@
 
   // 算子任务条:HTML 绝对定位(不是 SVG),条上的算子名才不会被横向拉伸变形。
   function barsTrack(rnd, lane) {
-    let previousName = null;
-    let previousColorIndex = -1;
     let barIndex = 0;
-    const pick = (name) => {
-      let index = Math.floor(rnd() * BAR_COLORS.length);
-      if (previousName !== null && previousName !== name && index === previousColorIndex) {
-        index = (index + 1) % BAR_COLORS.length;
-      }
-      previousName = name;
-      previousColorIndex = index;
-      return BAR_COLORS[index];
-    };
+    let previous = null;
     const bar = (x, w, text, tip) => {
       const ms = (w * DUR_MS / 100).toFixed(2);
       const name = tip || text || 'kernel';
-      const c = pick(name);
+      const c = colorForAdjacentTask(name, previous);
+      previous = { name, color: c };
       return '<span class="msi-bar' + (text ? '' : ' msi-bar--tick') + '" style="left:' + x.toFixed(2) +
         '%;width:' + w.toFixed(2) + '%;background:' + c.bg + ';color:' + c.fg + '"' +
         ' data-preview-id="' + lane.id + '-' + barIndex++ + '"' +
@@ -1104,6 +1139,19 @@
 
   // 主时间线与报告嵌入图共用同一算子名哈希和 18 色映射。
   const TRACE_TASK_COLOR_BY_ID = new Map();
+  const traceTasksByLane = new Map();
+  REAL_TRACE_TASKS.forEach((task) => {
+    if (!traceTasksByLane.has(task.laneId)) traceTasksByLane.set(task.laneId, []);
+    traceTasksByLane.get(task.laneId).push(task);
+  });
+  traceTasksByLane.forEach((tasks) => {
+    let previous = null;
+    tasks.sort((a, b) => a.start - b.start || a.id.localeCompare(b.id)).forEach((task) => {
+      const color = colorForAdjacentTask(task.name, previous);
+      TRACE_TASK_COLOR_BY_ID.set(task.id, color);
+      previous = { name: task.name, color };
+    });
+  });
   function traceTaskColor(task) {
     if (!TRACE_TASK_COLOR_BY_ID.has(task.id)) {
       TRACE_TASK_COLOR_BY_ID.set(task.id, window.MsiTraceColors.colorForName(task.name));
@@ -1117,8 +1165,9 @@
       const left = task.start / TRACE_WINDOW_MS * 100;
       const trueWidth = task.dur / TRACE_WINDOW_MS * 100;
       const width = Math.max(.62, trueWidth); // 微秒级 launch 也要保留可点击宽度
-      const meta = task.kind === 'device'
-        ? ' · Task ' + task.taskId + ' · connection_id ' + task.connectionId + ' · ' + task.taskType
+      const meta = task.sample ? ' · level2 X 采样事件' : task.kind === 'device'
+        ? (task.taskId == null ? '' : ' · Task ' + task.taskId) +
+          (task.connectionId == null ? '' : ' · connection_id ' + task.connectionId) + ' · ' + task.taskType
         : (task.connectionId ? ' · connection_id ' + task.connectionId : '');
       return '<span class="msi-bar" style="left:' + left.toFixed(3) + '%;width:' + width.toFixed(3) +
         '%;background:' + c.bg + ';color:' + c.fg + '" data-task-id="' + task.id +
@@ -1154,20 +1203,50 @@
            '</svg>';
   }
 
+  function laneRandom(task, lane) {
+    return mulberry32(hashSeed(task.name + '|' + lane.id));
+  }
+
+  // 折叠行只汇总后代可见任务的时间位置；不再自己生成一套彩色任务。
+  function projectionTrack(group, task) {
+    const ranges = [];
+    const visit = (lane) => {
+      if (lane.children?.length) { lane.children.forEach(visit); return; }
+      const fragment = document.createElement('template');
+      fragment.innerHTML = trackHtml(lane, laneRandom(task, lane), task);
+      fragment.content.querySelectorAll('.msi-bar').forEach((bar) => {
+        const left = parseFloat(bar.style.left), width = parseFloat(bar.style.width);
+        if (Number.isFinite(left) && Number.isFinite(width)) ranges.push([left, Math.min(100, left + width)]);
+      });
+      fragment.content.querySelectorAll('rect.msi-dense-bar').forEach((bar) => {
+        const left = Number(bar.getAttribute('x')) / 10;
+        const width = Number(bar.getAttribute('width')) / 10;
+        ranges.push([left, Math.min(100, left + width)]);
+      });
+    };
+    group.children?.forEach(visit);
+    ranges.sort((a, b) => a[0] - b[0]);
+    const merged = [];
+    ranges.forEach(([left, right]) => {
+      const last = merged[merged.length - 1];
+      if (last && left <= last[1] + .08) last[1] = Math.max(last[1], right);
+      else merged.push([left, right]);
+    });
+    return merged.map(([left, right]) => '<span class="msi-projection-bar" style="left:' +
+      left.toFixed(3) + '%;width:' + Math.max(.08, right - left).toFixed(3) + '%"></span>').join('');
+  }
+
   function trackHtml(lane, rnd, task) {
-    // 展开的分组行不画东西:那条密集带只是折叠态下用来概括子行的,展开后子行各画各的,
-    // 再留着就成了一条没有含义的占位灰带。
-    if (isRealTraceSelection(task) && REAL_TRACE_TASKS.some((event) => event.laneId === lane.id)) {
+    if (lane.group) return lane.open ? '' : projectionTrack(lane, task);
+    if (isRealTraceSelection(task) && traceTasksByLane.has(lane.id)) {
       return realTraceTrack(lane);
     }
-    if (lane.group && lane.open) return '';
     if (isRealTraceSelection(task)) {
-      // 指标泳道保留曲线；折叠分组保留概览带，避免内容区出现大片空白。
       if (lane.track === 'area') return areaTrack(rnd, lane.area);
-      if (lane.track === 'dense') return denseTrack(rnd, lane.density || 0.5, !lane.group && !lane.staticCollapsed);
+      if (lane.track === 'dense') return denseTrack(rnd, lane.density || 0.5, true);
       return '';
     }
-    if (lane.track === 'dense') return denseTrack(rnd, lane.density || 0.5, !lane.group && !lane.staticCollapsed);
+    if (lane.track === 'dense') return denseTrack(rnd, lane.density || 0.5, true);
     if (lane.track === 'bars') return barsTrack(rnd, lane);
     if (lane.track === 'area') return areaTrack(rnd, lane.area);
     return '';
@@ -1182,11 +1261,7 @@
         '" aria-expanded="' + (lane.open ? 'true' : 'false') + '" aria-label="展开或收起">' +
           '<svg class="msi-lane-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>' +
         '</button>'
-      : (lane.staticCollapsed
-        ? '<span class="msi-lane-caret-static" aria-label="已折叠的线程概览" title="已折叠的线程概览">' +
-            '<svg class="msi-lane-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>' +
-          '</span>'
-        : '<span class="msi-lane-caret-slot" aria-hidden="true"></span>');
+      : '<span class="msi-lane-caret-slot" aria-hidden="true"></span>';
     return (
       '<div class="msi-lane-row' + (lane.id === selectedLaneId ? ' is-selected' : '') +
         '" data-lane="' + lane.id + '" style="height:' + h + 'px">' +
@@ -1195,7 +1270,7 @@
           caret +
           '<span class="msi-lane-text">' + esc(lane.label) + '</span>' +
         '</div>' +
-        '<div class="msi-lane-track">' + trackHtml(lane, rnd, task) + '</div>' +
+        '<div class="msi-lane-track">' + trackHtml(lane, laneRandom(task, lane), task) + '</div>' +
       '</div>'
     );
   }
@@ -1368,7 +1443,11 @@
     if (task.kind === 'python') return 'PyTorch (CPU)';
     if (task.kind === 'cann') return 'PyTorch (CPU) / runtime / CANN';
     if (task.kind === 'device') return 'Ascend Hardware / ' + path[path.length - 1].label;
-    if (task.kind === 'communication') return 'Communication / ' + path[path.length - 1].label.replace(' Group / ', ' / ');
+    if (task.kind === 'communication') {
+      const parent = path[path.length - 2];
+      const group = parent?.id.startsWith('comm-') ? parent.label.replace(' Group / ', ' / ') : '';
+      return 'Communication / ' + (group ? group + ' / ' : '') + path[path.length - 1].label;
+    }
     if (task.kind === 'overlap') return 'Overlap Analysis / ' + path[path.length - 1].label;
     return path.map((lane) => lane.label).join(' / ');
   }
@@ -1413,34 +1492,172 @@
     chain.scrollLeft = 0;
   }
 
+  function selectedChainPathEdges(edges, selectedId) {
+    const upstream = new Set([selectedId]);
+    const downstream = new Set([selectedId]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      edges.forEach((edge) => {
+        if (upstream.has(edge.target) && !upstream.has(edge.source)) {
+          upstream.add(edge.source);
+          grew = true;
+        }
+        if (downstream.has(edge.source) && !downstream.has(edge.target)) {
+          downstream.add(edge.target);
+          grew = true;
+        }
+      });
+    }
+    return new Set(edges.filter((edge) =>
+      (upstream.has(edge.source) && upstream.has(edge.target)) ||
+      (downstream.has(edge.source) && downstream.has(edge.target))));
+  }
+
+  function drawChainGraphLinks(graph, edges, stackVerticalEdges, selectedPathEdges) {
+    if (!graph?.isConnected) return;
+    const svg = graph.querySelector('.msi-chain-graph-links');
+    const mount = svg?.querySelector('g');
+    if (!svg || !mount) return;
+    const graphRect = graph.getBoundingClientRect();
+    const cards = new Map([...graph.querySelectorAll('[data-chain-id]')]
+      .map((card) => [card.dataset.chainId, card]));
+    svg.setAttribute('viewBox', '0 0 ' + graphRect.width + ' ' + graphRect.height);
+    mount.innerHTML = edges.map((edge) => {
+      const source = cards.get(edge.source)?.querySelector('.msi-chain-taskbar')?.getBoundingClientRect();
+      const target = cards.get(edge.target)?.querySelector('.msi-chain-taskbar')?.getBoundingClientRect();
+      if (!source || !target) return '';
+      const type = edge.type === 'communication' ? 'communication' : edge.type === 'operator' ? 'operator' : 'dispatch';
+      const selectedPath = selectedPathEdges.has(edge);
+      const pathClass = selectedPath ? ' is-selected-path' : '';
+      const marker = selectedPath ? 'selected' : type;
+      const endpoints = ' data-source="' + esc(edge.source) + '" data-target="' + esc(edge.target) + '"';
+      if (edge.vertical && stackVerticalEdges) {
+        const x = (source.left + source.right) / 2 - graphRect.left;
+        const y1 = source.bottom - graphRect.top + 2;
+        const y2 = target.top - graphRect.top - 2;
+        return '<path class="msi-chain-graph-link msi-chain-graph-link--' + type +
+          pathClass + '"' + endpoints + ' d="M' + x.toFixed(1) + ',' + y1.toFixed(1) + ' V' + y2.toFixed(1) +
+          '" marker-end="url(#msiChainGraphArrow-' + marker + ')"></path>';
+      }
+      const x1 = source.right - graphRect.left;
+      const y1 = (source.top + source.bottom) / 2 - graphRect.top;
+      const x2 = target.left - graphRect.left - 2;
+      const y2 = (target.top + target.bottom) / 2 - graphRect.top;
+      const bend = Math.max(22, (x2 - x1) * .45);
+      return '<path class="msi-chain-graph-link msi-chain-graph-link--' + type +
+        pathClass + (edge.inferred && !edge.demo ? ' is-inferred' : '') + '"' + endpoints + ' d="M' + x1.toFixed(1) + ',' + y1.toFixed(1) +
+        ' C' + (x1 + bend).toFixed(1) + ',' + y1.toFixed(1) + ' ' +
+        (x2 - bend).toFixed(1) + ',' + y2.toFixed(1) + ' ' + x2.toFixed(1) + ',' + y2.toFixed(1) +
+        '" marker-end="url(#msiChainGraphArrow-' + marker + ')"></path>';
+    }).join('');
+  }
+
+  function renderChainGraph(chain, component, selectedId) {
+    const availableWidth = chain.clientWidth || chain.parentElement?.clientWidth || 420;
+    const columnsFor = (stackVerticalEdges) => {
+      const level = new Map(component.ordered.map((id) => [id, 0]));
+      component.ordered.forEach((id) => {
+        component.edges.filter((edge) => edge.source === id).forEach((edge) => {
+          level.set(edge.target, Math.max(level.get(edge.target) || 0,
+            (level.get(id) || 0) + (edge.vertical && stackVerticalEdges ? 0 : 1)));
+        });
+      });
+      const columns = [];
+      component.ordered.forEach((id) => {
+        const index = level.get(id) || 0;
+        (columns[index] ||= []).push(id);
+      });
+      return columns;
+    };
+    const horizontalColumns = columnsFor(false);
+    const stackVerticalEdges = horizontalColumns.length * 120 + (horizontalColumns.length - 1) * 24 + 4 > availableWidth;
+    const columns = stackVerticalEdges ? columnsFor(true) : horizontalColumns;
+    const nodeWidth = Math.min(190, Math.max(120,
+      Math.floor((availableWidth - (columns.length - 1) * 24 - 4) / columns.length)));
+    chain.dataset.layoutWidth = String(availableWidth);
+    chain.style.setProperty('--msi-chain-node-w', nodeWidth + 'px');
+    const cardHtml = (id) => {
+      const task = REAL_TRACE_TASK_BY_ID[id];
+      const color = traceTaskColor(task);
+      const fullPath = taskLaneFullPath(task);
+      return '<div class="msi-chain-graph-node" data-chain-id="' + esc(id) + '">' +
+        '<span class="msi-chain-path" title="' + esc(fullPath) + '">' + esc(taskLaneLabel(task)) + '</span>' +
+        '<button class="msi-chain-taskbar' + (id === selectedId ? ' is-current' : '') +
+          '" type="button" data-locate-task="' + esc(id) + '"' +
+          ' style="background:' + color.bg + ';color:' + color.fg + '" title="' + esc(fullPath + ' / ' + task.name) + '">' +
+          esc(task.name) + '</button>' +
+        '<span class="msi-chain-dur">耗时 ' + esc(task.dur.toFixed(3)) + ' ms</span>' +
+      '</div>';
+    };
+    chain.innerHTML = '<div class="msi-chain-graph">' +
+      '<svg class="msi-chain-graph-links" aria-hidden="true"><defs>' +
+        ['dispatch', 'operator', 'communication', 'selected'].map((type) =>
+          '<marker id="msiChainGraphArrow-' + type + '" markerUnits="userSpaceOnUse"' +
+          ' markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">' +
+          '<path class="msi-chain-graph-arrow msi-chain-graph-arrow--' + type +
+          (type === 'selected' ? ' is-selected-path' : '') +
+          '" d="M1 1 L8 5 L1 9"></path></marker>').join('') +
+      '</defs><g></g></svg>' +
+      columns.map((ids) => '<div class="msi-chain-graph-column">' + ids.map(cardHtml).join('') + '</div>').join('') +
+      '</div>' + (component.edges.some((edge) => edge.demo)
+        ? '<p class="msi-chain-note">部分连线为演示构造；真实下发关系请以 trace flow 为准。</p>' : '');
+    chain.scrollLeft = 0;
+    chain.scrollTop = 0;
+    requestAnimationFrame(() => {
+      const graph = chain.querySelector('.msi-chain-graph');
+      drawChainGraphLinks(graph, component.edges, stackVerticalEdges,
+        selectedChainPathEdges(component.edges, selectedId));
+      chain.scrollLeft = 0;
+    });
+  }
+
   function previewBarMetrics(bar) {
     const start = parseFloat(bar.style.left) * DUR_MS / 100;
     const dur = parseFloat(bar.style.width) * DUR_MS / 100;
     return { start, dur, name: bar.dataset.op || 'kernel' };
   }
 
-  // 示意数据没有真实 flow。挑选时间位置最近、分属不同泳道的两个可见事件，
-  // 让示意时间线也能展示跨泳道的时间顺序；详情中明确标注这只是推断关系。
+  // 普通示意数据没有 flow，不能把邻近泳道事件画成下发关系。
   function previewRelatedBars(bar, body) {
-    const middle = (item) => parseFloat(item.style.left) + parseFloat(item.style.width) / 2;
-    const laneId = bar.closest('.msi-lane-row')?.dataset.lane;
-    const pinnedTaskIndex = bar.closest('.msi-lane-row')?.dataset.pinnedTaskIndex;
-    const candidates = [...body.querySelectorAll('.msi-bar[data-preview-id]')]
-      .filter((item) => item !== bar && item.closest('.msi-lane-row')?.dataset.lane !== laneId &&
-        (pinnedTaskIndex === undefined
-          ? item.closest('.msi-lane-row')?.dataset.pinnedTaskIndex === undefined
-          : item.closest('.msi-lane-row')?.dataset.pinnedTaskIndex === pinnedTaskIndex))
-      .sort((a, b) => Math.abs(middle(a) - middle(bar)) - Math.abs(middle(b) - middle(bar)));
-    const related = [bar];
-    const lanes = new Set([laneId]);
-    for (const item of candidates) {
-      const lane = item.closest('.msi-lane-row')?.dataset.lane;
-      if (lanes.has(lane)) continue;
-      related.push(item);
-      lanes.add(lane);
-      if (related.length === 3) break;
+    return [bar];
+  }
+
+  function callChainChatText() {
+    const task = REAL_TRACE_TASK_BY_ID[selectedTraceTaskId];
+    if (task) {
+      const component = orderedTraceComponent(task.id);
+      const numbers = new Map(component.ordered.map((id, index) => [id, index + 1]));
+      const nodes = component.ordered.map((id, index) => {
+        const node = REAL_TRACE_TASK_BY_ID[id];
+        return (index + 1) + '. ' + node.name + (id === task.id ? '（当前选中）' : '') +
+          '；泳道：' + taskLaneFullPath(node) +
+          '；开始：' + node.start.toFixed(5) + ' ms；耗时：' + node.dur.toFixed(5) + ' ms';
+      });
+      const relations = component.edges.map((edge) =>
+        numbers.get(edge.source) + ' → ' + numbers.get(edge.target) +
+        (edge.demo ? '（演示关系）' : edge.inferred ? '（推断关系）' : '（原始调用关系）'));
+      const ref = (window.WZH_CHIP_HASH || '# ') + 'profile_dir';
+      const gap = window.WZH_CHIP_GAP || '   ';
+      return ref + gap + '请分析以下调用链的上下游关系和性能瓶颈：\n' +
+        nodes.join('\n') + (relations.length ? '\n关系：' + relations.join('，') : '');
     }
-    return related.sort((a, b) => middle(a) - middle(b));
+    if (selectedPreviewBar?.bar.isConnected) {
+      const { bar, body, task: previewTask } = selectedPreviewBar;
+      const nodes = previewRelatedBars(bar, body).map((item, index) => {
+        const info = previewBarMetrics(item);
+        const row = item.closest('.msi-lane-row');
+        const path = lanePath(row.dataset.lane).map((lane) => lane.label).join(' / ') || row.dataset.lane;
+        return (index + 1) + '. ' + info.name + (item === bar ? '（当前选中）' : '') +
+          '；泳道：' + path +
+          '；开始：' + info.start.toFixed(2) + ' ms；耗时：' + info.dur.toFixed(2) + ' ms';
+      });
+      const ref = (window.WZH_CHIP_HASH || '# ') + previewTask.name;
+      const gap = window.WZH_CHIP_GAP || '   ';
+      return ref + gap + '请分析以下示意事件的性能问题。' +
+        '页面未提供 flow，因此没有可验证的上下游调用关系：\n' + nodes.join('\n');
+    }
+    return '';
   }
 
   function renderPreviewDetail() {
@@ -1483,7 +1700,7 @@
         '</div>' + (arrowRight ? chainArrowHtml() : '') + '</div>';
     };
     renderChainLayout(chain, nearby, nodeHtml,
-      '<p class="msi-chain-note">示意数据缺少真实调用关系；连线仅表示邻近泳道事件的时间顺序。</p>');
+      '<p class="msi-chain-note">当前示意数据缺少 flow，无法确认是谁下发了该任务。</p>');
   }
 
   // 左栏「选中详情」和页签无关,只看有没有选中:有就放 key-value,没有放「请选择泳道对象」。
@@ -1511,6 +1728,9 @@
     const showChain = !collapsed && tabName === 'chain' &&
       (!!selectedTraceTaskId || !!selectedPreviewBar?.bar.isConnected);
     if (chain) chain.hidden = !showChain;
+    const analyze = document.getElementById('msiChainAnalyze');
+    if (analyze) analyze.title = (selectedTraceTaskId || selectedPreviewBar?.bar.isConnected)
+      ? '分析调用链' : '请先选择泳道对象';
     if (placeholder) {
       placeholder.textContent = tabName === 'chain' ? '请选择泳道对象' : '敬请期待';
       placeholder.hidden = collapsed || showChain;
@@ -1584,12 +1804,24 @@
       ['结束时间', end.toFixed(5) + ' ms'],
       ['持续时间', task.dur.toFixed(5) + ' ms'],
       ['Task ID', task.taskId ?? '—'],
-      ['connection_id', task.connectionId ?? '推断关系'],
+      ['connection_id', task.connectionId ?? (task.demo ? '演示构造' : '—')],
+      ['数据来源', task.sample ? 'level2 ProfilerStep#13 的 X 事件采样；上游为演示构造'
+        : task.demo ? '页面演示构造' : 'Timeline 示例事件'],
     ];
     basics.innerHTML = fields.map(([key, value, isHtml]) =>
       '<dt>' + esc(key) + '</dt><dd>' + (isHtml ? value : esc(value)) + '</dd>').join('');
 
     const component = orderedTraceComponent(task.id);
+    const incoming = new Map();
+    const outgoing = new Map();
+    component.edges.forEach((edge) => {
+      incoming.set(edge.target, (incoming.get(edge.target) || 0) + 1);
+      outgoing.set(edge.source, (outgoing.get(edge.source) || 0) + 1);
+    });
+    if ([...incoming.values(), ...outgoing.values()].some((count) => count > 1)) {
+      renderChainGraph(chain, component, task.id);
+      return;
+    }
     const nodeHtml = (id, arrowRight) => {
       const node = REAL_TRACE_TASK_BY_ID[id];
       if (!node) return '';
@@ -1609,7 +1841,11 @@
     // 一行放几个:按最小宽度算出上限;剩下的宽度再均分给这几个节点——
     // 节点一律等宽(宽窄跟内容走的话,用户会把宽的条误读成耗时长),
     // 上限 220px 兜住只有两三个节点时条子被拉得过长。
-    renderChainLayout(chain, component.ordered, nodeHtml);
+    renderChainLayout(chain, component.ordered, nodeHtml,
+      !component.edges.length
+        ? '<p class="msi-chain-note">该事件没有已知的下发 flow，不展示推测连线。</p>'
+        : component.edges.some((edge) => edge.demo)
+          ? '<p class="msi-chain-note">部分连线为演示构造；真实下发关系请以 trace flow 为准。</p>' : '');
   }
 
   // 详情和泳道必须使用完全相同的端点集合。若关系链中的某条泳道被用户折叠，
@@ -1651,6 +1887,11 @@
       }).observe(chain);
     }
     panel.addEventListener('click', (event) => {
+      if (event.target.closest('#msiChainAnalyze')) {
+        const text = callChainChatText();
+        if (text) sendToChat(text);
+        return;
+      }
       const close = event.target.closest('#msiDetailClose');
       if (close) {
         setSelectionPanelCollapsed(!panel.classList.contains('is-collapsed'));
@@ -1688,10 +1929,11 @@
       '<defs>' +
         // 线形箭头(开口 V 形,不填充),按像素画(userSpaceOnUse)不随线宽缩放;refX 对准 V 尖,
         // 尖端正好落在目标条左边缘。颜色不在这里写死,交给 CSS 的 .msi-link-arrow--* 和线同源。
-        ['dispatch', 'operator', 'communication'].map((type) =>
+        ['dispatch', 'operator', 'communication', 'selected'].map((type) =>
           '<marker id="msiArrow' + type[0].toUpperCase() + type.slice(1) + '-' + bodyId + '" markerUnits="userSpaceOnUse"' +
             ' markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">' +
-            '<path class="msi-link-arrow msi-link-arrow--' + type + '" d="M2.5,1.5 L9,5 L2.5,8.5"></path>' +
+            '<path class="msi-link-arrow msi-link-arrow--' + type +
+              (type === 'selected' ? ' is-selected-path' : '') + '" d="M2.5,1.5 L9,5 L2.5,8.5"></path>' +
           '</marker>').join('') +
       '</defs><g class="msi-link-paths"></g></svg>';
   }
@@ -1768,6 +2010,7 @@
     // 控制点会反过来往左伸,线从右边缘出来就立刻折回穿过条身,看着像从条底下钻出来。
     // 现在目标靠后时曲线先向右再 S 形折回,出口始终干净地朝右。
     const DOT_R = 2.4;
+    const selectedPathEdges = selectedChainPathEdges(edges, selectedId);
     mount.innerHTML = edges.map((edge) => {
       const a = point(edge.source, true), b = point(edge.target, false);
       if (!a || !b) return '';
@@ -1781,12 +2024,17 @@
         b.x.toFixed(1) + ',' + b.y.toFixed(1);
       const cls = edge.type === 'operator' ? ' msi-link-path--operator'
         : (edge.type === 'communication' ? ' msi-link-path--communication' : '');
-      const marker = edge.type === 'operator' ? 'msiArrowOperator'
+      const selectedPath = selectedPathEdges.has(edge);
+      const pathClass = selectedPath ? ' is-selected-path' : '';
+      const marker = selectedPath ? 'msiArrowSelected' : edge.type === 'operator' ? 'msiArrowOperator'
         : (edge.type === 'communication' ? 'msiArrowCommunication' : 'msiArrowDispatch');
+      const endpoints = ' data-source="' + esc(edge.source) + '" data-target="' + esc(edge.target) + '"';
       // 出口点整个放在条的右边缘外侧(圆心外移一个半径):连线层 z-index 4 压不过选中条的 5,
       // 圆心压在边缘上会被条盖掉一半,窄条上甚至整个看不见,就成了「有的出口没点」。
-      return '<path class="msi-link-path' + cls + '" d="' + d + '" marker-end="url(#' + marker + '-' + body.id + ')"></path>' +
-        '<circle class="msi-link-dot' + cls.replace('msi-link-path', 'msi-link-dot') + '" cx="' + (a.x + DOT_R).toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + DOT_R + '"></circle>';
+      return '<path class="msi-link-path' + cls + pathClass + '"' + endpoints + ' d="' + d +
+        '" marker-end="url(#' + marker + '-' + body.id + ')"></path>' +
+        '<circle class="msi-link-dot' + cls.replace('msi-link-path', 'msi-link-dot') + pathClass +
+        '" cx="' + (a.x + DOT_R).toFixed(1) + '" cy="' + a.y.toFixed(1) + '" r="' + DOT_R + '"></circle>';
     }).join('');
   }
 
@@ -2391,7 +2639,7 @@
           return end > visibleStart && start < visibleEnd;
         });
         // Summary and metric tracks carry content without operator bars.
-        const keep = hasVisibleBar || hasVisibleChild || lane.staticCollapsed ||
+        const keep = hasVisibleBar || hasVisibleChild ||
           !!row.querySelector('.msi-lane-track svg');
         row.classList.toggle('is-auto-empty', !keep);
         return keep;

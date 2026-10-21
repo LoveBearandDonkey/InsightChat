@@ -23,6 +23,8 @@ InsightChat 是一个面向性能分析场景的智能对话与数据洞察体�
 
 修改原型时编辑 `app/shell.html`、`app/pages/` 中的视图片段、`app/chat.css` 或 `app/*.js`，然后运行 `npm run build:chat`。`app/pages/` 中的三个入口 HTML 是生成文件，不应直接编辑。
 
+时间线泳道与调用链的交互约定见 [Timeline 演示规则](app/TIMELINE_RULES.md)。
+
 概览和时间线在源码中各占一个视图片段；入口页只决定首次显示哪个视图。页签仍在当前页面内切换，以保留聊天会话和工作台状态。`overview.js` 在时间线、对比入口中等到首次打开概览时才加载。新增视图时，在 `app/pages/` 添加片段，并在 `app/shell.html` 与 `tools/build-chat-pages.cjs` 注册入口。
 
 “内存”页签使用仓库内预置的 PyTorch 示例快照。两张图的外层布局在 `app/chat.css`，图内样式在 `app/memory-viz/host.css`；可视化源码及固定版本在 `app/memory-viz/vendor/`，示例快照原件压缩存放于 `app/memory-viz/snapshot.pickle.gz`。`npm run build:memory-viz` 会将 PyTorch MemoryViz 与 D3 打包为本地脚本，并生成浏览器可直接读取的压缩数据；`build:chat` 和 `build:standalone` 也会自动执行这一步。浏览器运行时不依赖 PyTorch 网站或 CDN，内存资源只在打开页签后加载。示例快照不代表左侧任务的实测数据。
