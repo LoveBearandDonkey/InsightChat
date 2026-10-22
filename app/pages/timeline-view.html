@@ -96,14 +96,65 @@
                   <dl class="msi-basic-grid" id="msiTaskBasics" hidden></dl>
                   <p class="msi-foot-empty" id="msiDetailEmpty">请选择泳道对象</p>
                 </section>
-                <!-- 右栏:页签内容区。「调用链」有选中就画调用流,没选中显示「请选择泳道对象」;
-                     其余三个页签还没做,统一显示「敬请期待」。文案由 activateFootTab 写入。 -->
+                <!-- 右栏:调用链、选中列表和固定的系统视图。 -->
                 <section class="msi-foot-right">
                   <button class="msi-chain-analyze" id="msiChainAnalyze" type="button" aria-label="分析调用链" title="请先选择泳道对象">
                     <img class="msi-ctxmenu-icon" src="../../src/pic/icon/msinsightbotAvatar.png" alt="">
                     <span>分析调用链</span>
                   </button>
                   <div class="msi-chain-flow" id="msiCallChain" hidden></div>
+                  <div class="msi-selected-list" id="msiSelectedList" hidden></div>
+                  <div class="msi-system-view" id="msiSystemView" aria-label="系统视图" hidden>
+                    <aside class="msi-system-sidebar" aria-label="系统视图设置">
+                      <label class="msi-system-view-select">
+                        <span class="visually-hidden">视图类型</span>
+                        <select aria-label="视图类型"><option>统计系统视图</option></select>
+                      </label>
+                      <label class="msi-system-field"><span>机器名称:</span>
+                        <select aria-label="机器名称"><option>localhost.localdomain21529381573044010...</option></select>
+                      </label>
+                      <label class="msi-system-field"><span>卡序号:</span>
+                        <select aria-label="卡序号"><option>0</option></select>
+                      </label>
+                      <div class="msi-system-section-list" aria-label="统计项目">
+                        <div>重叠分析 <span title="计算与通信重叠情况" aria-label="计算与通信重叠情况">ⓘ</span></div>
+                        <div class="is-active" aria-current="true">算子下发端到端时间 <span title="算子从下发到执行完成的耗时" aria-label="算子从下发到执行完成的耗时">ⓘ</span></div>
+                        <div>算子详情 <span title="算子的执行信息" aria-label="算子的执行信息">ⓘ</span></div>
+                        <div>算子详情汇总（按类型） <span title="按类型汇总算子信息" aria-label="按类型汇总算子信息">ⓘ</span></div>
+                        <div>内存拷贝总览</div>
+                      </div>
+                    </aside>
+                    <div class="msi-system-results">
+                      <div class="msi-system-table-wrap">
+                        <table class="msi-system-table">
+                          <thead><tr><th scope="col">算子</th><th scope="col">路径</th><th scope="col">准备时间</th><th scope="col">Python 耗时</th><th scope="col">入队耗时</th></tr></thead>
+                          <tbody>
+                            <tr><td title="aten::zero_">aten::zero_</td><td>ACLNN</td><td>--</td><td>--</td><td>16us220ns</td></tr>
+                            <tr class="is-active"><td title="aten::embedding">aten::embedding</td><td>ACLNN</td><td>--</td><td>--</td><td>10us120ns</td></tr>
+                            <tr><td title="aten::mul">aten::mul</td><td>ACLNN</td><td>--</td><td>--</td><td>8us700ns</td></tr>
+                            <tr><td title="aten::arange">aten::arange</td><td>ACLNN</td><td>--</td><td>--</td><td>8us650ns</td></tr>
+                            <tr><td title="aten::add">aten::add</td><td>ACLNN</td><td>--</td><td>--</td><td>6us820ns</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="msi-system-summary"><span>共 1998 条</span><span>匹配率: 0.00%</span><span>第 1 / 20 页</span><span>100 条/页</span></div>
+                    </div>
+                    <aside class="msi-system-detail" aria-label="算子详情">
+                      <div class="msi-system-detail-title">详情 <span>aten::embedding</span></div>
+                      <div class="msi-system-detail-scroll">
+                        <table class="msi-system-detail-table">
+                          <thead><tr><th scope="col">#</th><th scope="col">名称</th><th scope="col">开始时间</th><th scope="col">耗时</th></tr></thead>
+                          <tbody>
+                            <tr><td>1</td><td><button class="msi-system-detail-name" type="button" data-system-task="system-missing-parent" title="定位 missing parent">missing parent</button></td><td>0ns</td><td>0ns</td></tr>
+                            <tr><td>2</td><td><button class="msi-system-detail-name" type="button" data-system-task="system-aten-embedding" title="定位 aten::embedding">aten::embedding</button></td><td>4ms74us330ns</td><td>92us540ns</td></tr>
+                            <tr><td>3</td><td><button class="msi-system-detail-name" type="button" data-system-task="system-enqueue-embedding" title="定位 Enqueue@aclnnEmbedding">Enqueue@aclnnEmbedding</button></td><td>4ms146us400ns</td><td>10us140ns</td></tr>
+                            <tr><td>4</td><td><button class="msi-system-detail-name" type="button" data-system-task="system-dequeue-embedding" title="定位 Dequeue@aclnnEmbedding">Dequeue@aclnnEmbedding</button></td><td>4ms161us290ns</td><td>28us440ns</td></tr>
+                            <tr><td>5</td><td><button class="msi-system-detail-name" type="button" data-system-task="system-aclnn-embedding" title="定位 aclnnEmbedding">aclnnEmbedding</button></td><td>4ms167us450ns</td><td>21us440ns</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </aside>
+                  </div>
                   <div class="msi-foot-placeholder" id="msiFootPlaceholder" hidden></div>
                 </section>
               </div>

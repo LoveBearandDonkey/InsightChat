@@ -19,11 +19,12 @@
   let chatStreaming = false;
   let chatStopped = false;    // 本轮回答是否被用户按「停止回答」打断
   let chatAbortCtrl = null;   // 真实流式请求的 AbortController,停止时用它掐断 fetch
-  // 会话世代号:每按一次「新建对话」+1。回答是一串 await 串起来的异步流程,掐断请求只能
+  // 会话世代号:新建对话或插队中断当前回答时 +1。回答是一串 await 串起来的异步流程,掐断请求只能
   // 让它停下,停不住它接着要做的收尾(往 chatHistory 里塞、改 chatStreaming、往 DOM 上补
   // 「已停止回答」)。这些收尾一旦落到新会话上就是污染,所以每轮开跑时记下当时的世代号,
   // 收尾前对一下:对不上说明"我这轮已经被丢掉了",直接撒手。
   let chatEpoch = 0;
+  let restoreChatContext = () => {};
 
   // ── 首屏点阵底纹:canvas 逐点画一块椭圆形淡出的点阵,替代原来的 src/pic/点阵背景.png。
   // 之所以不引现成的点阵库(Magic UI DotPattern / react-bits DotGrid 之类):那些都是 React 组件,
@@ -624,8 +625,8 @@ ${issuesText || '（暂无）'}
 
   // 提问一律走置顶问题卡片(见 appendQuestionCard):思考过程动辄几屏,右对齐小气泡一滚就没了,
   // 而"我问的是什么"恰恰是看思考过程时最需要一直在眼前的东西。
-  function appendUserMessage(text) {
-    appendQuestionCard(text);
+  function appendUserMessage(text, opts) {
+    appendQuestionCard(text, opts);
   }
 
   // AI 回复统一走"缩进正文"外壳(不加背景气泡、不加头像行——表格/卡片这类内容挤在有色
@@ -768,6 +769,19 @@ ${issuesText || '（暂无）'}
 
   const QCARD_MAX_LINES = 3; // 锚点行之外，正文默认展示的行数
 
+  function captureComposerContext() {
+    const group = $('trainChatContextGroup');
+    if (!group || group.hidden) return { directory: '', codePath: '' };
+    const anchor = $('trainChatAnchorChip');
+    const codeContext = $('trainChatCodeContext');
+    const codeChip = $('trainChatCodeChip');
+    return {
+      directory: anchor && !anchor.hidden ? $('trainChatAnchorName')?.textContent.trim() || '' : '',
+      codePath: codeContext && !codeContext.hidden && codeChip && !codeChip.hidden
+        ? $('trainChatLocalCodePath')?.value || '' : '',
+    };
+  }
+
   function appendQuestionCard(text, opts) {
     const msgEl = $('trainChatMessages');
     if (!msgEl) return null;
@@ -777,20 +791,33 @@ ${issuesText || '（暂无）'}
     msgEl.querySelectorAll('.wzh-chat-qcard.is-pinned').forEach((c) => c.classList.remove('is-pinned'));
 
     const o = opts || {};
+    const context = o.context || captureComposerContext();
+    const contextItems = [];
+    if (context.directory) contextItems.push(
+      '<span class="wzh-chat-qcard-context-item wzh-chat-qcard-directory">' +
+        '<img src="../../src/pic/icon/folder.svg" alt=""><span>' + escHtml(context.directory) + '</span>' +
+      '</span>');
+    if (context.codePath) contextItems.push(
+      '<span class="wzh-chat-qcard-context-item wzh-chat-qcard-code">' +
+        '<img src="../../src/pic/icon/code-file.svg" alt=""><span>' + escHtml(context.codePath) + '</span>' +
+      '</span>');
     ensureSessionTitle(text, o.sessionTitle); // 第一问落地时,顶上那行会话主题才出现
     flushPendingModelNote();                  // 欢迎屏上切过模型的话,标记补在这一问前面
     stickToBottom = true; // 新一轮提问:重新跟随最新内容
     const card = document.createElement('div');
-    card.className = 'wzh-chat-qcard is-pinned';
+    card.className = 'wzh-chat-qcard is-pinned' + (contextItems.length ? ' has-context' : '');
     card.innerHTML =
       '<button class="wzh-chat-qcard-toggle" type="button" aria-expanded="true" title="收起提问">' +
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>' +
       '</button>' +
-      '<span class="wzh-chat-qcard-anchor">' +
-        '<img src="../../src/pic/icon/folder.svg" alt="">' +
-        '<span>' + escHtml(o.anchor || CHAT_TASK_NAME) + '</span>' +
-      '</span>' +
+      (contextItems.length ? '<span class="wzh-chat-qcard-anchor">' +
+        contextItems.join('<span class="wzh-chat-qcard-divider" aria-hidden="true"></span>') +
+      '</span>' : '') +
       '<div class="wzh-chat-qcard-text">' + renderQuestionText(text) + '</div>';
+    const directoryItem = card.querySelector('.wzh-chat-qcard-directory');
+    if (directoryItem) directoryItem.title = context.directory;
+    const codeItem = card.querySelector('.wzh-chat-qcard-code');
+    if (codeItem) codeItem.title = context.codePath;
 
     const textEl = card.querySelector('.wzh-chat-qcard-text');
     const toggle = card.querySelector('.wzh-chat-qcard-toggle');
@@ -860,6 +887,7 @@ ${issuesText || '（暂无）'}
     });
 
     const startedAt = Date.now();
+    const runEpoch = chatEpoch;
     let current = null;   // { el, timeEl, titleEl, doneTitle, startedAt }
     let ticker = 0;
     let totalMs = 0;
@@ -928,7 +956,7 @@ ${issuesText || '（暂无）'}
         return new Promise((resolve) => {
           let i = 0;
           const timer = setInterval(() => {
-            if (chatStopped) { clearInterval(timer); resolve(); return; } // 用户按了停止键
+            if (chatStopped || runEpoch !== chatEpoch) { clearInterval(timer); resolve(); return; } // 停止或插队中断
             i = Math.min(text.length, i + 2);
             target.innerHTML = renderThinkText(text.slice(0, i));
             follow();
@@ -944,6 +972,22 @@ ${issuesText || '（暂无）'}
         if (ticker) { clearInterval(ticker); ticker = 0; }
         thinkingActive = false;
         if (activeThink === api) activeThink = null;
+      },
+      interrupt() {
+        if (current) {
+          current.timeEl.textContent = fmtDuration(elapsed(current.startedAt));
+          current.titleEl.textContent = '思考已停止';
+          current.el.classList.remove('is-running');
+          current = null;
+        }
+        if (ticker) { clearInterval(ticker); ticker = 0; }
+        headTimeEl.textContent = fmtDuration(elapsed(startedAt));
+        headLabelEl.textContent = '思考已停止';
+        box.classList.add('is-done', 'is-collapsed');
+        headBtn.setAttribute('aria-expanded', 'false');
+        thinkingActive = false;
+        if (activeThink === api) activeThink = null;
+        updateJumpBtn();
       },
       // 正式回答开始：停表、标题改成「思考完成 2m36s」并自动收起
       finish() {
@@ -979,10 +1023,11 @@ ${issuesText || '（暂无）'}
     const msgEl = $('trainChatMessages');
     const step = msPerTick || 28;
     const chunk = charsPerTick || 2;
+    const runEpoch = chatEpoch;
     return new Promise((resolve) => {
       let i = 0;
       const timer = setInterval(() => {
-        if (chatStopped) { clearInterval(timer); resolve(); return; } // 用户按了停止键
+        if (chatStopped || runEpoch !== chatEpoch) { clearInterval(timer); resolve(); return; } // 停止或插队中断
         i = Math.min(text.length, i + chunk);
         // 可视化卡片是可交互节点。当前段落重绘前先摘下并保留同一批 DOM，
         // 重绘后再由 onRender 放回新位置，避免动画期间按钮每 16ms 被替换一次。
@@ -1455,8 +1500,9 @@ ${issuesText || '（暂无）'}
   function chatSleep(ms) {
     return new Promise((resolve) => {
       const t0 = Date.now();
+      const runEpoch = chatEpoch;
       const timer = setInterval(() => {
-        if (chatStopped || Date.now() - t0 >= ms) { clearInterval(timer); resolve(); }
+        if (chatStopped || runEpoch !== chatEpoch || Date.now() - t0 >= ms) { clearInterval(timer); resolve(); }
       }, 40);
     });
   }
@@ -1473,6 +1519,7 @@ ${issuesText || '（暂无）'}
     }
     chatAbortCtrl = null;
     chatStreaming = false;
+    activeRoundBody = null;
     setChatBusy(false);
     if (msgEl) scrollChatToBottom(msgEl, { onlyIfNearBottom: true });
   }
@@ -1502,9 +1549,11 @@ ${issuesText || '（暂无）'}
   // ── 排队消息 ───────────────────────────────────────────────────────────
   // 回答期间发出的问题不打断当前这轮,先排进队列显示在输入框上方,当前这条答完自动接上。
   // 队列面板左上角箭头可收起,收起后只留"N 条排队消息"那一行。
-  const chatQueue = [];   // [{ id, text }]
+  const chatQueue = [];   // [{ id, text, scenario, context }]
   let chatQueueSeq = 0;
   let chatQueueCollapsed = false;
+  let chatQueueFlushTimer = 0;
+  let activeRoundBody = null;
 
   function renderQueueText(text) {
     const source = String(text || '');
@@ -1525,12 +1574,18 @@ ${issuesText || '（暂无）'}
     const titleEl = $('trainChatQueueTitle');
     if (!box || !listEl || !titleEl) return;
     box.classList.toggle('is-collapsed', chatQueueCollapsed);
+    box.classList.toggle('has-multiple', chatQueue.length > 1);
     box.hidden = chatQueue.length === 0; // 队列空了整块撤掉,输入框自然回到贴底
     titleEl.textContent = chatQueue.length + ' 条排队消息';
     listEl.innerHTML = chatQueue.map((item) =>
       '<li class="wzh-chat-queue-item" data-id="' + item.id + '">' +
-        '<span class="wzh-chat-queue-dot" aria-hidden="true"></span>' +
+        '<button class="wzh-chat-queue-dot" type="button" aria-label="拖拽排序" title="拖拽排序"' + (chatQueue.length > 1 ? '' : ' disabled') + '>' +
+          '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="5" cy="3" r="1.2"></circle><circle cx="11" cy="3" r="1.2"></circle><circle cx="5" cy="8" r="1.2"></circle><circle cx="11" cy="8" r="1.2"></circle><circle cx="5" cy="13" r="1.2"></circle><circle cx="11" cy="13" r="1.2"></circle></svg>' +
+        '</button>' +
         '<span class="wzh-chat-queue-text" title="' + escHtml(item.text).replace(/"/g, '&quot;') + '">' + renderQueueText(item.text) + '</span>' +
+        '<button class="wzh-chat-queue-send" type="button" title="立即发送" aria-label="立即发送这条排队消息">' +
+          '<img src="../../src/pic/icon/sent.svg" alt="">' +
+        '</button>' +
         '<button class="wzh-chat-queue-del" type="button" title="移除这条" aria-label="移除这条排队消息">' +
           '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>' +
         '</button>' +
@@ -1538,8 +1593,8 @@ ${issuesText || '（暂无）'}
     scheduleFadeUpdate();
   }
 
-  function enqueueChatMessage(text) {
-    chatQueue.push({ id: ++chatQueueSeq, text: text });
+  function enqueueChatMessage(text, scenario, context) {
+    chatQueue.push({ id: ++chatQueueSeq, text, scenario, context });
     renderChatQueue();
   }
 
@@ -1554,18 +1609,58 @@ ${issuesText || '（暂无）'}
     renderChatQueue();
   }
 
+  function interruptRoundForQueuedMessage() {
+    if (!chatStreaming) return;
+    chatEpoch++; // 旧打字机与流式请求的异步回调不能再改写当前会话
+    chatStopped = true;
+    if (chatAbortCtrl) { try { chatAbortCtrl.abort(); } catch (e) { /* 已结束 */ } }
+    chatAbortCtrl = null;
+    const wasThinking = thinkingActive;
+    if (wasThinking && activeThink) activeThink.interrupt();
+    else activeThink = null;
+    if (!wasThinking && activeRoundBody?.isConnected) {
+      const note = document.createElement('div');
+      note.className = 'wzh-chat-stopped';
+      note.textContent = '已停止回答';
+      activeRoundBody.appendChild(note);
+    }
+    chatStreaming = false;
+    activeRoundBody = null;
+  }
+
+  function sendQueuedMessageNow(id) {
+    const index = chatQueue.findIndex((item) => item.id === id);
+    if (index < 0) return;
+    const [item] = chatQueue.splice(index, 1);
+    renderChatQueue();
+    const msgEl = $('trainChatMessages');
+    if (!msgEl) return;
+    const bubble = document.createElement('div');
+    bubble.className = 'wzh-chat-message user wzh-chat-queued-sent';
+    bubble.innerHTML = renderQueueText(item.text);
+    if (chatStreaming) {
+      const parent = activeRoundBody?.isConnected ? activeRoundBody : msgEl;
+      interruptRoundForQueuedMessage();
+      parent.appendChild(bubble);
+    } else msgEl.appendChild(bubble);
+    clearTimeout(chatQueueFlushTimer);
+    chatQueueFlushTimer = 0;
+    sendMessage(item.text, item.scenario, { alreadyDisplayed: true, context: item.context });
+    scrollChatToBottom(msgEl);
+  }
+
   // 当前这轮答完 → 隔一小段再把队首那条发出去:紧贴着上一轮结束抛出下一张提问卡片会闪。
   // 这段间隙里用户可能又发了新问题、也可能把这条清掉了,所以到点后重新确认一次再发。
   function flushChatQueue() {
     if (chatStreaming || !chatQueue.length) return;
-    const next = chatQueue[0];
-    setTimeout(() => {
+    clearTimeout(chatQueueFlushTimer);
+    chatQueueFlushTimer = setTimeout(() => {
+      chatQueueFlushTimer = 0;
       if (chatStreaming) return;
-      const i = chatQueue.indexOf(next);
-      if (i < 0) return;
-      chatQueue.splice(i, 1);
+      const next = chatQueue.shift();
+      if (!next) return;
       renderChatQueue();
-      sendMessage(next.text);
+      sendMessage(next.text, next.scenario, { context: next.context });
     }, 320);
   }
 
@@ -1590,13 +1685,66 @@ ${issuesText || '（暂无）'}
       scheduleFadeUpdate();
     });
     $('trainChatQueueClear')?.addEventListener('click', () => { clearChatQueue(); focusChatInput(); });
-    // 单条移除:事件委托挂在列表上,重渲染后依然生效
-    $('trainChatQueueList')?.addEventListener('click', (e) => {
-      const btn = e.target.closest && e.target.closest('.wzh-chat-queue-del');
+    const list = $('trainChatQueueList');
+    // 单条操作:事件委托挂在列表上,重渲染后依然生效
+    list?.addEventListener('click', (e) => {
+      const btn = e.target.closest && e.target.closest('.wzh-chat-queue-del, .wzh-chat-queue-send');
       if (!btn) return;
       const li = btn.closest('.wzh-chat-queue-item');
-      if (li) removeQueuedMessage(Number(li.dataset.id));
+      if (li) {
+        if (btn.classList.contains('wzh-chat-queue-send')) sendQueuedMessageNow(Number(li.dataset.id));
+        else removeQueuedMessage(Number(li.dataset.id));
+      }
       focusChatInput();
+    });
+    let draggingId = null;
+    list?.addEventListener('pointerdown', (e) => {
+      const handle = e.target.closest?.('.wzh-chat-queue-dot');
+      if (!handle || chatQueue.length < 2) return;
+      const item = handle.closest('.wzh-chat-queue-item');
+      if (!item) return;
+      e.preventDefault();
+      draggingId = Number(item.dataset.id);
+      box.classList.add('is-sorting');
+      item.classList.add('is-dragging');
+      const pointerId = e.pointerId;
+      const move = (event) => {
+        if (event.pointerId !== pointerId || draggingId == null) return;
+        event.preventDefault();
+        const from = chatQueue.findIndex((entry) => entry.id === draggingId);
+        const rows = Array.from(list.querySelectorAll('.wzh-chat-queue-item'));
+        const over = rows.findIndex((row) => event.clientY < row.getBoundingClientRect().top + row.getBoundingClientRect().height / 2);
+        const to = over < 0 ? rows.length - 1 : over;
+        if (from < 0 || from === to) return;
+        chatQueue.splice(to, 0, chatQueue.splice(from, 1)[0]);
+        const row = rows[from];
+        list.insertBefore(row, to > from ? rows[to].nextSibling : rows[to]);
+      };
+      const end = (event) => {
+        if (event.pointerId !== pointerId) return;
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', end);
+        document.removeEventListener('pointercancel', end);
+        draggingId = null;
+        box.classList.remove('is-sorting');
+        renderChatQueue();
+      };
+      document.addEventListener('pointermove', move, { passive: false });
+      document.addEventListener('pointerup', end);
+      document.addEventListener('pointercancel', end);
+    });
+    list?.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      const handle = e.target.closest?.('.wzh-chat-queue-dot');
+      const row = handle?.closest('.wzh-chat-queue-item');
+      if (!row || chatQueue.length < 2) return;
+      const from = chatQueue.findIndex((item) => item.id === Number(row.dataset.id));
+      const to = Math.max(0, Math.min(chatQueue.length - 1, from + (e.key === 'ArrowUp' ? -1 : 1)));
+      if (from === to) return;
+      e.preventDefault();
+      chatQueue.splice(to, 0, chatQueue.splice(from, 1)[0]);
+      renderChatQueue();
+      list.querySelector('[data-id="' + row.dataset.id + '"] .wzh-chat-queue-dot')?.focus();
     });
     renderChatQueue();
   }
@@ -1658,6 +1806,7 @@ ${issuesText || '（暂无）'}
   function resetConversation() {
     const msgEl = $('trainChatMessages');
     if (!msgEl) return;
+    restoreChatContext();
     demoInputEpoch++;
     chatEpoch++; // 老的异步收尾靠它认出自己已经过期,不会再往新会话上写东西
     if (chatStreaming) {
@@ -1668,6 +1817,9 @@ ${issuesText || '（暂无）'}
     }
     if (activeThink) { activeThink.dispose(); activeThink = null; }
     clearChatQueue();
+    clearTimeout(chatQueueFlushTimer);
+    chatQueueFlushTimer = 0;
+    activeRoundBody = null;
     chatHistory = [];
     thinkingActive = false;
     msgEl.innerHTML = WELCOME_HTML;
@@ -1702,7 +1854,8 @@ ${issuesText || '（暂无）'}
   // 实算指标」,回答则是一份完整的 markdown 诊断报告(结论速览 / 行动清单 / 问题详情 /
   // 已确认无问题 / 数据与方法)。其中三个关键证据点补轻量可视化入口，正文仍可整段复制。──
   const CHAT_TASK_NAME = 'openPanGu2.0flash预训练_v1';
-  const PROFILING_DATA_DIR = 'profile_dir'; // 问题卡片锚点:这次要诊断的落盘目录
+  const PROFILING_DATA_DIR = 'profile_dir'; // 预置历史会话的任务目录
+  let profilingHistoryContext = { directory: PROFILING_DATA_DIR, codePath: '' };
   const PROFILING_SESSION_TITLE = 'profile_dir 单机多卡性能分析';
 
   // 演示流程一分钟不到就跑完,但计时按真实排查节奏展示(实测墙钟约 10~15 分钟),
@@ -2095,19 +2248,21 @@ ${issuesText || '（暂无）'}
 
   // 提问卡片固定用内置的 PROFILING_QUESTION,不回显用户实际敲的那句——这套回答是写死的,
   // 用真实提问做题面只会得到一组对不上的问答。
-  function runProfilingDiagnosisScenario() {
+  function runProfilingDiagnosisScenario(opts) {
     if (chatStreaming) return;
     const msgEl = $('trainChatMessages');
     if (!msgEl) return;
 
-    appendQuestionCard(PROFILING_QUESTION, {
-      anchor: PROFILING_DATA_DIR,
+    profilingHistoryContext = opts?.context || captureComposerContext();
+    if (!opts?.alreadyDisplayed) appendQuestionCard(PROFILING_QUESTION, {
+      context: profilingHistoryContext,
       sessionTitle: PROFILING_SESSION_TITLE,
     });
     chatHistory.push({ role: 'user', content: PROFILING_QUESTION.replace(/#\{([^}]+)\}/g, '$1') });
 
     const { el: aiDiv, bodyEl } = createAiMessageShell();
     msgEl.appendChild(aiDiv);
+    activeRoundBody = bodyEl;
     scrollChatToBottom(msgEl);
 
     chatStreaming = true;
@@ -2155,6 +2310,7 @@ ${issuesText || '（暂无）'}
       chatHistory.push({ role: 'assistant', content: sections.join('\n') });
 
       chatStreaming = false;
+      activeRoundBody = null;
       setChatBusy(false);
       scrollChatToBottom(msgEl, { onlyIfNearBottom: true });
     })();
@@ -2167,7 +2323,7 @@ ${issuesText || '（暂无）'}
 
     resetConversation();
     appendQuestionCard(PROFILING_QUESTION, {
-      anchor: PROFILING_DATA_DIR,
+      context: profilingHistoryContext,
       sessionTitle: PROFILING_SESSION_TITLE,
     });
 
@@ -2203,19 +2359,20 @@ ${issuesText || '（暂无）'}
     });
   }
 
-  function runKnowledgeQaScenario() {
+  function runKnowledgeQaScenario(opts) {
     if (chatStreaming) return;
     const msgEl = $('trainChatMessages');
     if (!msgEl) return;
 
-    appendQuestionCard(KNOWLEDGE_QUESTION, {
-      anchor: PROFILING_DATA_DIR,
+    if (!opts?.alreadyDisplayed) appendQuestionCard(KNOWLEDGE_QUESTION, {
+      context: opts?.context,
       sessionTitle: '统计模型层与 MoE 模块耗时',
     });
     chatHistory.push({ role: 'user', content: KNOWLEDGE_QUESTION });
 
     const { el: aiDiv, bodyEl } = createAiMessageShell();
     msgEl.appendChild(aiDiv);
+    activeRoundBody = bodyEl;
     scrollChatToBottom(msgEl);
 
     chatStreaming = true;
@@ -2245,24 +2402,26 @@ ${issuesText || '（暂无）'}
       answer.appendChild(buildAnswerActions());
       chatHistory.push({ role: 'assistant', content: markdown });
       chatStreaming = false;
+      activeRoundBody = null;
       setChatBusy(false);
       scrollChatToBottom(msgEl, { onlyIfNearBottom: true });
     })();
   }
 
-  function runModuleStatisticReadyScenario() {
+  function runModuleStatisticReadyScenario(opts) {
     if (chatStreaming) return;
     const msgEl = $('trainChatMessages');
     if (!msgEl) return;
 
-    appendQuestionCard(KNOWLEDGE_QUESTION, {
-      anchor: PROFILING_DATA_DIR,
+    if (!opts?.alreadyDisplayed) appendQuestionCard(KNOWLEDGE_QUESTION, {
+      context: opts?.context,
       sessionTitle: '统计模型层与 MoE 模块耗时',
     });
     chatHistory.push({ role: 'user', content: KNOWLEDGE_QUESTION });
 
     const { el: aiDiv, bodyEl } = createAiMessageShell();
     msgEl.appendChild(aiDiv);
+    activeRoundBody = bodyEl;
     scrollChatToBottom(msgEl);
 
     chatStreaming = true;
@@ -2292,45 +2451,48 @@ ${issuesText || '（暂无）'}
       answer.appendChild(buildAnswerActions());
       chatHistory.push({ role: 'assistant', content: markdown });
       chatStreaming = false;
+      activeRoundBody = null;
       setChatBusy(false);
       scrollChatToBottom(msgEl, { onlyIfNearBottom: true });
     })();
   }
 
-  async function sendMessage(text, scenario) {
+  async function sendMessage(text, scenario, opts) {
     if (!text) return;
+    const sendOpts = { ...opts, context: opts?.context || captureComposerContext() };
     // 回答期间不打断当前这轮:新问题排进队列,等这轮答完自动接上(见 flushChatQueue)
-    if (chatStreaming) { enqueueChatMessage(text); return; }
+    if (chatStreaming) { enqueueChatMessage(text, scenario, sendOpts.context); return; }
     const msgEl = $('trainChatMessages');
     if (!msgEl) return;
 
     if (scenario === 'module-statistic-ready') {
-      runModuleStatisticReadyScenario();
+      runModuleStatisticReadyScenario(sendOpts);
       return;
     }
     if (text.trim() === KNOWLEDGE_QUESTION) {
-      runKnowledgeQaScenario();
+      runKnowledgeQaScenario(sendOpts);
       return;
     }
 
     // 没配 DeepSeek key 时不再弹窗要 key,直接走「性能诊断」这套固定脚本演示:
     // 提问卡片、思考过程、诊断报告全部是写死的内容,输入框里敲的那句只用来触发,不发任何网络请求。
     if (!getApiKey()) {
-      runProfilingDiagnosisScenario();
+      runProfilingDiagnosisScenario(sendOpts);
       return;
     }
 
     if (quotaLeft() <= 0) {
-      appendUserMessage(text);
+      if (!sendOpts.alreadyDisplayed) appendUserMessage(text, sendOpts);
       appendSystemNotice(`提示：今日问答已达上限（${DAILY_LIMIT} 次/天），请明天再来。`);
       return;
     }
 
-    appendUserMessage(text);
+    if (!sendOpts.alreadyDisplayed) appendUserMessage(text, sendOpts);
     chatHistory.push({ role: 'user', content: text });
 
     const { el: aiDiv, bodyEl } = createAiMessageShell();
     msgEl.appendChild(aiDiv);
+    activeRoundBody = bodyEl;
     // 真实对话拿不到模型的中间推理，思考块就只有一个 thinking 节点:从发出请求计时，
     // 首个 token 落地即结束并自动收起。clockScale 不缩放，显示的就是真实等待时长。
     const think = createThinkBlock(bodyEl, {});
@@ -2353,6 +2515,7 @@ ${issuesText || '（暂无）'}
     let partialText = '';
     try {
       const full = await streamChat(messages, (partial) => {
+        if (epoch !== chatEpoch) return;
         partialText = partial;
         if (thinkingActive) think.finish(); // 首个 token 到达 = 正式回答开始
         answerEl.innerHTML = renderMarkdown(partial);
@@ -2392,6 +2555,7 @@ ${issuesText || '（暂无）'}
           if (thinkingActive) think.finish();
           chatAbortCtrl = null;
           chatStreaming = false;
+          activeRoundBody = null;
           setChatBusy(false);
         }
         scrollChatToBottom(msgEl, { onlyIfNearBottom: true });
@@ -2881,6 +3045,7 @@ ${issuesText || '（暂无）'}
       const text = input.value.trim();
       if (!text) return;
       const scenario = pendingGuideScenario;
+      const context = captureComposerContext();
       pendingGuideScenario = '';
       ctxPicker?.close();
       commandPicker?.close();
@@ -2888,7 +3053,7 @@ ${issuesText || '（暂无）'}
       input.style.height = '';
       autoResizeInput();
       syncSendState();
-      sendMessage(text, scenario);
+      sendMessage(text, scenario, { context });
     }
     sendBtn.addEventListener('click', () => {
       if (performance.now() - lastPointerPressFxAt > 800) playSendPressFx();
@@ -3387,23 +3552,27 @@ ${issuesText || '（暂无）'}
 
   function initAnchorChip() {
     const nameEl = $('trainChatAnchorName');
-    // 锚定到左树当前选中文件所属的采集目录(window.MSI_ANCHOR_NAME 由 msi-workbench 维护),
-    // 树里换一个文件、chip 上的目录名跟着换;左树没渲染出来时退回训练任务名。
-    if (nameEl) nameEl.textContent = window.MSI_ANCHOR_NAME || CHAT_TASK_NAME;
     const contextChips = $('trainChatContextChips');
+    const contextGroup = $('trainChatContextGroup');
     const anchorChip = $('trainChatAnchorChip');
+    const codeContext = $('trainChatCodeContext');
     const codeAddBtn = $('trainChatCodeAddBtn');
     const codeChip = $('trainChatCodeChip');
     const codePath = $('trainChatCodePath');
     const localCodePath = $('trainChatLocalCodePath');
+    const defaultCodePath = codePath?.dataset.fullPath || '';
+    const codeBindings = new Map();
+    let currentTaskName = window.MSI_ANCHOR_NAME || CHAT_TASK_NAME;
     const syncContextChips = () => {
-      if (contextChips) contextChips.hidden = !!anchorChip?.hidden && !!codeAddBtn?.hidden && !!codeChip?.hidden;
+      const empty = !!anchorChip?.hidden && !!codeContext?.hidden;
+      if (contextGroup) contextGroup.hidden = empty;
+      if (contextChips) contextChips.hidden = empty;
     };
     let fitCodePath = () => {};
     if (codePath) {
-      const fullPath = codePath.dataset.fullPath || '';
       const context = document.createElement('canvas').getContext('2d');
       fitCodePath = () => {
+        const fullPath = codePath.dataset.fullPath || '';
         const width = codePath.clientWidth;
         if (!width || !context) return;
         context.font = getComputedStyle(codePath).font;
@@ -3434,26 +3603,45 @@ ${issuesText || '（暂无）'}
       else window.addEventListener('resize', fitCodePath);
       document.fonts?.ready.then(fitCodePath);
     }
-    codeAddBtn?.addEventListener('click', () => {
-      codeAddBtn.hidden = true;
-      if (codeChip) codeChip.hidden = false;
-      if (localCodePath) localCodePath.value = codePath?.dataset.fullPath || '';
+    const syncCodeBinding = () => {
+      const boundPath = codeBindings.get(currentTaskName) || '';
+      if (codeAddBtn) codeAddBtn.hidden = !!boundPath;
+      if (codeChip) {
+        codeChip.hidden = !boundPath;
+        if (boundPath) codeChip.title = '已绑定代码目录：' + boundPath;
+      }
+      if (codePath) codePath.dataset.fullPath = boundPath || defaultCodePath;
+      codeContext?.classList.toggle('is-bound', !!boundPath);
+      if (localCodePath) localCodePath.value = boundPath;
+      if (boundPath) requestAnimationFrame(fitCodePath);
+    };
+    restoreChatContext = (taskName = window.MSI_ANCHOR_NAME || CHAT_TASK_NAME) => {
+      currentTaskName = taskName;
+      if (nameEl) nameEl.textContent = taskName;
+      if (anchorChip) anchorChip.hidden = false;
+      if (codeContext) codeContext.hidden = false;
+      syncCodeBinding();
       syncContextChips();
-      requestAnimationFrame(fitCodePath);
+    };
+    window.addEventListener('msi:task-selected', (event) => restoreChatContext(event.detail?.taskName));
+    codeAddBtn?.addEventListener('click', () => {
+      codeBindings.set(currentTaskName, defaultCodePath);
+      syncCodeBinding();
+      syncContextChips();
     });
-    // 取消锚定:整条 chip 撤掉,输入框自然收窄一行;焦点还给输入框,别停在已消失的按钮上
+    // 任务锚点可移除；代码路径关闭后回到添加入口。
     $('trainChatAnchorCloseBtn')?.addEventListener('click', () => {
       if (anchorChip) anchorChip.hidden = true;
       syncContextChips();
       focusChatInput();
     });
     $('trainChatCodeCloseBtn')?.addEventListener('click', () => {
-      if (codeChip) codeChip.hidden = true;
-      if (codeAddBtn) codeAddBtn.hidden = false;
-      if (localCodePath) localCodePath.value = '';
+      codeBindings.delete(currentTaskName);
+      syncCodeBinding();
       syncContextChips();
       codeAddBtn?.focus({ preventScroll: true });
     });
+    restoreChatContext();
   }
 
   function boot() {

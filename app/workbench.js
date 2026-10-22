@@ -743,6 +743,7 @@
     window.MSI_ANCHOR_NAME = selected.task.name;
     const chipName = document.getElementById('trainChatAnchorName');
     if (chipName) chipName.textContent = selected.task.name;
+    window.dispatchEvent(new CustomEvent('msi:task-selected', { detail: { taskName: selected.task.name } }));
     selectedTraceTaskId = null;
     clearTraceTaskFocus();
     renderSwimlanes();
@@ -779,7 +780,9 @@
   function clearBoxSelection() {
     document.querySelectorAll('#msiTimelineSwims .is-box-selected')
       .forEach((bar) => bar.classList.remove('is-box-selected'));
+    selectedBoxEntries = null;
     clearBoxTimeSelection();
+    refreshSelectedList();
   }
 
   function updateBoxTimeSelection() {
@@ -852,6 +855,7 @@
               { id: 'proc-py-ops', label: 'PyTorch Operators', track: 'bars' },
               { id: 'acl', label: 'acl', group: true, open: true, children: [
                 { id: 'proc-cann', label: 'runtime / CANN', track: 'bars' },
+                { id: 'proc-cann-dequeue', label: 'runtime / CANN dequeue', track: 'bars' },
               ] },
             ] },
           ] },
@@ -993,6 +997,25 @@
       { source: 'py-' + n, target: 'cann-' + n, type: 'dispatch', connectionId, demo: true },
     );
   });
+
+  // 系统视图详情表对应的固定示意事件；时间与表格一致，供点击名称后定位。
+  REAL_TRACE_TASKS.push(
+    { id: 'system-missing-parent', laneId: 'proc-py-ops', name: 'missing parent',
+      start: 0, dur: 0, kind: 'python', taskType: '系统视图根节点', demo: true },
+    { id: 'system-aten-embedding', laneId: 'proc-py-ops', name: 'aten::embedding',
+      start: 4.07433, dur: .09254, kind: 'python', taskType: 'PyTorch 算子', demo: true },
+    { id: 'system-enqueue-embedding', laneId: 'proc-cann', name: 'Enqueue@aclnnEmbedding',
+      start: 4.1464, dur: .01014, kind: 'cann', taskType: 'CANN 入队', demo: true },
+    { id: 'system-dequeue-embedding', laneId: 'proc-cann-dequeue', name: 'Dequeue@aclnnEmbedding',
+      start: 4.16129, dur: .02844, kind: 'cann', taskType: 'CANN 出队', demo: true },
+    { id: 'system-aclnn-embedding', laneId: 'stream-2', name: 'aclnnEmbedding',
+      start: 4.16745, dur: .02144, kind: 'device', taskType: 'AI_CORE', demo: true },
+  );
+  REAL_TRACE_EDGES.push(
+    { source: 'system-aten-embedding', target: 'system-enqueue-embedding', type: 'dispatch', demo: true },
+    { source: 'system-enqueue-embedding', target: 'system-dequeue-embedding', type: 'dispatch', demo: true },
+    { source: 'system-dequeue-embedding', target: 'system-aclnn-embedding', type: 'dispatch', demo: true },
+  );
 
   // 同一 ProfilerStep 内可交互的代表事件；更多真实 X 事件以采样背景条补足密度。
   // 保持数据量有限，避免把 7.9 万条原始事件全部塞进单页。
@@ -1514,6 +1537,122 @@
 
   let selectedTraceTaskId = null;
   let selectedPreviewBar = null;
+  let selectedListSort = { key: 'name', direction: 1 };
+  let selectedListIndexName = null;
+  let selectedBoxEntries = null;
+
+  function selectedListEntry(bar) {
+    const task = REAL_TRACE_TASK_BY_ID[bar.dataset.taskId];
+    if (task) return { name: task.name, start: task.start, dur: task.dur, id: task.id, bar };
+    const metrics = previewBarMetrics(bar);
+    return { ...metrics, id: bar.dataset.previewId, bar };
+  }
+
+  function selectedListEntries() {
+    if (selectedBoxEntries) return selectedBoxEntries;
+    const boxed = [...document.querySelectorAll('#msiTimelineSwims .msi-bar.is-box-selected')];
+    if (boxed.length) return boxed.map(selectedListEntry);
+    if (selectedTraceTaskId) {
+      const task = REAL_TRACE_TASK_BY_ID[selectedTraceTaskId];
+      if (task) return [{ name: task.name, start: task.start, dur: task.dur, id: task.id }];
+    }
+    if (selectedPreviewBar?.bar.isConnected) return [selectedListEntry(selectedPreviewBar.bar)];
+    return [];
+  }
+
+  function sameNameListEntries(name) {
+    const selected = selectedListEntries();
+    const real = selected.some((entry) => REAL_TRACE_TASK_BY_ID[entry.id]);
+    if (real) return REAL_TRACE_TASKS.filter((task) => task.name === name)
+      .map((task) => ({ name, start: task.start, dur: task.dur, id: task.id }));
+    const seen = new Set();
+    return [...document.querySelectorAll('#msiTimelineSwims .msi-bar[data-preview-id]')]
+      .filter((bar) => bar.dataset.op === name)
+      .filter((bar) => {
+        const row = bar.closest('.msi-lane-row');
+        const taskIndex = row?.dataset.pinnedTaskIndex ??
+          (bar.closest('#msiSwimCompare') ? 1 : 0);
+        const key = taskIndex + ':' + bar.dataset.previewId;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).map(selectedListEntry);
+  }
+
+  function formatSelectedStart(ms) {
+    const totalNs = Math.round(ms * 1000000);
+    const wholeMs = Math.floor(totalNs / 1000000);
+    const us = Math.floor(totalNs % 1000000 / 1000);
+    const ns = totalNs % 1000;
+    return wholeMs + 'ms' + us + 'us' + ns + 'ns';
+  }
+
+  function refreshSelectedList() {
+    const host = document.getElementById('msiSelectedList');
+    if (!host || host.hidden) return;
+    const entries = selectedListEntries();
+    if (!entries.length) {
+      selectedListIndexName = null;
+      host.innerHTML = '<p class="msi-selected-list-empty">请框选内容</p>';
+      return;
+    }
+    const listScroll = host.querySelector('.msi-selected-list-scroll');
+    const indexScroll = host.querySelector('.msi-selected-index-scroll');
+    const scrollTop = listScroll?.scrollTop || 0;
+    const scrollLeft = listScroll?.scrollLeft || 0;
+    const indexScrollTop = indexScroll?.scrollTop || 0;
+    const summarize = (name, items, isTotal = false) => {
+      const durations = items.map((item) => item.dur);
+      const total = durations.reduce((sum, dur) => sum + dur, 0);
+      return { name, isTotal, start: items[0].start, total, self: total, average: total / items.length,
+        max: Math.max(...durations), min: Math.min(...durations) };
+    };
+    const rows = entries.map((entry) => summarize(entry.name, [entry]));
+    const total = summarize('Totals', entries, true);
+    const { key, direction } = selectedListSort;
+    rows.sort((a, b) => direction * (key === 'name'
+      ? a.name.localeCompare(b.name, 'zh-CN') : a[key] - b[key]) || a.start - b.start);
+    const columns = [
+      ['name', '名称'], ['total', '持续时间（ms）'], ['self', '自用时间（ms）'],
+      ['average', '平均持续时间（ms）'], ['max', '最大持续时间（ms）'],
+      ['min', '最小持续时间（ms）'],
+    ];
+    const cell = (row, column) => column === 'name'
+      ? row.isTotal ? 'Totals' : '<button class="msi-selected-name" type="button" data-list-name="' +
+        esc(row.name) + '" title="查看同名任务索引">' + esc(row.name) + '</button>'
+      : row[column].toFixed(6);
+    host.innerHTML = '<div class="msi-selected-list-scroll"><table class="msi-selected-table"><thead><tr>' +
+      columns.map(([column, label]) => '<th scope="col"><button type="button" data-list-sort="' +
+        column + '" aria-label="按' + label + '排序">' + label +
+        '<span class="msi-selected-sort" aria-hidden="true">' +
+        (key === column ? direction === 1 ? '▲' : '▼' : '◆') + '</span></button></th>').join('') +
+      '</tr></thead><tbody>' + [total, ...rows].map((row) => '<tr' +
+        (row.isTotal ? ' class="msi-selected-total"' : '') + '>' +
+        columns.map(([column]) => '<td>' + cell(row, column) + '</td>').join('') +
+        '</tr>').join('') + '</tbody></table></div><aside class="msi-selected-index" id="msiSelectedIndex" hidden></aside>';
+    if (selectedListIndexName && entries.some((entry) => entry.name === selectedListIndexName)) {
+      renderSelectedListIndex(selectedListIndexName);
+    }
+    host.querySelector('.msi-selected-list-scroll').scrollTo(scrollLeft, scrollTop);
+    const nextIndexScroll = host.querySelector('.msi-selected-index-scroll');
+    if (nextIndexScroll) nextIndexScroll.scrollTop = indexScrollTop;
+  }
+
+  function renderSelectedListIndex(name) {
+    const panel = document.getElementById('msiSelectedIndex');
+    if (!panel) return;
+    const matches = sameNameListEntries(name).sort((a, b) => a.start - b.start || a.id.localeCompare(b.id));
+    if (matches.length <= 1) { panel.hidden = true; selectedListIndexName = null; return; }
+    selectedListIndexName = name;
+    panel.hidden = false;
+    panel.setAttribute('aria-label', name + ' 的同名任务索引');
+    panel.innerHTML = '<div class="msi-selected-index-title">详情 <button type="button" data-list-index-close aria-label="关闭索引">×</button></div>' +
+      '<div class="msi-selected-index-scroll"><table><thead><tr><th>索引</th><th>开始时间</th><th>时长(ms)</th></tr></thead><tbody>' +
+      matches.map((entry, index) => '<tr><td><button type="button" data-list-index="' + index +
+        '" title="定位到第 ' + (index + 1) + ' 个任务">' + (index + 1) + '</button></td><td>' +
+        formatSelectedStart(entry.start) + '</td><td>' + entry.dur.toFixed(6) + '</td></tr>').join('') +
+      '</tbody></table></div>';
+  }
 
   function traceComponent(taskId) {
     const ids = new Set(taskId ? [taskId] : []);
@@ -1780,7 +1919,10 @@
     const row = bar.closest('.msi-lane-row');
     if (!basics || !chain || !row) return;
     setSelectionPanelCollapsed(false);
-    activateFootTab('chain');
+    const activeTab = document.querySelector('#msiSelectionPanel .msi-foot-tab.is-active');
+    activateFootTab(activeTab?.dataset.footTab === 'list' ||
+      (activeTab?.dataset.footTab === 'system' && document.getElementById('msiSystemView'))
+      ? activeTab.dataset.footTab : 'chain');
     const metrics = previewBarMetrics(bar);
     const laneName = row.querySelector('.msi-lane-text');
     const lane = laneName?.dataset.fullName || laneName?.textContent || row.dataset.lane;
@@ -1825,11 +1967,21 @@
     if (empty) empty.hidden = has;
   }
 
-  // 右栏页签切换 + 内容区取舍:面板展开时右栏一定有东西——「调用链」有选中就画调用流,
-  // 没选中放「请选择泳道对象」;其余页签一律放「敬请期待」。收起时整块 body 由 CSS 藏掉。
+  function syncSystemDetailSelection() {
+    document.querySelectorAll('#msiSystemView [data-system-task]').forEach((button) => {
+      const active = button.dataset.systemTask === selectedTraceTaskId;
+      button.closest('tr')?.classList.toggle('is-active', active);
+      if (active) button.setAttribute('aria-current', 'true');
+      else button.removeAttribute('aria-current');
+    });
+  }
+
+  // 右栏页签切换:调用链与选中列表分别更新内容，其他页签使用各自的内容或占位。
   function activateFootTab(tabName) {
     const panel = document.getElementById('msiSelectionPanel');
     const chain = document.getElementById('msiCallChain');
+    const list = document.getElementById('msiSelectedList');
+    const system = document.getElementById('msiSystemView');
     const placeholder = document.getElementById('msiFootPlaceholder');
     if (!panel) return;
     panel.querySelectorAll('.msi-foot-tab').forEach((tab) => {
@@ -1838,15 +1990,22 @@
       tab.setAttribute('aria-selected', active ? 'true' : 'false');
     });
     const collapsed = panel.classList.contains('is-collapsed');
+    panel.classList.toggle('is-list-active', tabName === 'list');
+    panel.classList.toggle('is-system-active', tabName === 'system' && !!system);
     const showChain = !collapsed && tabName === 'chain' &&
       (!!selectedTraceTaskId || !!selectedPreviewBar?.bar.isConnected);
     if (chain) chain.hidden = !showChain;
+    if (list) {
+      list.hidden = collapsed || tabName !== 'list';
+      if (!list.hidden) refreshSelectedList();
+    }
+    if (system) system.hidden = collapsed || tabName !== 'system';
     const analyze = document.getElementById('msiChainAnalyze');
     if (analyze) analyze.title = (selectedTraceTaskId || selectedPreviewBar?.bar.isConnected)
       ? '分析调用链' : '请先选择泳道对象';
     if (placeholder) {
       placeholder.textContent = tabName === 'chain' ? '请选择泳道对象' : '敬请期待';
-      placeholder.hidden = collapsed || showChain;
+      placeholder.hidden = collapsed || showChain || tabName === 'list' || (tabName === 'system' && !!system);
     }
     syncFootDetailColumn();
   }
@@ -1877,6 +2036,10 @@
       panel.querySelectorAll('.msi-foot-tab').forEach((tab) => tab.setAttribute('aria-selected', 'false'));
       const chain = document.getElementById('msiCallChain');
       if (chain) chain.hidden = true;
+      const list = document.getElementById('msiSelectedList');
+      if (list) list.hidden = true;
+      const system = document.getElementById('msiSystemView');
+      if (system) system.hidden = true;
       const placeholder = document.getElementById('msiFootPlaceholder');
       if (placeholder) placeholder.hidden = true;
     } else {
@@ -1889,6 +2052,7 @@
     const basics = document.getElementById('msiTaskBasics');
     const chain = document.getElementById('msiCallChain');
     const task = REAL_TRACE_TASK_BY_ID[selectedTraceTaskId];
+    syncSystemDetailSelection();
     if (!task && selectedPreviewBar?.bar.isConnected) {
       renderPreviewDetail();
       return;
@@ -1902,7 +2066,10 @@
     // 选中了任务条就一定把面板拉开——用户手动收起后再点泳道,也要重新弹出详情。
     // 右栏若停在别的页签就切回「调用链」,保证点一下泳道就能看到调用流。
     setSelectionPanelCollapsed(false);
-    activateFootTab('chain');
+    const activeTab = document.querySelector('#msiSelectionPanel .msi-foot-tab.is-active');
+    activateFootTab(activeTab?.dataset.footTab === 'list' ||
+      (activeTab?.dataset.footTab === 'system' && document.getElementById('msiSystemView'))
+      ? activeTab.dataset.footTab : 'chain');
     const end = task.start + task.dur;
     // 「标题」这行不写纯文字:复用泳道/调用链任务条的配色,直接给一个同色的矩形条,
     // 一眼能和图上那根条对上。第三项 true 表示 value 已经是 HTML,不再转义。
@@ -2000,6 +2167,58 @@
       }).observe(chain);
     }
     panel.addEventListener('click', (event) => {
+      const systemName = event.target.closest('[data-system-task]');
+      if (systemName) {
+        const taskId = systemName.dataset.systemTask;
+        if (!REAL_TRACE_TASK_BY_ID[taskId]) return;
+        const hasTraceCanvas = compareMode
+          ? compareTasks.some((task) => isRealTraceSelection(task)) : isRealTraceSelection();
+        if (!hasTraceCanvas) {
+          const profileTask = PROF_TASKS.find((task) => task.name === 'profile_dir');
+          if (!profileTask || deletedTasks.has(PROF_TASKS.indexOf(profileTask))) return;
+          if (compareMode) setCompareMode(false);
+          selectTask(profileTask);
+        }
+        activateAnalysisTab('timeline');
+        activateFootTab('system');
+        if (zoomIdx < 5) { zoomIdx = 5; applyZoom(); }
+        locateTraceTask(taskId);
+        return;
+      }
+      const sort = event.target.closest('[data-list-sort]');
+      if (sort) {
+        const key = sort.dataset.listSort;
+        selectedListSort = { key, direction: selectedListSort.key === key ? -selectedListSort.direction : 1 };
+        refreshSelectedList();
+        return;
+      }
+      const listName = event.target.closest('[data-list-name]');
+      if (listName) {
+        const name = listName.dataset.listName;
+        selectedListIndexName = selectedListIndexName === name ? null : name;
+        refreshSelectedList();
+        return;
+      }
+      if (event.target.closest('[data-list-index-close]')) {
+        selectedListIndexName = null;
+        const indexPanel = document.getElementById('msiSelectedIndex');
+        if (indexPanel) indexPanel.hidden = true;
+        return;
+      }
+      const indexButton = event.target.closest('[data-list-index]');
+      if (indexButton && selectedListIndexName) {
+        const matches = sameNameListEntries(selectedListIndexName)
+          .sort((a, b) => a.start - b.start || a.id.localeCompare(b.id));
+        const entry = matches[Number(indexButton.dataset.listIndex)];
+        if (entry?.bar?.isConnected) {
+          const body = entry.bar.closest('.msi-swim-body, .msi-pinned-body');
+          selectPreviewBar(entry.bar, body, true, true);
+          centerBarInView(body, entry.bar, true);
+        } else if (entry?.id) {
+          locateTraceTask(entry.id, true);
+        }
+        return;
+      }
       if (event.target.closest('#msiChainAnalyze')) {
         const text = callChainChatText();
         if (text) sendToChat(text);
@@ -2051,10 +2270,11 @@
       '</defs><g class="msi-link-paths"></g></svg>';
   }
 
-  function clearTraceTaskFocus() {
+  function clearTraceTaskFocus(preserveListIndex = false, skipDetailRender = false) {
     selectedTraceTaskId = null;
     selectedPreviewBar = null;
-    renderSelectionDetail();
+    if (!preserveListIndex) selectedListIndexName = null;
+    if (!skipDetailRender) renderSelectionDetail();
     document.querySelectorAll('#msiPinnedBody, #msiSwimBody, #msiSwimBodyCompare').forEach((item) => {
       item.classList.remove('has-task-focus');
       item.querySelectorAll('.msi-bar.is-picked,.msi-bar.is-related').forEach((el) => {
@@ -2154,6 +2374,7 @@
   function selectTraceTask(taskId) {
     if (!REAL_TRACE_TASK_BY_ID[taskId]) return;
     const wasSelected = selectedTraceTaskId === taskId;
+    clearBoxSelection();
     clearTraceTaskFocus();
     if (!wasSelected) {
       selectedTraceTaskId = taskId;
@@ -2163,9 +2384,10 @@
     updateTimelineResetButton();
   }
 
-  function selectPreviewBar(bar, body, keepSelected = false) {
+  function selectPreviewBar(bar, body, keepSelected = false, preserveListSelection = false) {
     const wasSelected = selectedPreviewBar?.bar === bar;
-    clearTraceTaskFocus();
+    if (!preserveListSelection) clearBoxSelection();
+    clearTraceTaskFocus(preserveListSelection, preserveListSelection);
     if (wasSelected && !keepSelected) return;
     const pinnedIndex = bar.closest('.msi-lane-row')?.dataset.pinnedTaskIndex;
     const task = compareMode ? compareTasks[pinnedIndex === undefined
@@ -2212,8 +2434,8 @@
     });
   }
 
-  function renderSwimlanes() {
-    clearBoxSelection();
+  function renderSwimlanes(preserveBoxSelection = false) {
+    if (!preserveBoxSelection) clearBoxSelection();
     const stack = document.getElementById('msiTimelineSwims');
     const upper = document.getElementById('msiSwim');
     const lower = document.getElementById('msiSwimCompare');
@@ -2261,6 +2483,15 @@
     pinnedBody.innerHTML = pinnedRows.length
       ? pinnedRows.join('') + traceLinkLayerHtml(pinnedBody.id) : '';
     if (pinnedRows.length) fitBarLabels(pinnedBody);
+    if (preserveBoxSelection && selectedBoxEntries) {
+      selectedBoxEntries.forEach((entry) => {
+        const selector = entry.bar?.dataset.taskId
+          ? '.msi-bar[data-task-id="' + CSS.escape(entry.id) + '"]'
+          : '.msi-bar[data-preview-id="' + CSS.escape(entry.id) + '"]';
+        stack.querySelector(selector)?.classList.add('is-box-selected');
+      });
+      updateBoxTimeSelection();
+    }
     // 置顶卡片从隐藏变为可见后，时间尺才有实际宽度可用于避让标签。
     renderRuler();
     if (selectedPreviewBar && !selectedPreviewBar.bar.isConnected) {
@@ -2569,17 +2800,20 @@
     row.classList.add('is-locate-flash');
     return true;
   }
-  function locateTraceTask(taskId) {
+  function locateTraceTask(taskId, preserveListSelection = false) {
     const task = REAL_TRACE_TASK_BY_ID[taskId];
     const body = traceSwimBody();
     if (!task || !body) return false;
+    if (!preserveListSelection) clearBoxSelection();
+    else clearTraceTaskFocus(true, true);
     selectedTraceTaskId = taskId;
+    selectedPreviewBar = null;
     selectedLaneId = task.laneId;
     traceComponent(taskId).ids.forEach((id) => {
       const relatedTask = REAL_TRACE_TASK_BY_ID[id];
       if (relatedTask) openLanePath(relatedTask.laneId);
     });
-    renderSwimlanes();
+    renderSwimlanes(preserveListSelection);
     renderSelectionDetail();
     // 连线由 renderSwimlanes 里的 rAF 画;这里只负责把条居中(面板已在上一行拉开,量到的是挤矮后的高度)
     centerTraceTaskInView(taskId, true);
@@ -3026,6 +3260,7 @@
           const rect = drag.selection.getBoundingClientRect();
           let count = 0;
           if (drag.started && rect.width > 3 && rect.height > 3 && event.type !== 'pointercancel') {
+            clearTraceTaskFocus();
             drag.row.querySelectorAll('.msi-bar').forEach((bar) => {
               const r = bar.getBoundingClientRect();
               if (r.left < rect.right && r.right > rect.left) {
@@ -3033,6 +3268,7 @@
                 count++;
               }
             });
+            selectedBoxEntries = [...drag.row.querySelectorAll('.msi-bar.is-box-selected')].map(selectedListEntry);
             const panel = body.parentElement;
             const corner = panel.querySelector('.msi-swim-corner');
             const ruler = panel.querySelector('.msi-swim-ruler');
@@ -3042,6 +3278,8 @@
               showBoxTimeSelection(panel, Math.max(0, Math.min(1, start)), Math.max(0, Math.min(1, end)));
             }
             announce('已框选 ' + count + ' 个事件');
+            setSelectionPanelCollapsed(false);
+            activateFootTab('list');
             updateTimelineResetButton();
           } else if (!drag.started && event.type !== 'pointercancel') {
             clickTarget = drag.clickTarget;
