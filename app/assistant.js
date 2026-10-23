@@ -19,6 +19,8 @@
   let chatStreaming = false;
   let chatStopped = false;    // 本轮回答是否被用户按「停止回答」打断
   let chatAbortCtrl = null;   // 真实流式请求的 AbortController,停止时用它掐断 fetch
+  let activeResumeRound = null;
+  let stoppedRound = null;    // 只保留最近一轮被用户停止的回答
   // 会话世代号:新建对话或插队中断当前回答时 +1。回答是一串 await 串起来的异步流程,掐断请求只能
   // 让它停下,停不住它接着要做的收尾(往 chatHistory 里塞、改 chatStreaming、往 DOM 上补
   // 「已停止回答」)。这些收尾一旦落到新会话上就是污染,所以每轮开跑时记下当时的世代号,
@@ -1019,13 +1021,13 @@ ${issuesText || '（暂无）'}
 
   // 回答区打字机:按 markdown 源码逐段重渲染，而不是逐个 DOM 节点插入——
   // 列表 / 表格这类块级结构只有整段重渲染才能得到正确的中间态。
-  function typeMarkdownInto(el, text, msPerTick, charsPerTick, onRender) {
+  function typeMarkdownInto(el, text, msPerTick, charsPerTick, onRender, startAt = 0) {
     const msgEl = $('trainChatMessages');
     const step = msPerTick || 28;
     const chunk = charsPerTick || 2;
     const runEpoch = chatEpoch;
     return new Promise((resolve) => {
-      let i = 0;
+      let i = startAt;
       const timer = setInterval(() => {
         if (chatStopped || runEpoch !== chatEpoch) { clearInterval(timer); resolve(); return; } // 停止或插队中断
         i = Math.min(text.length, i + chunk);
@@ -1036,6 +1038,7 @@ ${issuesText || '（暂无）'}
           card,
         ]));
         el.innerHTML = renderMarkdown(text.slice(0, i));
+        el.dataset.typedChars = String(i);
         if (onRender) onRender(retainedCards);
         scrollChatToBottom(msgEl, { instant: true, onlyIfNearBottom: true });
         if (i >= text.length) { clearInterval(timer); resolve(); }
@@ -1308,7 +1311,7 @@ ${issuesText || '（暂无）'}
     return true;
   }
 
-  // 回答尾部的操作栏。赞/踩互斥,重试和复制在这个演示里只做视觉反馈。
+  // 回答尾部的操作栏。赞/踩互斥；复制入口点击后短暂显示对勾。
   function buildAnswerActions() {
     const bar = document.createElement('div');
     bar.className = 'wzh-chat-answer-actions';
@@ -1330,6 +1333,20 @@ ${issuesText || '（暂无）'}
           bar.querySelectorAll('.wzh-chat-answer-action.is-active')
             .forEach((b) => b.classList.remove('is-active'));
           btn.classList.toggle('is-active', !on);
+        });
+      } else if (a.label === '复制') {
+        btn.addEventListener('click', () => {
+          clearTimeout(btn._copyTimer);
+          btn.classList.add('is-copied');
+          btn.innerHTML = COPY_DONE_ICON;
+          btn.title = '已复制';
+          btn.setAttribute('aria-label', '已复制');
+          btn._copyTimer = setTimeout(() => {
+            btn.classList.remove('is-copied');
+            btn.innerHTML = '<img src="../../src/pic/icon/Copy.svg" alt="">';
+            btn.title = '复制';
+            btn.setAttribute('aria-label', '复制');
+          }, 1000);
         });
       }
       bar.appendChild(btn);
@@ -1491,10 +1508,11 @@ ${issuesText || '（暂无）'}
     renderInputHighlight();
   }
 
-  // 右下角这颗按钮一键三态:
+  // 右下角按钮按当前轮次和输入内容切换:
   //   1) 回答中 + 输入框为空 → 灰底「停止回答」键,点一下掐断当前这轮;
   //   2) 输入框里有字        → 品牌蓝发送键(回答中按下去是"排队",不是"打断");
-  //   3) 空闲 + 输入框为空    → 浅蓝置灰不可点。
+  //   3) 当前轮刚被停止 + 输入框为空 → 继续回答;
+  //   4) 其他空闲且输入框为空 → 浅蓝置灰不可点。
   function syncSendState() {
     const sendBtn = $('trainChatSendBtn');
     const input = $('trainChatInput');
@@ -1505,15 +1523,19 @@ ${issuesText || '（暂无）'}
     const cleanDivider = $('trainChatCleanDivider');
     if (cleanBtn) cleanBtn.hidden = !hasInput;
     if (cleanDivider) cleanDivider.hidden = !hasInput;
-    const stopMode = chatStreaming && !chatStopped && !hasText;
+    const stopMode = chatStreaming && !chatStopped && !hasInput;
+    const resumeMode = !chatStreaming && !!stoppedRound && !hasInput;
     sendBtn.classList.toggle('is-stop', stopMode);
-    sendBtn.disabled = !stopMode && !hasText;
+    sendBtn.classList.toggle('is-resume', resumeMode);
+    sendBtn.disabled = !stopMode && !resumeMode && !hasText;
     const icon = sendBtn.querySelector('img');
     if (icon) {
-      const src = stopMode ? '../../src/pic/icon/stop.svg' : '../../src/pic/icon/sent.svg';
+      const src = stopMode ? '../../src/pic/icon/stop.svg'
+        : resumeMode ? '../../src/pic/icon/play.svg' : '../../src/pic/icon/sent.svg';
       if (!icon.getAttribute('src').endsWith(src)) icon.setAttribute('src', src);
     }
-    sendBtn.title = stopMode ? '停止回答' : (chatStreaming ? '排队发送' : '发送');
+    sendBtn.title = stopMode ? '停止回答' : resumeMode ? '继续回答'
+      : (chatStreaming ? '排队发送' : '发送');
     sendBtn.setAttribute('aria-label', sendBtn.title);
     syncInputFlow();
   }
@@ -1551,7 +1573,7 @@ ${issuesText || '（暂无）'}
   // 收尾一轮被打断的回答:思考块停表收起,正文尾部补一行「已停止回答」,状态复位
   function finalizeStoppedRound(think, bodyEl) {
     const msgEl = $('trainChatMessages');
-    if (think && thinkingActive) think.finish();
+    if (think && thinkingActive) think.interrupt();
     if (bodyEl && !bodyEl.querySelector('.wzh-chat-stopped')) {
       const note = document.createElement('div');
       note.className = 'wzh-chat-stopped';
@@ -1561,8 +1583,58 @@ ${issuesText || '（暂无）'}
     chatAbortCtrl = null;
     chatStreaming = false;
     activeRoundBody = null;
+    stoppedRound = chatQueue.length ? null : activeResumeRound;
+    activeResumeRound = null;
     setChatBusy(false);
     if (msgEl) scrollChatToBottom(msgEl, { onlyIfNearBottom: true });
+  }
+
+  function resumeDemoRound(bodyEl, sections, profiling) {
+    if (!bodyEl.isConnected) return;
+    bodyEl.querySelector('.wzh-chat-stopped')?.remove();
+    stoppedRound = null;
+    chatStopped = false;
+    chatStreaming = true;
+    activeRoundBody = bodyEl;
+    const round = { resume: () => resumeDemoRound(bodyEl, sections, profiling) };
+    activeResumeRound = round;
+    setChatBusy(true);
+    const epoch = chatEpoch;
+    const msgEl = $('trainChatMessages');
+    (async () => {
+      let answer = bodyEl.querySelector('.wzh-chat-answer');
+      if (!answer) {
+        answer = document.createElement('div');
+        answer.className = 'wzh-chat-answer';
+        bodyEl.appendChild(answer);
+      }
+      for (let index = 0; index < sections.length; index++) {
+        const md = sections[index];
+        let target = answer;
+        if (profiling) {
+          target = answer.children[index];
+          if (!target) {
+            target = document.createElement('div');
+            answer.appendChild(target);
+          }
+        }
+        const startAt = Number(target.dataset.typedChars || 0);
+        if (startAt < md.length) {
+          await typeMarkdownInto(target, md, profiling ? 16 : 11, 12,
+            profiling ? (cards) => addProfilingVisualizationCards(answer, cards) : null, startAt);
+        }
+        if (epoch !== chatEpoch) return;
+        if (chatStopped) return finalizeStoppedRound(null, bodyEl);
+      }
+      if (profiling) addProfilingVisualizationCards(answer);
+      answer.appendChild(buildAnswerActions());
+      chatHistory.push({ role: 'assistant', content: sections.join(profiling ? '\n' : '') });
+      chatStreaming = false;
+      activeRoundBody = null;
+      activeResumeRound = null;
+      setChatBusy(false);
+      if (msgEl) scrollChatToBottom(msgEl, { onlyIfNearBottom: true });
+    })();
   }
 
   function setChatBusy(busy) {
@@ -1675,6 +1747,8 @@ ${issuesText || '（暂无）'}
   function interruptRoundForQueuedMessage() {
     if (!chatStreaming) return;
     chatEpoch++; // 旧打字机与流式请求的异步回调不能再改写当前会话
+    stoppedRound = null;
+    activeResumeRound = null;
     chatStopped = true;
     if (chatAbortCtrl) { try { chatAbortCtrl.abort(); } catch (e) { /* 已结束 */ } }
     chatAbortCtrl = null;
@@ -1873,6 +1947,8 @@ ${issuesText || '（暂无）'}
     restoreChatContext();
     demoInputEpoch++;
     chatEpoch++; // 老的异步收尾靠它认出自己已经过期,不会再往新会话上写东西
+    stoppedRound = null;
+    activeResumeRound = null;
     if (chatStreaming) {
       chatStopped = true; // 打字机和 chatSleep 每一拍都看这个标志,能立刻停在半截
       if (chatAbortCtrl) { try { chatAbortCtrl.abort(); } catch (e) { /* 已结束 */ } }
@@ -2334,6 +2410,13 @@ ${issuesText || '（暂无）'}
     chatStopped = false;
     setChatBusy(true);
     const epoch = chatEpoch;
+    const sections = [
+      buildProfilingOverviewMarkdown(),
+      buildProfilingDetailMarkdown(),
+      buildProfilingAppendixMarkdown(),
+      buildProfilingTailMarkdown(),
+    ];
+    activeResumeRound = { resume: () => resumeDemoRound(bodyEl, sections, true) };
 
     const think = createThinkBlock(bodyEl, { clockScale: PROFILING_DEMO_CLOCK_SCALE });
 
@@ -2353,12 +2436,6 @@ ${issuesText || '（暂无）'}
       answer.className = 'wzh-chat-answer';
       bodyEl.appendChild(answer);
 
-      const sections = [
-        buildProfilingOverviewMarkdown(),
-        buildProfilingDetailMarkdown(),
-        buildProfilingAppendixMarkdown(),
-        buildProfilingTailMarkdown(),
-      ];
       for (const md of sections) {
         const seg = document.createElement('div');
         answer.appendChild(seg);
@@ -2376,6 +2453,7 @@ ${issuesText || '（暂无）'}
 
       chatStreaming = false;
       activeRoundBody = null;
+      activeResumeRound = null;
       setChatBusy(false);
       scrollChatToBottom(msgEl, { onlyIfNearBottom: true });
     })();
@@ -2444,6 +2522,8 @@ ${issuesText || '（暂无）'}
     chatStopped = false;
     setChatBusy(true);
     const epoch = chatEpoch;
+    const markdown = buildKnowledgeAnswerMarkdown();
+    activeResumeRound = { resume: () => resumeDemoRound(bodyEl, [markdown], false) };
     const think = createThinkBlock(bodyEl, { clockScale: PROFILING_DEMO_CLOCK_SCALE });
 
     (async () => {
@@ -2459,7 +2539,6 @@ ${issuesText || '（暂无）'}
       const answer = document.createElement('div');
       answer.className = 'wzh-chat-answer';
       bodyEl.appendChild(answer);
-      const markdown = buildKnowledgeAnswerMarkdown();
       await typeMarkdownInto(answer, markdown, 11, 12);
       if (epoch !== chatEpoch) return;
       if (chatStopped) return finalizeStoppedRound(think, bodyEl);
@@ -2468,6 +2547,7 @@ ${issuesText || '（暂无）'}
       chatHistory.push({ role: 'assistant', content: markdown });
       chatStreaming = false;
       activeRoundBody = null;
+      activeResumeRound = null;
       setChatBusy(false);
       scrollChatToBottom(msgEl, { onlyIfNearBottom: true });
     })();
@@ -2493,6 +2573,8 @@ ${issuesText || '（暂无）'}
     chatStopped = false;
     setChatBusy(true);
     const epoch = chatEpoch;
+    const markdown = buildModuleStatisticReadyAnswerMarkdown();
+    activeResumeRound = { resume: () => resumeDemoRound(bodyEl, [markdown], false) };
     const think = createThinkBlock(bodyEl, { clockScale: PROFILING_DEMO_CLOCK_SCALE });
 
     (async () => {
@@ -2508,7 +2590,6 @@ ${issuesText || '（暂无）'}
       const answer = document.createElement('div');
       answer.className = 'wzh-chat-answer';
       bodyEl.appendChild(answer);
-      const markdown = buildModuleStatisticReadyAnswerMarkdown();
       await typeMarkdownInto(answer, markdown, 11, 12);
       if (epoch !== chatEpoch) return;
       if (chatStopped) return finalizeStoppedRound(think, bodyEl);
@@ -2517,9 +2598,83 @@ ${issuesText || '（暂无）'}
       chatHistory.push({ role: 'assistant', content: markdown });
       chatStreaming = false;
       activeRoundBody = null;
+      activeResumeRound = null;
       setChatBusy(false);
       scrollChatToBottom(msgEl, { onlyIfNearBottom: true });
     })();
+  }
+
+  async function runLiveRound(round, resuming = false) {
+    const { bodyEl, answerEl, think } = round;
+    const msgEl = $('trainChatMessages');
+    if (resuming) bodyEl.querySelector('.wzh-chat-stopped')?.remove();
+    stoppedRound = null;
+    activeResumeRound = round;
+    activeRoundBody = bodyEl;
+    chatStreaming = true;
+    chatStopped = false;
+    chatAbortCtrl = new AbortController();
+    setChatBusy(true);
+    const epoch = chatEpoch;
+    const prefix = round.partialText;
+    const messages = [
+      { role: 'system', content: buildSystemPrompt(getTrainingContext()) },
+      ...chatHistory,
+    ];
+    if (resuming) messages.push({ role: 'user', content: '请从上一条回答中断的位置继续，不要重复已经给出的内容。' });
+    try {
+      const full = await streamChat(messages, (partial) => {
+        if (epoch !== chatEpoch || chatStopped) return;
+        round.partialText = prefix + partial;
+        if (thinkingActive) think.finish();
+        answerEl.innerHTML = renderMarkdown(round.partialText);
+        scrollChatToBottom(msgEl, { instant: true, onlyIfNearBottom: true });
+      }, chatAbortCtrl.signal);
+      if (epoch !== chatEpoch || chatStopped) return;
+      if (full && full.trim()) {
+        round.partialText = prefix + full;
+        if (round.hasHistoryAnswer) chatHistory[chatHistory.length - 1].content = round.partialText;
+        else {
+          chatHistory.push({ role: 'assistant', content: round.partialText });
+          round.hasHistoryAnswer = true;
+        }
+        bumpQuota();
+        answerEl.appendChild(buildAnswerActions());
+      } else if (!round.partialText) {
+        answerEl.innerHTML = renderMarkdown('（未返回内容，请重试）');
+      }
+    } catch (e) {
+      if (epoch !== chatEpoch) return;
+      if (!chatStopped) {
+        if (!resuming) chatHistory.pop();
+        const msg = (e && e.message) ? e.message : String(e);
+        const hint = /Failed to fetch|NetworkError/i.test(msg)
+          ? '网络请求失败：请检查网络连接，或确认 API Key 是否正确（点右上角齿轮图标）。'
+          : msg;
+        answerEl.innerHTML = '错误：' + escHtml(hint);
+      }
+    } finally {
+      if (epoch === chatEpoch) {
+        if (chatStopped) {
+          if (round.partialText.trim()) {
+            if (round.hasHistoryAnswer) chatHistory[chatHistory.length - 1].content = round.partialText;
+            else {
+              chatHistory.push({ role: 'assistant', content: round.partialText });
+              round.hasHistoryAnswer = true;
+            }
+          }
+          finalizeStoppedRound(think, bodyEl);
+        } else {
+          if (thinkingActive) think.finish();
+          chatAbortCtrl = null;
+          chatStreaming = false;
+          activeRoundBody = null;
+          activeResumeRound = null;
+          setChatBusy(false);
+        }
+        scrollChatToBottom(msgEl, { onlyIfNearBottom: true });
+      }
+    }
   }
 
   async function sendMessage(text, scenario, opts) {
@@ -2529,6 +2684,8 @@ ${issuesText || '（暂无）'}
     if (chatStreaming) { enqueueChatMessage(text, scenario, sendOpts.context); return; }
     const msgEl = $('trainChatMessages');
     if (!msgEl) return;
+    stoppedRound = null; // 发起新一轮后，之前被停止的回答不再可续
+    syncSendState();
 
     if (scenario === 'module-statistic-ready') {
       runModuleStatisticReadyScenario(sendOpts);
@@ -2567,65 +2724,9 @@ ${issuesText || '（暂无）'}
     bodyEl.appendChild(answerEl);
     scrollChatToBottom(msgEl);
 
-    const messages = [
-      { role: 'system', content: buildSystemPrompt(getTrainingContext()) },
-      ...chatHistory,
-    ];
-
-    chatStreaming = true;
-    chatStopped = false;
-    chatAbortCtrl = new AbortController();
-    setChatBusy(true);
-    const epoch = chatEpoch;
-    let partialText = '';
-    try {
-      const full = await streamChat(messages, (partial) => {
-        if (epoch !== chatEpoch) return;
-        partialText = partial;
-        if (thinkingActive) think.finish(); // 首个 token 到达 = 正式回答开始
-        answerEl.innerHTML = renderMarkdown(partial);
-        // 流式增量:每个 token 都会走到这里,用瞬时对齐(平滑动画被反复重启反而更顿),
-        // 且只在用户本来就贴着底部时才跟随——往回翻历史时不会被硬拽回来。
-        scrollChatToBottom(msgEl, { instant: true, onlyIfNearBottom: true });
-      }, chatAbortCtrl.signal);
-      if (epoch !== chatEpoch) { /* 这轮已被「新建对话」丢弃,答案连同会话一起作废 */ }
-      else if (full && full.trim()) {
-        chatHistory.push({ role: 'assistant', content: full });
-        bumpQuota();
-        answerEl.appendChild(buildAnswerActions());
-      } else {
-        answerEl.innerHTML = renderMarkdown('（未返回内容，请重试）');
-      }
-    } catch (e) {
-      if (epoch !== chatEpoch) { /* 同上:chatHistory 早清空了,这里不能再 pop 新会话的内容 */ }
-      else if (chatStopped) {
-        // 用户主动停止:半截回答照常留在页面上,不当成错误;一个字都没出来就把这条提问也撤回
-        if (partialText.trim()) chatHistory.push({ role: 'assistant', content: partialText });
-        else chatHistory.pop();
-      } else {
-        chatHistory.pop();
-        const msg = (e && e.message) ? e.message : String(e);
-        const hint = /Failed to fetch|NetworkError/i.test(msg)
-          ? '网络请求失败：请检查网络连接，或确认 API Key 是否正确（点右上角齿轮图标）。'
-          : msg;
-        answerEl.innerHTML = '错误：' + escHtml(hint);
-      }
-    } finally {
-      // 被丢弃的那一轮什么都不用收:状态在 resetConversation 里已经复位过,这里再动一次
-      // 只会盖掉新会话的状态
-      if (epoch === chatEpoch) {
-        if (chatStopped) {
-          finalizeStoppedRound(think, bodyEl);
-        } else {
-          if (thinkingActive) think.finish();
-          chatAbortCtrl = null;
-          chatStreaming = false;
-          activeRoundBody = null;
-          setChatBusy(false);
-        }
-        scrollChatToBottom(msgEl, { onlyIfNearBottom: true });
-      }
-    }
+    const round = { bodyEl, answerEl, think, partialText: '', hasHistoryAnswer: false };
+    round.resume = () => runLiveRound(round, true);
+    await runLiveRound(round);
   }
 
   function initPanelToggle() {
@@ -2694,6 +2795,8 @@ ${issuesText || '（暂无）'}
       const v = input.value;
       const hash = v.lastIndexOf('#', pos - 1);
       if (hash < 0) return null;
+      // 从 Timeline 置入的算子标签已有确定来源，不交给落盘文件选择器再次匹配。
+      if (operatorChips.some((chip) => chip.start === hash && chip.token.startsWith('#'))) return null;
       // "# 名字" 里 # 后面那个空格是标签自带的,不算这个 token 敲完;再多的空白才算
       const query = v.slice(hash + 1, pos).replace(/^ /, '');
       if (/[\s#]/.test(query)) return null;
@@ -3139,8 +3242,9 @@ ${issuesText || '（暂无）'}
     }
     sendBtn.addEventListener('click', () => {
       if (performance.now() - lastPointerPressFxAt > 800) playSendPressFx();
-      // 空输入 + 回答中 = 停止键;其余情况都是发送(回答中发送 = 排队)
+      // 空输入时按当前轮状态停止或继续；有输入时发送(回答中发送 = 排队)
       if (sendBtn.classList.contains('is-stop')) { stopAnswering(); return; }
+      if (sendBtn.classList.contains('is-resume')) { stoppedRound?.resume(); return; }
       doSend();
     });
     input.addEventListener('keydown', (e) => {

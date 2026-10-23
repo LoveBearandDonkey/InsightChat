@@ -352,6 +352,10 @@
                     <img class="msi-ctxmenu-icon" src="../../src/pic/icon/msinsightbotAvatar.png" alt="">
                     <span>分析调用链</span>
                   </button>
+                  <button class="msi-chain-analyze" id="msiListInsert" type="button" aria-label="将选中列表的算子置入输入框" title="置入输入框" hidden>
+                    <img class="msi-ctxmenu-icon" src="../../src/pic/icon/msinsightbotAvatar.png" alt="">
+                    <span>置入输入框</span>
+                  </button>
                   <div class="msi-chain-flow" id="msiCallChain" hidden></div>
                   <div class="msi-selected-list" id="msiSelectedList" hidden></div>
                   <div class="msi-system-view" id="msiSystemView" aria-label="系统视图" hidden>
@@ -657,7 +661,7 @@
               <input id="trainChatLocalCodePath" type="hidden" value="">
             </div>
             <!-- 高亮层浮在 textarea 之上(见 .wzh-chat-input-hl):textarea 自己的文字设为透明,
-                 真正看到的字由高亮层画,# 开头的上下文才能包成蓝色标签。两层字体度量必须完全一致。 -->
+                 真正看到的字由高亮层画,# 开头的上下文和算子会显示成蓝色标签。两层字体度量必须完全一致。 -->
             <div class="wzh-chat-input-wrap">
               <!-- autocomplete=off:刷新时别让浏览器把上一次的草稿恢复回来。textarea 的字是透明的
                    (真正看到的字由高亮层画),恢复进来的内容看不见,却会把输入框撑高 -->

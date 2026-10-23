@@ -5507,6 +5507,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     .wzh-chat-send-btn.is-stop { background: color-mix(in srgb, var(--foreground) 9%, transparent); }
     .wzh-chat-send-btn.is-stop:hover { background: color-mix(in srgb, var(--foreground) 16%, transparent); }
     .wzh-chat-send-btn.is-stop img { filter: none; }
+    .wzh-chat-send-btn.is-resume img { filter: brightness(0) invert(1); }
 
     /* 用户按下停止键后,在这一轮正文尾部补一行说明,避免半截回答看着像是出错了 */
     .wzh-chat-stopped { margin-top: 8px; font: 12px/1.5 var(--font-sans); color: var(--foreground-muted); }
@@ -6148,6 +6149,27 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     .wzh-chat-answer-action.is-active { background: color-mix(in srgb, var(--mi-brand-blue) var(--brand-tint-strong), transparent); }
     /* 图标不压暗,与头部 .wzh-chat-head-btn img 保持同一档颜色 */
     .wzh-chat-answer-action img { width: 16px; height: 16px; display: block; }
+    .wzh-chat-answer-action.is-copied { color: var(--brand-green); }
+    .wzh-chat-answer-action.is-copied svg {
+      width: 16px; height: 16px; fill: none; stroke: currentColor;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      animation: wzh-chat-copy-pop 240ms cubic-bezier(.2, 1.4, .4, 1) both;
+    }
+    .wzh-chat-answer-action.is-copied svg path {
+      stroke-dasharray: 24;
+      stroke-dashoffset: 24;
+      animation: wzh-chat-copy-draw 300ms ease-out forwards;
+    }
+    @keyframes wzh-chat-copy-pop {
+      from { opacity: .4; transform: scale(.65); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes wzh-chat-copy-draw { to { stroke-dashoffset: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .wzh-chat-answer-action.is-copied svg,
+      .wzh-chat-answer-action.is-copied svg path { animation: none; }
+      .wzh-chat-answer-action.is-copied svg path { stroke-dashoffset: 0; }
+    }
 
     /* ── 回到底部按钮 ──────────────────────────────────────────────────
        不放在消息区内部(那样会跟着内容一起滚),挂在消息区与输入框之间的零高度

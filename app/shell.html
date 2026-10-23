@@ -73,7 +73,7 @@
             <span>导入</span>
           </button>
           <button class="msi-side-btn msi-side-normal-action" id="msiCompareBtn" type="button" title="对比两次采集">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="7" height="16" rx="1.5"></rect><path d="M14 4h7v16h-7z"></path><path d="M14 9h7M14 15h7"></path></svg>
+            __COMPARE_ICON__
             <span>对比</span>
           </button>
           <button class="msi-side-icon msi-side-normal-action" id="msiManageBtn" type="button" title="管理工程树" aria-label="管理工程树">
@@ -283,11 +283,11 @@
                   </button>
                 </div>
                 <div class="wzh-chat-context-item wzh-chat-code-context" id="trainChatCodeContext">
-                  <button class="wzh-chat-local-code-add" id="trainChatCodeAddBtn" type="button" title="绑定当前工程的代码目录"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg>代码目录</button>
-                  <div class="wzh-chat-code-chip" id="trainChatCodeChip" title="已绑定代码目录：D:\Projects\InsightChat\packages\training\profiling\src" hidden>
-                    <img class="wzh-chat-code-icon" src="../../src/pic/icon/code-file.svg" alt="">
+                  <button class="wzh-chat-local-code-add" id="trainChatCodeAddBtn" type="button" title="绑定当前工程的__CODE_DIR_LABEL__目录">__CODE_DIR_ADD_ICON____CODE_DIR_LABEL__目录</button>
+                  <div class="wzh-chat-code-chip" id="trainChatCodeChip" title="已绑定__CODE_DIR_LABEL__目录：D:\Projects\InsightChat\packages\training\profiling\src" hidden>
+                    <img class="wzh-chat-code-icon" src="../../src/pic/icon/__CODE_DIR_ICON__" alt="">
                     <span class="wzh-chat-code-path" id="trainChatCodePath" data-full-path="D:\Projects\InsightChat\packages\training\profiling\src"></span>
-                    <button class="wzh-chat-anchor-close" id="trainChatCodeCloseBtn" type="button" title="移除代码目录" aria-label="移除代码目录">
+                    <button class="wzh-chat-anchor-close" id="trainChatCodeCloseBtn" type="button" title="移除__CODE_DIR_LABEL__目录" aria-label="移除__CODE_DIR_LABEL__目录">
                       <img src="../../src/pic/icon/close.svg" alt="">
                     </button>
                   </div>
@@ -296,7 +296,7 @@
               <input id="trainChatLocalCodePath" type="hidden" value="">
             </div>
             <!-- 高亮层浮在 textarea 之上(见 .wzh-chat-input-hl):textarea 自己的文字设为透明,
-                 真正看到的字由高亮层画,# 开头的上下文才能包成蓝色标签。两层字体度量必须完全一致。 -->
+                 真正看到的字由高亮层画,# 开头的上下文和算子会显示成蓝色标签。两层字体度量必须完全一致。 -->
             <div class="wzh-chat-input-wrap">
               <!-- autocomplete=off:刷新时别让浏览器把上一次的草稿恢复回来。textarea 的字是透明的
                    (真正看到的字由高亮层画),恢复进来的内容看不见,却会把输入框撑高 -->
