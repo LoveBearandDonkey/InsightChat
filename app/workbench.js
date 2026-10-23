@@ -1852,8 +1852,7 @@
           '" d="M1 1 L8 5 L1 9"></path></marker>').join('') +
       '</defs><g></g></svg>' +
       columns.map((ids) => '<div class="msi-chain-graph-column">' + ids.map(cardHtml).join('') + '</div>').join('') +
-      '</div>' + (component.edges.some((edge) => edge.demo)
-        ? '<p class="msi-chain-note">部分连线为演示构造；真实下发关系请以 trace flow 为准。</p>' : '');
+      '</div>';
     chain.scrollLeft = 0;
     chain.scrollTop = 0;
     requestAnimationFrame(() => {
@@ -2124,8 +2123,7 @@
     renderChainLayout(chain, component.ordered, nodeHtml,
       !component.edges.length
         ? '<p class="msi-chain-note">该事件没有已知的下发 flow，不展示推测连线。</p>'
-        : component.edges.some((edge) => edge.demo)
-          ? '<p class="msi-chain-note">部分连线为演示构造；真实下发关系请以 trace flow 为准。</p>' : '');
+        : '');
   }
 
   // 详情和泳道必须使用完全相同的端点集合。若关系链中的某条泳道被用户折叠，
@@ -2149,6 +2147,23 @@
   function initSelectionPanel() {
     const panel = document.getElementById('msiSelectionPanel');
     if (!panel) return;
+    document.getElementById('msiSystemView')?.addEventListener('click', (event) => {
+      const row = event.target.closest('.msi-system-detail-table tbody tr');
+      const taskId = row?.querySelector('[data-system-task]')?.dataset.systemTask;
+      if (!REAL_TRACE_TASK_BY_ID[taskId]) return;
+      const hasTraceCanvas = compareMode
+        ? compareTasks.some((task) => isRealTraceSelection(task)) : isRealTraceSelection();
+      if (!hasTraceCanvas) {
+        const profileTask = PROF_TASKS.find((task) => task.name === 'profile_dir');
+        if (!profileTask || deletedTasks.has(PROF_TASKS.indexOf(profileTask))) return;
+        if (compareMode) setCompareMode(false);
+        selectTask(profileTask);
+      }
+      activateAnalysisTab('timeline');
+      activateFootTab('system');
+      if (zoomIdx < 5) { zoomIdx = 5; applyZoom(); }
+      locateTraceTask(taskId);
+    });
     const chain = document.getElementById('msiCallChain');
     if (chain && typeof ResizeObserver === 'function') {
       let resizeFrame = 0;
@@ -2167,24 +2182,6 @@
       }).observe(chain);
     }
     panel.addEventListener('click', (event) => {
-      const systemName = event.target.closest('[data-system-task]');
-      if (systemName) {
-        const taskId = systemName.dataset.systemTask;
-        if (!REAL_TRACE_TASK_BY_ID[taskId]) return;
-        const hasTraceCanvas = compareMode
-          ? compareTasks.some((task) => isRealTraceSelection(task)) : isRealTraceSelection();
-        if (!hasTraceCanvas) {
-          const profileTask = PROF_TASKS.find((task) => task.name === 'profile_dir');
-          if (!profileTask || deletedTasks.has(PROF_TASKS.indexOf(profileTask))) return;
-          if (compareMode) setCompareMode(false);
-          selectTask(profileTask);
-        }
-        activateAnalysisTab('timeline');
-        activateFootTab('system');
-        if (zoomIdx < 5) { zoomIdx = 5; applyZoom(); }
-        locateTraceTask(taskId);
-        return;
-      }
       const sort = event.target.closest('[data-list-sort]');
       if (sort) {
         const key = sort.dataset.listSort;

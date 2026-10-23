@@ -17,6 +17,8 @@
 .msi-timeline-swims.is-compare #msiSwim { border-left: 4px solid color-mix(in srgb, var(--msi-accent) 35%, var(--surface-1)); }
 .msi-timeline-swims.is-compare #msiSwimCompare { border-left: 4px solid color-mix(in srgb, var(--warning) 35%, var(--surface-1)); }
 .msi-timeline-panel { position: relative; }
+/* 窄工作区里浮动鼠标工具栏可能伸到详情栏上方；详情栏必须接收自己的点击。 */
+.msi-timeline-panel .msi-content-foot:not(.is-collapsed) { position: relative; z-index: 15; }
 .msi-mouse-tools {
   position: absolute; z-index: 14; top: 110px; right: 20px;
   display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -399,7 +401,13 @@
 .msi-system-detail-table th:first-child { width: 10%; }
 .msi-system-detail-table th:nth-child(2) { width: 36%; }
 .msi-system-detail-table th:nth-child(3) { width: 29%; }
-.msi-system-detail-table tbody tr.is-active { background: color-mix(in srgb, var(--msi-accent) 6%, var(--surface-1)); }
+.msi-system-detail-table tbody tr { cursor: pointer; }
+.msi-system-detail-table tbody tr:hover { background: var(--state-hover); }
+.msi-system-detail-table tbody tr.is-active { background: color-mix(in srgb, var(--msi-accent) 14%, var(--surface-1)); }
+.msi-system-detail-table tbody tr.is-active td:first-child { box-shadow: inset 3px 0 var(--msi-accent); }
+.msi-swim-body .msi-bar.is-picked[data-task-id^="system-"] {
+  box-shadow: 0 0 0 3px var(--msi-accent), 0 0 0 7px color-mix(in srgb, var(--msi-accent) 24%, transparent);
+}
 .msi-system-detail-name {
   display: block; width: 100%; padding: 0; border: 0; background: transparent;
   color: var(--msi-accent); font: inherit; text-align: left;
