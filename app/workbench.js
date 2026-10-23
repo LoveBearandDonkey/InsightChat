@@ -1412,6 +1412,13 @@
     }
     return TRACE_TASK_COLOR_BY_ID.get(task.id);
   }
+  function traceTaskHoverTitle(task) {
+    const meta = task.sample ? ' · level2 X 采样事件' : task.kind === 'device'
+      ? (task.taskId == null ? '' : ' · Task ' + task.taskId) +
+        (task.connectionId == null ? '' : ' · connection_id ' + task.connectionId) + ' · ' + task.taskType
+      : (task.connectionId ? ' · connection_id ' + task.connectionId : '');
+    return task.name + ' · ' + task.start.toFixed(5) + 'ms · ' + task.dur.toFixed(5) + 'ms' + meta;
+  }
   function realTraceTrack(lane) {
     return REAL_TRACE_TASKS.filter((task) => task.laneId === lane.id)
       .sort((a, b) => a.start - b.start || a.id.localeCompare(b.id)).map((task) => {
@@ -1419,15 +1426,10 @@
       const left = task.start / TRACE_WINDOW_MS * 100;
       const trueWidth = task.dur / TRACE_WINDOW_MS * 100;
       const width = Math.max(.62, trueWidth); // 微秒级 launch 也要保留可点击宽度
-      const meta = task.sample ? ' · level2 X 采样事件' : task.kind === 'device'
-        ? (task.taskId == null ? '' : ' · Task ' + task.taskId) +
-          (task.connectionId == null ? '' : ' · connection_id ' + task.connectionId) + ' · ' + task.taskType
-        : (task.connectionId ? ' · connection_id ' + task.connectionId : '');
       return '<span class="msi-bar" style="left:' + left.toFixed(3) + '%;width:' + width.toFixed(3) +
         '%;background:' + c.bg + ';color:' + c.fg + '" data-task-id="' + task.id +
         '" data-op="' + esc(task.name) + '" data-dur="' + task.dur.toFixed(5) +
-        '" data-label="' + esc(task.name) + '" title="' + esc(task.name + ' · ' +
-        task.start.toFixed(5) + 'ms · ' + task.dur.toFixed(5) + 'ms' + meta) + '">' +
+        '" data-label="' + esc(task.name) + '" title="' + esc(traceTaskHoverTitle(task)) + '">' +
         esc(task.name) + '</span>';
     }).join('');
   }
@@ -1722,7 +1724,10 @@
     const summarize = (name, items, isTotal = false) => {
       const durations = items.map((item) => item.dur);
       const total = durations.reduce((sum, dur) => sum + dur, 0);
-      return { name, isTotal, start: items[0].start, total, self: total, average: total / items.length,
+      const source = items[0];
+      const task = REAL_TRACE_TASK_BY_ID[source.id];
+      const tip = source.bar?.title || (task ? traceTaskHoverTitle(task) : '');
+      return { name, isTotal, tip, start: source.start, total, self: total, average: total / items.length,
         max: Math.max(...durations), min: Math.min(...durations) };
     };
     const rows = entries.map((entry) => summarize(entry.name, [entry]));
@@ -1737,7 +1742,7 @@
     ];
     const cell = (row, column) => column === 'name'
       ? row.isTotal ? 'Totals' : '<button class="msi-selected-name" type="button" data-list-name="' +
-        esc(row.name) + '" title="查看同名任务索引">' + esc(row.name) + '</button>'
+        esc(row.name) + '" data-list-tip="' + esc(row.tip) + '" title="查看同名任务索引">' + esc(row.name) + '</button>'
       : row[column].toFixed(6);
     host.innerHTML = '<div class="msi-selected-list-scroll"><table class="msi-selected-table"><thead><tr>' +
       columns.map(([column, label]) => '<th scope="col"><button type="button" data-list-sort="' +
@@ -2123,6 +2128,8 @@
       analyze.title = (selectedTraceTaskId || selectedPreviewBar?.bar.isConnected)
         ? '分析调用链' : '请先选择泳道对象';
     }
+    const listInsert = document.getElementById('msiListInsert');
+    if (listInsert) listInsert.hidden = tabName !== 'list';
     if (placeholder) {
       placeholder.textContent = tabName === 'chain' ? '请选择泳道对象' : '敬请期待';
       placeholder.hidden = collapsed || showChain || tabName === 'list' || (tabName === 'system' && !!system);
@@ -2340,6 +2347,25 @@
       if (event.target.closest('#msiChainAnalyze')) {
         const text = callChainChatText();
         if (text) sendToChat(text);
+        return;
+      }
+      if (event.target.closest('#msiListInsert')) {
+        const items = [...panel.querySelectorAll('#msiSelectedList [data-list-name]')]
+          .map((item) => ({ name: item.dataset.listName, title: item.dataset.listTip }));
+        if (items.length) {
+          const ref = window.WZH_CHIP_HASH || '# ';
+          const gap = window.WZH_CHIP_GAP || '   ';
+          const chipNames = window.WZH_CHAT_CHIP_NAMES ||= new Set();
+          items.forEach((item) => chipNames.add(item.name));
+          const chips = [];
+          const text = items.map((item) => {
+            const token = ref + item.name;
+            const start = chips.length ? chips[chips.length - 1].end + gap.length : 0;
+            chips.push({ start, end: start + token.length, token, title: item.title });
+            return token;
+          }).join(gap);
+          sendToChat(text, chips);
+        }
         return;
       }
       const close = event.target.closest('#msiDetailClose');
@@ -2711,7 +2737,7 @@
   }
 
   // 把当前色块的信息塞进右侧对话框的输入框。面板收着就先把它打开。
-  function sendToChat(text) {
+  function sendToChat(text, chips = []) {
     const toggle = document.getElementById('trainChatToggle');
     if (toggle && toggle.getAttribute('aria-expanded') !== 'true') toggle.click();
     const input = document.getElementById('trainChatInput');
@@ -2719,7 +2745,11 @@
     const cur = input.value;
     // 接在已有内容后面时补一份 CHIP_GAP,否则 #标签会和前面的字黏在一起;行首不用留白
     const glue = !cur || /\n$/.test(cur) ? '' : (window.WZH_CHIP_GAP || '   ');
-    input.value = cur.replace(/[ \t]+$/, '') + glue + text;
+    const prefix = cur.replace(/[ \t]+$/, '') + glue;
+    input.value = prefix + text;
+    if (chips.length) window.WZH_ADD_CHAT_OPERATOR_CHIPS?.(chips.map((chip) => ({
+      ...chip, start: prefix.length + chip.start, end: prefix.length + chip.end,
+    })));
     // 派发 input 事件:输入框的高亮层、自动高度、发送键可用态都挂在这个事件上
     input.dispatchEvent(new Event('input', { bubbles: true }));
     try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); }
@@ -2737,10 +2767,18 @@
       return;
     }
     const { op, dur, lane } = menuCtx;
-    const ref = (window.WZH_CHIP_HASH || '# ') + (menuCtx.taskName || selected.task.name);
+    const hash = window.WZH_CHIP_HASH || '# ';
+    const ref = hash + (menuCtx.taskName || selected.task.name);
     const gap = window.WZH_CHIP_GAP || '   ';   // 和输入框里 # 标签同一份留白
     if (act === 'chat') {
-      sendToChat(ref + gap + lane + ' 上的 ' + op + '(' + dur + 'ms) ');
+      const operatorRef = hash + op;
+      const title = menuCtx.title || op + ' · ' + dur + 'ms';
+      (window.WZH_CHAT_CHIP_NAMES ||= new Set()).add(op);
+      sendToChat(ref + gap + operatorRef + gap + lane + ' 上的算子（' + dur + 'ms）', [
+        { start: 0, end: ref.length, token: ref, title },
+        { start: ref.length + gap.length, end: ref.length + gap.length + operatorRef.length,
+          token: operatorRef, title },
+      ]);
     }
   }
 
@@ -2791,6 +2829,7 @@
         lane: row ? (row.querySelector('.msi-lane-text')?.dataset.fullName ||
           row.querySelector('.msi-lane-text')?.textContent || '') : '',
         taskName: task?.name,
+        title: bar.title,
       }, bar.dataset.taskId ? (body.querySelector('.msi-bar[data-task-id="' + bar.dataset.taskId + '"]') || bar) : bar);
     });
     });
@@ -2809,6 +2848,7 @@
         dur: task.dur.toFixed(5),
         lane: path.length ? path[path.length - 1].label : task.laneId,
         taskName: 'profile_dir',
+        title: traceTaskHoverTitle(task),
       }, bar);
     });
 

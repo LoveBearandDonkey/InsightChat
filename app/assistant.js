@@ -1370,6 +1370,33 @@ ${issuesText || '（暂无）'}
 
   const INPUT_PLACEHOLDER = '输入 # 添加上下文，输入 / 使用指令';
   const INPUT_MAX_H = 126; // 6 行 × (14px × 1.5)
+  let operatorChips = [];
+  let previousInputValue = '';
+
+  function syncOperatorChipPositions(value) {
+    const old = previousInputValue;
+    if (old === value) return;
+    let start = 0;
+    while (start < old.length && start < value.length && old[start] === value[start]) start++;
+    let oldEnd = old.length;
+    let newEnd = value.length;
+    while (oldEnd > start && newEnd > start && old[oldEnd - 1] === value[newEnd - 1]) {
+      oldEnd--;
+      newEnd--;
+    }
+    const shift = newEnd - oldEnd;
+    operatorChips = operatorChips.flatMap((chip) => {
+      if (chip.end <= start) return [chip];
+      if (chip.start >= oldEnd) return [{ ...chip, start: chip.start + shift, end: chip.end + shift }];
+      return [];
+    });
+    previousInputValue = value;
+  }
+
+  window.WZH_ADD_CHAT_OPERATOR_CHIPS = (chips) => {
+    syncOperatorChipPositions($('trainChatInput')?.value || '');
+    operatorChips.push(...chips);
+  };
 
   // 输入框的两件事:高度跟着内容长,以及把 #上下文、/指令画成蓝色标签。
   // 标签是画在高亮层上的——textarea 装不下富文本,所以让它的文字透明,只留光标和选区。
@@ -1377,10 +1404,24 @@ ${issuesText || '（暂无）'}
     const input = $('trainChatInput');
     const hl = $('trainChatInputHl');
     if (!input || !hl) return;
-    const html = escHtml(input.value)
-      .replace(/# ?[^\s#]+|\/[^\s\/#]+/g, (m) => '<span class="wzh-chat-input-chip">' + m + '</span>')
-      .replace(/\n$/, '\n ');  // 末尾换行补一个空格,最后那行空行才占得住高度
-    hl.innerHTML = html;
+    syncOperatorChipPositions(input.value);
+    // 列表算子名可能含空格或 #，优先按完整名称匹配，再处理普通的单词标签。
+    const names = window.WZH_CHAT_CHIP_NAMES;
+    const known = names?.size ? [...names].sort((a, b) => b.length - a.length)
+      .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') : '';
+    const chipPattern = new RegExp((known ? '# ?(?:' + known + ')(?=\\s|$)|' : '') +
+      '# ?[^\\s#]+|\\/[^\\s\\/#]+', 'g');
+    let html = '';
+    let cursor = 0;
+    for (const match of input.value.matchAll(chipPattern)) {
+      html += escHtml(input.value.slice(cursor, match.index));
+      const chip = operatorChips.find((item) => item.start === match.index && item.token === match[0]);
+      html += '<span class="wzh-chat-input-chip"' +
+        (chip ? ' data-operator-chip-start="' + chip.start + '"' : '') + '>' + escHtml(match[0]) + '</span>';
+      cursor = match.index + match[0].length;
+    }
+    html += escHtml(input.value.slice(cursor));
+    hl.innerHTML = html.replace(/\n$/, '\n '); // 末尾换行补空格，撑住最后一行高度
     hl.scrollTop = input.scrollTop;
   }
 
@@ -3030,6 +3071,21 @@ ${issuesText || '（暂无）'}
     const sendBtn = $('trainChatSendBtn');
     const cleanBtn = $('trainChatCleanBtn');
     if (!input || !sendBtn) return;
+    const inputWrap = input.closest('.wzh-chat-input-wrap');
+    let operatorTooltip = $('trainChatOperatorTooltip');
+    if (!operatorTooltip && inputWrap) {
+      operatorTooltip = document.createElement('div');
+      operatorTooltip.id = 'trainChatOperatorTooltip';
+      operatorTooltip.className = 'wzh-chat-operator-tooltip';
+      operatorTooltip.setAttribute('role', 'tooltip');
+      operatorTooltip.hidden = true;
+      inputWrap.appendChild(operatorTooltip);
+    }
+    const inputBar = input.closest('.wzh-chat-input-bar');
+    const hideOperatorTooltip = () => {
+      if (operatorTooltip) operatorTooltip.hidden = true;
+      inputBar?.classList.remove('has-operator-tooltip');
+    };
     let lastPointerPressFxAt = -Infinity;
     let sendPressFxTimer = 0;
 
@@ -3093,6 +3149,7 @@ ${issuesText || '（暂无）'}
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
     });
     input.addEventListener('input', () => {
+      hideOperatorTooltip();
       chatInputTyped = true; // 见 syncInputFlow:框里一动字,描边流光就停
       autoSpaceBeforeHash(input);
       autoSpaceBeforeCommand(input);
@@ -3103,9 +3160,32 @@ ${issuesText || '（暂无）'}
     });
     // 超过 6 行后 textarea 内部滚动,高亮层要跟着滚,否则两层立刻错位
     input.addEventListener('scroll', () => {
+      hideOperatorTooltip();
       const hl = $('trainChatInputHl');
       if (hl) hl.scrollTop = input.scrollTop;
     }, { passive: true });
+    input.addEventListener('mousemove', (event) => {
+      const hl = $('trainChatInputHl');
+      if (!hl || !operatorTooltip) return;
+      let hit = null;
+      for (const span of hl.querySelectorAll('[data-operator-chip-start]')) {
+        if ([...span.getClientRects()].some((rect) => event.clientX >= rect.left &&
+          event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom)) {
+          hit = span;
+          break;
+        }
+      }
+      const chip = hit && operatorChips.find((item) =>
+        item.start === Number(hit.dataset.operatorChipStart));
+      if (!chip?.title) { hideOperatorTooltip(); return; }
+      operatorTooltip.textContent = chip.title;
+      operatorTooltip.hidden = false;
+      inputBar?.classList.add('has-operator-tooltip');
+      const left = hit.getBoundingClientRect().left - inputWrap.getBoundingClientRect().left;
+      operatorTooltip.style.left = Math.max(0, Math.min(left,
+        inputWrap.clientWidth - operatorTooltip.offsetWidth)) + 'px';
+    });
+    input.addEventListener('mouseleave', hideOperatorTooltip);
     ctxPicker = initCtxPicker();
     commandPicker = initCommandPicker();
     autoResizeInput();

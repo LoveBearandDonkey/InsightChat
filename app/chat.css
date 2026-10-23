@@ -5316,6 +5316,17 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       background: color-mix(in srgb, var(--mi-brand-blue) var(--brand-tint-strong), transparent);
       color: var(--mi-brand-blue);
     }
+    .wzh-chat-input-bar.has-operator-tooltip { z-index: 6; }
+    .wzh-chat-operator-tooltip {
+      position: absolute; z-index: 7; bottom: calc(100% + 8px);
+      box-sizing: border-box; max-width: min(360px, 100%);
+      padding: 8px 10px; border: 1px solid var(--border-default);
+      border-radius: var(--radius-md); background: var(--surface-1);
+      box-shadow: var(--wzh-chat-shadow); color: var(--foreground);
+      font: 12px/1.5 var(--font-sans); overflow-wrap: anywhere;
+      pointer-events: none;
+    }
+    .wzh-chat-operator-tooltip[hidden] { display: none; }
     /* ── 输入 # 弹出的上下文选择框(见 initCtxPicker) ─────────────────────────
        浮在输入框正上方,左边是性能落盘数据的文件名,右边是它在采集目录里的路径;
        # 后面继续敲字就实时筛选,文件名和路径都参与匹配。 */
