@@ -799,7 +799,7 @@ ${issuesText || '（暂无）'}
       '</span>');
     if (context.codePath) contextItems.push(
       '<span class="wzh-chat-qcard-context-item wzh-chat-qcard-code">' +
-        '<img src="../../src/pic/icon/code-file.svg" alt=""><span>' + escHtml(context.codePath) + '</span>' +
+        '<img src="../../src/pic/icon/localfile.svg" alt=""><span>' + escHtml(context.codePath) + '</span>' +
       '</span>');
     ensureSessionTitle(text, o.sessionTitle); // 第一问落地时,顶上那行会话主题才出现
     flushPendingModelNote();                  // 欢迎屏上切过模型的话,标记补在这一问前面
@@ -1553,6 +1553,7 @@ ${issuesText || '（暂无）'}
   let chatQueueSeq = 0;
   let chatQueueCollapsed = false;
   let chatQueueFlushTimer = 0;
+  let queuedEditContext = null;
   let activeRoundBody = null;
 
   function renderQueueText(text) {
@@ -1586,8 +1587,11 @@ ${issuesText || '（暂无）'}
         '<button class="wzh-chat-queue-send" type="button" title="立即发送" aria-label="立即发送这条排队消息">' +
           '<img src="../../src/pic/icon/sent.svg" alt="">' +
         '</button>' +
-        '<button class="wzh-chat-queue-del" type="button" title="移除这条" aria-label="移除这条排队消息">' +
-          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>' +
+        '<button class="wzh-chat-queue-edit" type="button" title="编辑这条" aria-label="编辑这条排队消息">' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4L16.5 3.5Z"></path></svg>' +
+        '</button>' +
+        '<button class="wzh-chat-queue-del" type="button" title="删除这条" aria-label="删除这条排队消息">' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 3h4l1 4H9l1-4ZM6 7l1 14h10l1-14M10 11v6M14 11v6"></path></svg>' +
         '</button>' +
       '</li>').join('');
     scheduleFadeUpdate();
@@ -1602,6 +1606,24 @@ ${issuesText || '（暂无）'}
     const i = chatQueue.findIndex((it) => it.id === id);
     if (i >= 0) chatQueue.splice(i, 1);
     renderChatQueue();
+  }
+
+  function editQueuedMessage(id) {
+    const i = chatQueue.findIndex((it) => it.id === id);
+    const input = $('trainChatInput');
+    if (i < 0 || !input) return;
+    const [item] = chatQueue.splice(i, 1);
+    renderChatQueue();
+    pendingGuideScenario = item.scenario || '';
+    queuedEditContext = item.context || null;
+    input.value = item.text;
+    input.scrollTop = 0;
+    chatInputTyped = true;
+    ctxPicker?.close();
+    commandPicker?.close();
+    autoResizeInput();
+    syncSendState();
+    focusChatInput();
   }
 
   function clearChatQueue() {
@@ -1688,11 +1710,12 @@ ${issuesText || '（暂无）'}
     const list = $('trainChatQueueList');
     // 单条操作:事件委托挂在列表上,重渲染后依然生效
     list?.addEventListener('click', (e) => {
-      const btn = e.target.closest && e.target.closest('.wzh-chat-queue-del, .wzh-chat-queue-send');
+      const btn = e.target.closest && e.target.closest('.wzh-chat-queue-del, .wzh-chat-queue-edit, .wzh-chat-queue-send');
       if (!btn) return;
       const li = btn.closest('.wzh-chat-queue-item');
       if (li) {
         if (btn.classList.contains('wzh-chat-queue-send')) sendQueuedMessageNow(Number(li.dataset.id));
+        else if (btn.classList.contains('wzh-chat-queue-edit')) editQueuedMessage(Number(li.dataset.id));
         else removeQueuedMessage(Number(li.dataset.id));
       }
       focusChatInput();
@@ -1826,6 +1849,7 @@ ${issuesText || '（暂无）'}
     applyAgentIdentity(); // 欢迎屏刚重建出来,头像还是模板里的默认值
     hideSessionTitle(); // 回到欢迎屏就没有「这次会话」了,主题行一并收掉
     pendingGuideScenario = '';
+    queuedEditContext = null;
     pendingModelNote = ''; // 上一轮对话没用上的切换标记,别带到新对话里
     streamingNote = null;
     streamingNoteFrom = '';
@@ -3034,6 +3058,7 @@ ${issuesText || '（暂无）'}
       ctxPicker?.close();
       commandPicker?.close();
       pendingGuideScenario = '';
+      queuedEditContext = null;
       input.value = '';
       input.style.height = '';
       input.scrollTop = 0;
@@ -3045,8 +3070,9 @@ ${issuesText || '（暂无）'}
       const text = input.value.trim();
       if (!text) return;
       const scenario = pendingGuideScenario;
-      const context = captureComposerContext();
+      const context = queuedEditContext || captureComposerContext();
       pendingGuideScenario = '';
+      queuedEditContext = null;
       ctxPicker?.close();
       commandPicker?.close();
       input.value = '';
@@ -3608,7 +3634,7 @@ ${issuesText || '（暂无）'}
       if (codeAddBtn) codeAddBtn.hidden = !!boundPath;
       if (codeChip) {
         codeChip.hidden = !boundPath;
-        if (boundPath) codeChip.title = '已绑定代码目录：' + boundPath;
+        if (boundPath) codeChip.title = '已绑定项目目录：' + boundPath;
       }
       if (codePath) codePath.dataset.fullPath = boundPath || defaultCodePath;
       codeContext?.classList.toggle('is-bound', !!boundPath);
@@ -3726,6 +3752,7 @@ ${issuesText || '（暂无）'}
       // 带场景标记的卡片填入自己的专业问法；其余诊断卡片继续填入 Profiling 演示问题。
       // 输入框里没有 chip 这种富文本,把 #{xxx} 还原成用户自己会敲的 #xxx。
       pendingGuideScenario = card.dataset.scenario || '';
+      queuedEditContext = null;
       const prompt = pendingGuideScenario ? card.dataset.prompt : PROFILING_QUESTION;
       input.value = prompt.replace(/#\{([^}]+)\}/g, CHIP_GAP + HASH_SP + '$1' + CHIP_GAP).trim();
       autoResizeInput();

@@ -157,28 +157,22 @@ function EventSelector(outer, events, stack_info, memory_view) {
     );
 
   const rows = events.map(formatEventColumns);
-  const allocByBlock = new Map();
-  const freeByBlock = new Map();
-  const blockKey = event => `${String(event.addr)}:${event.version}`;
+  const previousByAddress = new Array(events.length);
+  const nextByAddress = new Array(events.length);
+  const lastByAddress = new Map();
   events.forEach((event, index) => {
-    if (event.addr == null || event.version == null) return;
-    if (event.action === 'alloc') allocByBlock.set(blockKey(event), index);
-    if (event.action === 'free' || event.action === 'free_completed') {
-      freeByBlock.set(blockKey(event), index);
-    }
+    if (event.addr == null) return;
+    const address = String(event.addr);
+    previousByAddress[index] = lastByAddress.get(address) ?? null;
+    lastByAddress.set(address, index);
   });
-  function pairedEventIndex(event, index) {
-    if (event.addr == null || event.version == null) return null;
-    const key = blockKey(event);
-    if (event.action === 'alloc') {
-      const target = freeByBlock.get(key);
-      return target != null && target > index ? target : null;
-    }
-    if (event.action === 'free' || event.action === 'free_completed') {
-      const target = allocByBlock.get(key);
-      return target != null && target < index ? target : null;
-    }
-    return null;
+  lastByAddress.clear();
+  for (let index = events.length - 1; index >= 0; index--) {
+    const event = events[index];
+    if (event.addr == null) continue;
+    const address = String(event.addr);
+    nextByAddress[index] = lastByAddress.get(address) ?? null;
+    lastByAddress.set(address, index);
   }
   const maxChars = (field) => Math.max(1, ...rows.map(row => row[field].length));
   events_div
@@ -224,24 +218,22 @@ function EventSelector(outer, events, stack_info, memory_view) {
         size.append('span').text(parts.size);
         if (parts.bytes) size.append('span').text(parts.bytes);
         if (parts.deviceFree) size.append('span').text(parts.deviceFree);
-        if (event.action === 'alloc' || event.action === 'free' || event.action === 'free_completed') {
-          const target = pairedEventIndex(event, event.idx);
-          const isAllocation = event.action === 'alloc';
-          const label = isAllocation ? '跳转到对应的 free 记录' : '跳转到对应的 alloc 记录';
-          const direction = target == null ? null : target > event.idx ? 'down' : 'up';
-          const jump = row.append('button')
+        const jumps = row.append('span').attr('class', 'msi-memory-event-jumps');
+        for (const [target, direction, position] of [
+          [previousByAddress[event.idx], 'up', '上一条'],
+          [nextByAddress[event.idx], 'down', '下一条'],
+        ]) {
+          const label = `跳转到同地址${position}记录`;
+          const jump = jumps.append('button')
             .attr('type', 'button')
             .attr('class', 'msi-memory-event-jump')
-            .attr('data-target-event', target == null ? null : target)
+            .attr('data-target-event', target ?? null)
             .attr('data-direction', direction)
-            .attr('data-tooltip', target == null ? null : `${label} · 第 ${target + 1} 条 · 向${direction === 'down' ? '下' : '上'}滚动`)
-            .attr('aria-label', target == null ? `${label}（未记录）` : `${label}，向${direction === 'down' ? '下' : '上'}滚动`)
-            .attr('title', target == null ? '快照中没有对应记录' : '')
+            .attr('data-tooltip', target == null ? null : `${label} · 第 ${target + 1} 条`)
+            .attr('aria-label', target == null ? `${label}（无记录）` : `${label}，第 ${target + 1} 条`)
+            .attr('title', target == null ? `没有同地址${position}记录` : '')
             .property('disabled', target == null);
-          jump.append('span').attr('class', 'msi-memory-event-jump-symbol').attr('aria-hidden', 'true')
-            .text(isAllocation ? '○' : '●');
-          if (direction) jump.append('span').attr('class', 'msi-memory-event-jump-arrow').attr('aria-hidden', 'true')
-            .text(direction === 'down' ? '↓' : '↑');
+          jump.append('span').attr('class', 'msi-memory-event-jump-icon').attr('aria-hidden', 'true');
         }
       });
     topSpacer.style('height', `${start * rowHeight}px`);

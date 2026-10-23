@@ -137,12 +137,12 @@ div[style*="grid-column: 1; grid-row: 3;"] { display: none !important; }
 }
 .msi-memory-event-row {
   display: grid;
-  grid-template-columns: minmax(var(--msi-memory-action-width), 1fr) minmax(var(--msi-memory-address-width), 1fr) minmax(var(--msi-memory-size-width), 1fr) 16px;
+  grid-template-columns: minmax(var(--msi-memory-action-width), 1fr) minmax(var(--msi-memory-address-width), 1fr) minmax(var(--msi-memory-size-width), 1fr) 20px;
   column-gap: 8px;
   box-sizing: border-box;
   height: 35px;
   width: 100%;
-  min-width: calc(var(--msi-memory-action-width) + var(--msi-memory-address-width) + var(--msi-memory-size-width) + 52px);
+  min-width: calc(var(--msi-memory-action-width) + var(--msi-memory-address-width) + var(--msi-memory-size-width) + 56px);
   padding: 2px 6px;
   white-space: nowrap;
   cursor: pointer;
@@ -150,28 +150,38 @@ div[style*="grid-column: 1; grid-row: 3;"] { display: none !important; }
 .msi-memory-event-row > span:first-child { align-self: center; }
 .msi-memory-event-address > span,
 .msi-memory-event-size > span { display: block; }
+.msi-memory-event-jumps {
+  display: grid;
+  grid-template-rows: 10px 10px;
+  align-self: center;
+  width: 20px;
+  height: 20px;
+}
 .msi-memory-event-jump {
   display: grid;
   place-items: center;
-  align-self: center;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 10px;
   padding: 0;
   border: 0;
-  border-radius: 2px;
   background: transparent;
   color: var(--msi-viz-foreground, #24292f);
-  font: 12px/1 sans-serif;
   cursor: pointer;
 }
-.msi-memory-event-jump-symbol,
-.msi-memory-event-jump-arrow { grid-area: 1 / 1; transition: opacity .16s ease, transform .16s ease; }
-.msi-memory-event-jump-arrow { opacity: 0; transform: translateY(3px) scale(.65); font-size: 16px; }
-.msi-memory-event-jump[data-direction="down"] .msi-memory-event-jump-arrow { transform: translateY(-3px) scale(.65); }
-.msi-memory-event-jump:hover:not(:disabled) .msi-memory-event-jump-symbol,
-.msi-memory-event-jump:focus-visible .msi-memory-event-jump-symbol { opacity: 0; transform: scale(.55); }
-.msi-memory-event-jump:hover:not(:disabled) .msi-memory-event-jump-arrow,
-.msi-memory-event-jump:focus-visible .msi-memory-event-jump-arrow { opacity: 1; transform: translateY(0) scale(1); }
+.msi-memory-event-jump-icon {
+  width: 8px;
+  height: 5px;
+  background: currentColor;
+}
+.msi-memory-event-jump[data-direction="up"] .msi-memory-event-jump-icon {
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  transform: translateY(1.25px);
+}
+.msi-memory-event-jump[data-direction="down"] .msi-memory-event-jump-icon {
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transform: translateY(-1.25px);
+}
+.msi-memory-event-jump:hover:not(:disabled) { color: var(--msi-viz-accent, #0077ff); }
 .msi-memory-event-jump-tooltip {
   position: fixed;
   z-index: 20;

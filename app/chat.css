@@ -5553,10 +5553,14 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     .wzh-chat-local-code-add:focus-visible {
       color: var(--foreground);
     }
-    .wzh-chat-local-code-add svg {
-      width: 12px; height: 12px; flex-shrink: 0;
-      fill: none; stroke: currentColor; stroke-width: 1.5;
-      stroke-linecap: round; stroke-linejoin: round;
+    html[data-entry-view="overview"] .wzh-chat-local-code-add-icon,
+    html[data-entry-view="overview"] .wzh-chat-code-icon {
+      width: 14px; height: 14px; flex-shrink: 0;
+      display: block;
+    }
+    html[data-entry-view="overview"] .wzh-chat-local-code-add-icon {
+      background: currentColor;
+      mask: url('../src/pic/icon/addfile.svg') center / contain no-repeat;
     }
     .wzh-chat-code-chip {
       position: relative; min-width: 0; width: 100%;
@@ -5628,7 +5632,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       box-sizing: border-box; margin: 0; padding: 10px 12px;
       display: flex; flex-direction: column; gap: 8px;
       border: 1px solid var(--border-subtle); border-radius: 14px;
-      background: var(--surface-1);
+      background: #fafafa;
       transform-origin: 50% 100%;
       transition: margin var(--duration-slow) var(--easing-default),
                   padding var(--duration-slow) var(--easing-default),
@@ -5636,17 +5640,13 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
                   background var(--duration-slow) var(--easing-default),
                   border-color var(--duration-slow) var(--easing-default);
     }
+    :root[data-theme='dark'] .wzh-chat-queue-card { background: var(--surface-1); }
     /* 收起终态:比输入框窄一圈的灰色卡片,下半截垫在输入框背后。
        底部内边距特意加厚——被盖掉的那一截要够厚,露出来的才是"一截卡片"而不是"一条边"。
        文字颜色不变,收起前后读起来是同一块内容。 */
     .wzh-chat-queue.is-collapsed .wzh-chat-queue-card {
       margin: 0 16px; padding: 13px 16px 24px; gap: 0;
-      /* 浅色主题使用黑色 3%→8% 的纵向渐变；描边沿用中性卡片 token。 */
-      background: linear-gradient(
-        to bottom,
-        rgba(0, 0, 0, .03),
-        rgba(0, 0, 0, .08)
-      );
+      background: #fafafa;
       border-color: var(--card-neutral-border);
     }
     /* 深色主题用等透明度的白色渐变，保持相同层次而不压黑背景。 */
@@ -5733,15 +5733,9 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       position: absolute; width: 15px; height: 15px; opacity: 0;
       fill: currentColor;
     }
-    .wzh-chat-queue.has-multiple .wzh-chat-queue-item:hover .wzh-chat-queue-dot,
-    .wzh-chat-queue.has-multiple .wzh-chat-queue-dot:focus-visible,
-    .wzh-chat-queue.is-sorting .wzh-chat-queue-dot { cursor: grab; }
-    .wzh-chat-queue.has-multiple .wzh-chat-queue-item:hover .wzh-chat-queue-dot::before,
-    .wzh-chat-queue.has-multiple .wzh-chat-queue-dot:focus-visible::before,
-    .wzh-chat-queue.is-sorting .wzh-chat-queue-dot::before { opacity: 0; }
-    .wzh-chat-queue.has-multiple .wzh-chat-queue-item:hover .wzh-chat-queue-dot svg,
-    .wzh-chat-queue.has-multiple .wzh-chat-queue-dot:focus-visible svg,
-    .wzh-chat-queue.is-sorting .wzh-chat-queue-dot svg { opacity: 1; }
+    .wzh-chat-queue.has-multiple .wzh-chat-queue-dot { cursor: grab; }
+    .wzh-chat-queue.has-multiple .wzh-chat-queue-dot::before { opacity: 0; }
+    .wzh-chat-queue.has-multiple .wzh-chat-queue-dot svg { opacity: .5; }
     .wzh-chat-queue.is-sorting, .wzh-chat-queue.has-multiple .wzh-chat-queue-dot { touch-action: none; }
     .wzh-chat-queue-text {
       flex: 1; min-width: 0;
@@ -5754,16 +5748,16 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       display: inline; margin: 0 2px; padding: 1px 4px;
       white-space: nowrap; font-weight: 500;
     }
-    .wzh-chat-queue-del, .wzh-chat-queue-send {
+    .wzh-chat-queue-del, .wzh-chat-queue-edit, .wzh-chat-queue-send {
       width: 20px; height: 20px; flex-shrink: 0; padding: 0; border-radius: 4px;
       display: inline-flex; align-items: center; justify-content: center;
       border: none; background: none; cursor: pointer; color: var(--foreground-muted);
       transition: background var(--duration-fast) var(--easing-default);
     }
-    .wzh-chat-queue-del:hover, .wzh-chat-queue-send:hover { background: var(--state-hover); color: var(--foreground); }
-    .wzh-chat-queue-del svg, .wzh-chat-queue-send svg {
-      width: 12px; height: 12px; fill: none; stroke: currentColor;
-      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    .wzh-chat-queue-del:hover, .wzh-chat-queue-edit:hover, .wzh-chat-queue-send:hover { background: var(--state-hover); color: var(--foreground); }
+    .wzh-chat-queue-del svg, .wzh-chat-queue-edit svg, .wzh-chat-queue-send svg {
+      width: 14px; height: 14px; fill: none; stroke: currentColor;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
     }
     .wzh-chat-queue-send img { width: 14px; height: 14px; display: block; opacity: .68; }
     .wzh-chat-queue-send:hover img { opacity: 1; }
@@ -6433,10 +6427,20 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   cursor: pointer;
   white-space: nowrap;
   transition: background var(--duration-fast, 120ms) var(--easing-default, ease),
-              border-color var(--duration-fast, 120ms) var(--easing-default, ease);
+              border-color var(--duration-fast, 120ms) var(--easing-default, ease),
+              color var(--duration-fast, 120ms) var(--easing-default, ease);
 }
 .msi-side-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.msi-side-btn:hover { background: color-mix(in srgb, var(--foreground) 5%, var(--surface-1)); }
+html[data-entry-view="overview"] .msi-compare-icon {
+  width: 15px; height: 15px; flex-shrink: 0;
+  background: currentColor;
+  mask: url('../src/pic/icon/compare.svg') center / contain no-repeat;
+}
+.msi-side-btn:not(.msi-side-btn--primary):is(:hover, :focus-visible) {
+  background: var(--surface-1);
+  border-color: var(--mi-brand-blue);
+  color: var(--mi-brand-blue);
+}
 /* 「导入」是主操作:实心蓝胶囊,和还原稿一致 */
 .msi-side-btn--primary {
   border-color: transparent;
@@ -6484,7 +6488,7 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 }
 .msi-manage-delete:hover:not(:disabled) { background: var(--state-hover); }
 .msi-manage-delete:disabled { color: var(--foreground-muted); opacity: .45; cursor: default; }
-.msi-compare-back[hidden], .msi-compare-heading[hidden], .msi-manage-select-all[hidden], .msi-manage-delete[hidden], .msi-side-normal-action[hidden] { display: none; }
+.msi-compare-back[hidden], .msi-compare-heading[hidden], .msi-manage-select-all[hidden], .msi-manage-delete[hidden], .msi-side-normal-action[hidden], .msi-tree-expand-all[hidden] { display: none; }
 /* 设置 / 收起靠右贴边,和「导入」「对比」拉开 */
 .msi-side-icon:nth-of-type(3) { margin-left: auto; }
 .msi-side-icon {
@@ -6497,6 +6501,8 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 }
 .msi-side-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .msi-side-icon:hover { background: var(--state-hover); }
+.msi-tree-expand-all { margin-left: auto; }
+.msi-tree-expand-all svg[hidden] { display: none; }
 #msiSidebarFold svg { width: 18px; height: 18px; }
 #msiSidebarFold .msi-sidebar-direction,
 .msi-sidebar-menu-restore .msi-sidebar-direction {
@@ -6591,7 +6597,7 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   color: var(--warning);
 }
 .msi-tree-compare-role[aria-disabled="true"] { cursor: default; }
-/* 二级 rank：普通模式轻缩进；对比模式为一级任务的勾选框补齐占位。 */
+/* 二级 rank：对比模式仍保留层级缩进，并显示自己的勾选框。 */
 .msi-tree-row--d1 { padding-left: 5px; }
 .msi-tree.is-compare-mode .msi-tree-row--d1 { padding-left: 26px; }
 
@@ -6635,6 +6641,8 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   overflow: visible; white-space: nowrap;
 }
 .msi-content-title-label { flex: 0 0 auto; }
+.msi-title-compare-back { display: none; flex: 0 0 28px; }
+.pto-ide-frame.is-sidebar-collapsed .msi-title-compare-back { display: inline-flex; }
 .msi-title-picker-toggle {
   min-width: 0; max-width: min(420px, 55vw); height: 28px;
   display: inline-flex; align-items: center; gap: 6px;
@@ -6990,7 +6998,6 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 .msi-content-foot.is-list-active .msi-foot-right {
   padding: 0; overflow: hidden;
 }
-.msi-content-foot.is-list-active .msi-chain-analyze { display: none; }
 .msi-selected-list { position: relative; flex: 1 1 auto; min-width: 0; min-height: 0; }
 .msi-selected-list[hidden] { display: none; }
 .msi-selected-list-empty {
@@ -7072,13 +7079,14 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   pointer-events: none;
   transition: width 180ms ease, opacity 180ms ease, background 180ms ease;
 }
+.msi-chain-analyze[hidden] { display: none; }
 .msi-foot-right:hover .msi-chain-analyze,
 .msi-chain-analyze:focus-visible {
   opacity: 1;
   pointer-events: auto;
 }
 .msi-chain-analyze:hover,
-.msi-chain-analyze:focus-visible { width: 112px; background: #fff; }
+.msi-chain-analyze:focus-visible { width: 100px; background: #fff; }
 .msi-chain-analyze .msi-ctxmenu-icon { width: 16px; height: 16px; flex: 0 0 16px; }
 .msi-chain-analyze span { opacity: 0; transition: opacity 120ms ease; }
 .msi-chain-analyze:hover span,
@@ -8092,6 +8100,17 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 }
 .msi-ov-runtime-insight-main {
   position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.msi-ov-runtime-insight-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  background: var(--msi-accent);
+  mask: url('../src/pic/icon/aistar.svg') center / contain no-repeat;
 }
 .msi-ov-runtime-insight-copy { min-width: 0; }
 .msi-ov-runtime-insight strong { display: block; margin-bottom: 2px; color: var(--foreground); font-size: 12px; }

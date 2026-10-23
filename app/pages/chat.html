@@ -73,7 +73,7 @@
             <span>导入</span>
           </button>
           <button class="msi-side-btn msi-side-normal-action" id="msiCompareBtn" type="button" title="对比两次采集">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="7" height="16" rx="1.5"></rect><path d="M14 4h7v16h-7z"></path><path d="M14 9h7M14 15h7"></path></svg>
+            <span class="msi-compare-icon" aria-hidden="true"></span>
             <span>对比</span>
           </button>
           <button class="msi-side-icon msi-side-normal-action" id="msiManageBtn" type="button" title="管理工程树" aria-label="管理工程树">
@@ -86,6 +86,10 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path></svg>
           </button>
           <span class="msi-compare-heading" id="msiCompareHeading" hidden>对比</span>
+          <button class="msi-side-icon msi-tree-expand-all" id="msiTreeExpandAll" type="button" title="一键展开" aria-label="一键展开" hidden>
+            <svg class="msi-tree-expand-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 9 4-4 4 4M8 15l4 4 4-4M4 12h16"></path></svg>
+            <svg class="msi-tree-collapse-icon" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="m8 5 4 4 4-4M8 19l4-4 4 4M4 12h16"></path></svg>
+          </button>
           <label class="msi-manage-select-all" id="msiManageSelectAllLabel" hidden><input id="msiManageSelectAll" type="checkbox"><span>全选</span></label>
           <button class="msi-manage-delete" id="msiManageDelete" type="button" disabled hidden>批量删除</button>
         </div>
@@ -123,6 +127,7 @@
             <main class="msi-analysis-stage msi-overview" id="msiOverviewPanel" role="tabpanel" aria-label="性能概览">
               <div class="msi-ov-runtime-insight">
                 <div class="msi-ov-runtime-insight-main">
+                  <span class="msi-ov-runtime-insight-icon" aria-hidden="true"></span>
                   <div class="msi-ov-runtime-insight-copy"><strong>性能诊断</strong><span>Rank 6 / 7 的计算耗时比其余 Rank 高约 51%，各 Rank 最大计算差异为 <b id="msiOvRuntimeGap">3.11 s</b>；建议优先均衡末级负载，减少 Rank 0–5 每步约 3.77 s 的通信等待，并开启计算通信重叠。</span></div>
                 </div>
 
@@ -639,11 +644,11 @@
                   </button>
                 </div>
                 <div class="wzh-chat-context-item wzh-chat-code-context" id="trainChatCodeContext">
-                  <button class="wzh-chat-local-code-add" id="trainChatCodeAddBtn" type="button" title="绑定当前工程的代码目录"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg>代码目录</button>
-                  <div class="wzh-chat-code-chip" id="trainChatCodeChip" title="已绑定代码目录：D:\Projects\InsightChat\packages\training\profiling\src" hidden>
-                    <img class="wzh-chat-code-icon" src="../../src/pic/icon/code-file.svg" alt="">
+                  <button class="wzh-chat-local-code-add" id="trainChatCodeAddBtn" type="button" title="绑定当前工程的项目目录"><span class="wzh-chat-local-code-add-icon" aria-hidden="true"></span>项目目录</button>
+                  <div class="wzh-chat-code-chip" id="trainChatCodeChip" title="已绑定项目目录：D:\Projects\InsightChat\packages\training\profiling\src" hidden>
+                    <img class="wzh-chat-code-icon" src="../../src/pic/icon/localfile.svg" alt="">
                     <span class="wzh-chat-code-path" id="trainChatCodePath" data-full-path="D:\Projects\InsightChat\packages\training\profiling\src"></span>
-                    <button class="wzh-chat-anchor-close" id="trainChatCodeCloseBtn" type="button" title="移除代码目录" aria-label="移除代码目录">
+                    <button class="wzh-chat-anchor-close" id="trainChatCodeCloseBtn" type="button" title="移除项目目录" aria-label="移除项目目录">
                       <img src="../../src/pic/icon/close.svg" alt="">
                     </button>
                   </div>

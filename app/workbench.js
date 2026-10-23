@@ -91,6 +91,10 @@
     open: name === 'profile_dir',
     ranks: sources.map((source, rank) => makeRank(name, source, rank)),
   }));
+  PROF_TASKS.forEach((task) => task.ranks.forEach((rank) => {
+    rank.parentTaskName = task.name;
+    rank.compareType = task.compareType;
+  }));
   const selectedTask = PROF_TASKS.find((task) => task.name === 'profile_dir');
   const PROF_FOLDERS = selectedTask.ranks;
   const PROF_ROOT = { name: 'data', dir: 'data', tasks: PROF_TASKS };
@@ -190,6 +194,47 @@
   const rankKey = (taskIndex, rankIndex) => taskIndex + ':' + rankIndex;
   const visibleRanks = (task, taskIndex) => task.ranks.map((_, index) => index)
     .filter((index) => !deletedRanks.has(rankKey(taskIndex, index)));
+  const compareItemName = (item) => item.parentTaskName
+    ? item.parentTaskName + ' / ' + item.name : item.name;
+  const compareItemLevel = (item) => item.parentTaskName ? 'rank' : 'task';
+
+  function compareCheck(item) {
+    const checked = compareTasks.includes(item);
+    const first = compareTasks[0];
+    const differentLevel = first && compareItemLevel(item) !== compareItemLevel(first);
+    const differentType = first && item.compareType !== first.compareType;
+    const disabled = !checked && (differentLevel || differentType || compareTasks.length >= 2);
+    const title = differentLevel ? '任务与子文件不能跨级对比'
+      : differentType ? '所属任务类型不同，不支持对比'
+        : disabled ? '最多选择 2 个对比项' : checked ? '取消选择' : '选择对比项';
+    return '<span class="msi-tree-check" data-compare-check="1" role="checkbox"' +
+      ' aria-checked="' + checked + '" aria-disabled="' + disabled + '"' +
+      ' title="' + title + '">' + (checked ? '✓' : '') + '</span>';
+  }
+
+  function compareRole(item) {
+    const index = compareTasks.indexOf(item);
+    if (!compareMode || index < 0) return '';
+    const name = index === 0 ? '基线' : '对比';
+    return '<span class="msi-tree-compare-role msi-tree-compare-role--' +
+      (index === 0 ? 'baseline' : 'compare') + '" data-compare-swap="1"' +
+      ' aria-disabled="' + (compareTasks.length < 2) + '"' +
+      ' title="' + (compareTasks.length < 2 ? name : '点击互换基线和对比') + '">' + name + '</span>';
+  }
+
+  function syncTreeExpandButton() {
+    const button = document.getElementById('msiTreeExpandAll');
+    if (!button) return;
+    button.hidden = !compareMode;
+    const expandable = PROF_TASKS.filter((task, index) =>
+      !deletedTasks.has(index) && visibleRanks(task, index).length);
+    const allOpen = expandable.length > 0 && expandable.every((task) => task.open);
+    const label = allOpen ? '一键折叠' : '一键展开';
+    button.title = label;
+    button.setAttribute('aria-label', label);
+    button.querySelector('.msi-tree-expand-icon').hidden = allOpen;
+    button.querySelector('.msi-tree-collapse-icon').hidden = !allOpen;
+  }
 
   function managementCheck(checked, mixed = false) {
     return '<span class="msi-tree-check" data-manage-check="1" role="checkbox"' +
@@ -210,39 +255,34 @@
     selectAll.indeterminate = !allSelected && (managedTasks.size > 0 || managedRanks.size > 0);
   }
 
-  function renderTree() {
+  function treeItemPositions(host) {
+    const positions = new Map();
+    host.querySelectorAll('.msi-tree-row').forEach((row) => {
+      const rowKey = row.dataset.task + ':' + (row.dataset.rank ?? 'task');
+      positions.set(rowKey + ':row', row.getBoundingClientRect());
+      row.querySelectorAll('.msi-tree-caret, .msi-tree-mark, .msi-tree-file-icon, .msi-tree-name')
+        .forEach((item) => {
+          positions.set(rowKey + ':' + item.classList[0], item.getBoundingClientRect());
+        });
+    });
+    return positions;
+  }
+
+  function renderTree(oldPositions = null) {
     const host = document.getElementById('msiTree');
     if (!host) return;
     host.classList.toggle('is-compare-mode', compareMode);
     host.classList.toggle('is-manage-mode', manageMode);
     const rows = [];
     const taskRow = (task, taskIndex) => {
-      const checked = compareTasks.includes(task);
-      const differentType = compareMode && compareTasks[0] &&
-        task.compareType !== compareTasks[0].compareType;
-      const disabled = !checked && (differentType || (compareMode && compareTasks.length >= 2));
-      const on = selected.task === task;
-      const roleIndex = compareTasks.indexOf(task);
-      const roleName = roleIndex === 0 ? '基线' : (roleIndex === 1 ? '对比' : '');
+      const on = selected.task === task && (!selected.rank || !task.open);
       const ranks = visibleRanks(task, taskIndex);
       const selectedRanks = ranks.filter((index) => managedRanks.has(rankKey(taskIndex, index))).length;
       const manageCheck = manageMode
         ? managementCheck(managedTasks.has(taskIndex), selectedRanks > 0 && !managedTasks.has(taskIndex))
         : '';
-      const check = compareMode
-        ? '<span class="msi-tree-check" data-compare-check="1" role="checkbox"' +
-            ' aria-checked="' + (checked ? 'true' : 'false') + '"' +
-            ' aria-disabled="' + (disabled ? 'true' : 'false') + '"' +
-            ' title="' + (differentType ? '非同类型任务，不支持对比' :
-              (disabled ? '最多选择 2 个任务' : (checked ? '取消选择' : '选择任务'))) + '">' +
-            (checked ? '✓' : '') +
-          '</span>'
-        : '';
-      const role = compareMode && roleName
-        ? '<span class="msi-tree-compare-role msi-tree-compare-role--' + (roleIndex === 0 ? 'baseline' : 'compare') + '"' +
-            ' data-compare-swap="1" aria-disabled="' + (compareTasks.length < 2 ? 'true' : 'false') + '"' +
-            ' title="' + (compareTasks.length < 2 ? roleName : '点击互换基线和对比') + '">' + roleName + '</span>'
-        : '';
+      const check = compareMode ? compareCheck(task) : '';
+      const role = compareRole(task);
       return '<button class="msi-tree-row msi-tree-row--folder' + (on ? ' is-selected' : '') +
         (role ? ' has-compare-role' : '') + '" type="button" role="treeitem"' +
         ' data-task="' + taskIndex + '" aria-expanded="' + (task.open ? 'true' : 'false') + '"' +
@@ -253,16 +293,21 @@
           nameHtml(task.name) + role +
         '</button>';
     };
-    const rankRow = (rank, taskIndex, rankIndex) =>
-      '<button class="msi-tree-row msi-tree-row--folder msi-tree-row--d1" type="button" role="treeitem"' +
+    const rankRow = (rank, taskIndex, rankIndex) => {
+      const on = selected.rank === rank;
+      const role = compareRole(rank);
+      return (
+      '<button class="msi-tree-row msi-tree-row--folder msi-tree-row--d1' + (on ? ' is-selected' : '') + '" type="button" role="treeitem"' +
       ' data-task="' + taskIndex + '" data-rank="' + rankIndex + '"' +
-      ' aria-selected="false" aria-label="' + esc(rank.name) + '"' +
+      ' aria-selected="' + on + '" aria-label="' + esc(rank.name) + '"' +
       ' title="' + esc(rank.rootDir) + '">' +
+        (compareMode ? compareCheck(rank) : '') +
         (manageMode ? managementCheck(managedTasks.has(taskIndex) || managedRanks.has(rankKey(taskIndex, rankIndex))) : '') +
-        CARET.replace('msi-tree-caret', 'msi-tree-caret msi-tree-caret--placeholder') +
+        (compareMode ? '' : CARET.replace('msi-tree-caret', 'msi-tree-caret msi-tree-caret--placeholder')) +
         FILE_ICON +
-        nameHtml(rank.name) +
-      '</button>';
+        nameHtml(rank.name) + role +
+      '</button>');
+    };
 
     PROF_TASKS.forEach((task, ti) => {
       if (deletedTasks.has(ti)) return;
@@ -275,6 +320,38 @@
     });
     host.innerHTML = rows.join('');
     updateTreeNames();
+    syncTreeExpandButton();
+    if (oldPositions) {
+      host.querySelectorAll('.msi-tree-row').forEach((row) => {
+        const rowKey = row.dataset.task + ':' + (row.dataset.rank ?? 'task');
+        const previousRow = oldPositions.get(rowKey + ':row');
+        if (previousRow) {
+          const dy = previousRow.top - row.getBoundingClientRect().top;
+          if (Math.abs(dy) >= 1) {
+            row.animate([{ translate: `0px ${dy}px` }, { translate: '0px 0px' }],
+              { duration: 280, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+          }
+        }
+        row.querySelectorAll('.msi-tree-caret, .msi-tree-mark, .msi-tree-file-icon, .msi-tree-name')
+          .forEach((item) => {
+            const previous = oldPositions.get(rowKey + ':' + item.classList[0]);
+            if (!previous) return;
+            const current = item.getBoundingClientRect();
+            const dx = previous.left - current.left;
+            if (Math.abs(dx) < 1) return;
+            item.animate([
+              { translate: `${dx}px 0px` },
+              { translate: '0px 0px' },
+            ], { duration: 280, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+          });
+        if (compareMode) {
+          row.querySelectorAll('.msi-tree-check, .msi-tree-compare-role').forEach((item) => {
+            item.animate([{ opacity: 0 }, { opacity: 1 }],
+              { duration: 200, easing: 'ease-out' });
+          });
+        }
+      });
+    }
   }
 
   function initTree() {
@@ -391,7 +468,10 @@
       }
       const check = e.target.closest('.msi-tree-check');
       if (check) {
-        if (check.getAttribute('aria-disabled') !== 'true') toggleCompareTask(task);
+        if (check.getAttribute('aria-disabled') !== 'true') {
+          const item = row.dataset.rank === undefined ? task : task.ranks[Number(row.dataset.rank)];
+          if (item) toggleCompareTask(item);
+        }
         return;
       }
       if (row.dataset.rank === undefined) {
@@ -403,7 +483,7 @@
         }
         return;
       }
-      // 二级 rank 只展示任务包含的采集项，不再切换内容页面。
+      selectRank(task, task.ranks[Number(row.dataset.rank)]);
     });
     renderTree();
     if (typeof ResizeObserver !== 'undefined') {
@@ -476,6 +556,9 @@
     managedRanks.forEach((key) => deletedRanks.add(key));
     managedTasks.clear();
     managedRanks.clear();
+    if (selected.rank && deletedRanks.has(rankKey(PROF_TASKS.indexOf(selected.task), selected.task.ranks.indexOf(selected.rank)))) {
+      selected = { task: selected.task };
+    }
     syncManageControls();
     const nextTask = PROF_TASKS.find((_, index) => !deletedTasks.has(index));
     if (deletedTasks.has(PROF_TASKS.indexOf(selected.task))) {
@@ -496,6 +579,15 @@
     selected = { task };
     task.open = true;
     applySelection();
+  }
+
+  function selectRank(task, rank) {
+    if (!rank || deletedTasks.has(PROF_TASKS.indexOf(task))) return;
+    const sameTask = selected.task === task;
+    selected = { task, rank };
+    task.open = true;
+    if (sameTask || compareMode) renderTree();
+    else applySelection();
   }
 
   function renderContentTitle() {
@@ -523,12 +615,12 @@
       return;
     }
     const tagItems = compareTasks.map((task, roleIndex) => {
-      const taskIndex = PROF_TASKS.indexOf(task);
       const roleName = roleIndex === 0 ? '基线' : '对比';
-      return '<span class="msi-compare-tag" title="' + esc(task.name) + '">' +
-        '<span class="msi-compare-tag-name">' + esc(task.name + '（' + roleName + '）') + '</span>' +
-        '<button class="msi-compare-tag-close" type="button" data-compare-remove="' + taskIndex + '"' +
-        ' aria-label="取消选择 ' + esc(task.name) + '" title="取消选择">×</button>' +
+      const name = compareItemName(task);
+      return '<span class="msi-compare-tag" title="' + esc(name) + '">' +
+        '<span class="msi-compare-tag-name">' + esc(name + '（' + roleName + '）') + '</span>' +
+        '<button class="msi-compare-tag-close" type="button" data-compare-remove="' + roleIndex + '"' +
+        ' aria-label="取消选择 ' + esc(name) + '" title="取消选择">×</button>' +
       '</span>';
     });
     const swap = '<button class="msi-compare-swap" type="button" data-compare-swap="1"' +
@@ -536,7 +628,12 @@
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12"></path><path d="m15 4 3 3-3 3"></path>' +
       '<path d="M18 17H6"></path><path d="m9 14-3 3 3 3"></path></svg></button>';
     const tags = tagItems.length === 2 ? tagItems.join(swap) : tagItems.join('');
-    title.innerHTML = '<span class="msi-content-title-label">任务对比</span>' +
+    title.innerHTML = '<button class="msi-compare-back msi-title-compare-back" type="button"' +
+      ' data-compare-exit="1" title="退出对比" aria-label="退出对比">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"></path>' +
+      '<path d="m12 19-7-7 7-7"></path></svg></button>' +
+      '<span class="msi-content-title-label">' +
+      (compareTasks[0] && compareItemLevel(compareTasks[0]) === 'rank' ? '子文件对比' : '任务对比') + '</span>' +
       (tags ? '<span class="msi-compare-title-items">' + tags + '</span>' : '');
   }
 
@@ -545,7 +642,8 @@
     const index = compareTasks.indexOf(task);
     if (index >= 0) compareTasks.splice(index, 1);
     else if (compareTasks.length < 2 &&
-      (!compareTasks[0] || task.compareType === compareTasks[0].compareType)) compareTasks.push(task);
+      (!compareTasks[0] || (task.compareType === compareTasks[0].compareType &&
+        compareItemLevel(task) === compareItemLevel(compareTasks[0])))) compareTasks.push(task);
     pinnedLaneIds.clear();
     renderTree();
     renderContentTitle();
@@ -558,7 +656,7 @@
     if (!button) return;
     button.hidden = !compareMode;
     button.disabled = compareTasks.length !== 2;
-    button.title = button.disabled ? '请先选择两个任务' : '将对比分析请求置入智能对话';
+    button.title = button.disabled ? '请先选择两个对比项' : '将对比分析请求置入智能对话';
   }
 
   function swapCompareRoles() {
@@ -571,10 +669,16 @@
   }
 
   function setCompareMode(active) {
+    const tree = document.getElementById('msiTree');
+    const oldPositions = tree && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? treeItemPositions(tree) : null;
     compareMode = active;
-    compareTasks = active ? [deletedTasks.has(PROF_TASKS.indexOf(selected.task))
+    const taskIndex = PROF_TASKS.indexOf(selected.task);
+    const selectedRankAvailable = selected.rank &&
+      !deletedRanks.has(rankKey(taskIndex, selected.task.ranks.indexOf(selected.rank)));
+    compareTasks = active ? [deletedTasks.has(taskIndex)
       ? PROF_TASKS.find((_, index) => !deletedTasks.has(index))
-      : selected.task].filter(Boolean) : [];
+      : (selectedRankAvailable ? selected.rank : selected.task)].filter(Boolean) : [];
     pinnedLaneIds.clear();
     document.querySelectorAll('.msi-side-normal-action').forEach((el) => { el.hidden = active; });
     document.querySelectorAll('.msi-tab--normal-only').forEach((el) => { el.hidden = active; });
@@ -587,7 +691,7 @@
     if (back) back.hidden = !active;
     const heading = document.getElementById('msiCompareHeading');
     if (heading) heading.hidden = !active;
-    renderTree();
+    renderTree(oldPositions);
     renderContentTitle();
     refreshCompareSwimlanes();
     syncSmartCompareButton();
@@ -616,9 +720,19 @@
       const [baseline, comparison] = compareTasks;
       const ref = window.WZH_CHIP_HASH || '# ';
       const gap = window.WZH_CHIP_GAP || '   ';
-      sendToChat(ref + baseline.name + gap + ref + comparison.name + gap +
-        '请以 ' + baseline.name + ' 为基线，对比 ' + comparison.name +
-        ' 的整体耗时、计算与通信开销、关键算子和各 Rank 差异，找出主要性能回退并给出优化建议。');
+      const baseName = compareItemName(baseline);
+      const comparisonName = compareItemName(comparison);
+      sendToChat(ref + baseName + gap + ref + comparisonName + gap +
+        '请以 ' + baseName + ' 为基线，对比 ' + comparisonName +
+        ' 的整体耗时、计算与通信开销、关键算子差异，找出主要性能回退并给出优化建议。');
+    });
+    document.getElementById('msiTreeExpandAll')?.addEventListener('click', () => {
+      if (!compareMode) return;
+      const expandable = PROF_TASKS.filter((task, index) =>
+        !deletedTasks.has(index) && visibleRanks(task, index).length);
+      const open = !expandable.every((task) => task.open);
+      expandable.forEach((task) => { task.open = open; });
+      renderTree();
     });
     document.getElementById('msiManageBtn')?.addEventListener('click', () => setManageMode(true));
     document.getElementById('msiManageSelectAll')?.addEventListener('change', (event) =>
@@ -629,6 +743,10 @@
       else setCompareMode(false);
     });
     document.getElementById('msiContentTitle')?.addEventListener('click', (e) => {
+      if (e.target.closest('.msi-title-compare-back')) {
+        setCompareMode(false);
+        return;
+      }
       const swap = e.target.closest('.msi-compare-swap');
       if (swap) {
         swapCompareRoles();
@@ -636,7 +754,7 @@
       }
       const close = e.target.closest('.msi-compare-tag-close');
       if (close) {
-        const task = PROF_TASKS[Number(close.dataset.compareRemove)];
+        const task = compareTasks[Number(close.dataset.compareRemove)];
         if (task) toggleCompareTask(task);
         return;
       }
@@ -2000,8 +2118,11 @@
     }
     if (system) system.hidden = collapsed || tabName !== 'system';
     const analyze = document.getElementById('msiChainAnalyze');
-    if (analyze) analyze.title = (selectedTraceTaskId || selectedPreviewBar?.bar.isConnected)
-      ? '分析调用链' : '请先选择泳道对象';
+    if (analyze) {
+      analyze.hidden = tabName !== 'chain';
+      analyze.title = (selectedTraceTaskId || selectedPreviewBar?.bar.isConnected)
+        ? '分析调用链' : '请先选择泳道对象';
+    }
     if (placeholder) {
       placeholder.textContent = tabName === 'chain' ? '请选择泳道对象' : '敬请期待';
       placeholder.hidden = collapsed || showChain || tabName === 'list' || (tabName === 'system' && !!system);
@@ -2450,7 +2571,7 @@
       const title = panel.querySelector('.msi-swim-title');
       panel.querySelector('.msi-swim-head').hidden = !task;
       if (!selectedTraceTaskId) body.classList.remove('has-task-focus');
-      const name = task?.name || '请勾选对比项';
+      const name = task ? compareItemName(task) : '请勾选对比项';
       title.innerHTML = role
         ? '<span class="msi-swim-title-name" title="' + esc(name) + '">' + esc(name) + '</span>' +
           '<span class="msi-tree-compare-role msi-tree-compare-role--' +
@@ -2508,8 +2629,7 @@
   /* ══ 色块的左键选中 + 右键菜单 ═══════════════════════════════════
      色块使用算子菜单；对比模式叶子泳道的空白处使用置顶菜单。 */
   const CTX_MENU = [
-    [{ act: 'chat', label: '置入智能对话', icon: true },
-     { act: 'analyze', label: '智能分析', icon: true }],
+    [{ act: 'chat', label: '置入智能对话', icon: true }],
     [{ label: '应用时间范围分析' }],
     [{ label: '全屏显示' },
      { label: '撤销缩放(0)', key: 'Backspace', disabled: true },
@@ -2621,8 +2741,6 @@
     const gap = window.WZH_CHIP_GAP || '   ';   // 和输入框里 # 标签同一份留白
     if (act === 'chat') {
       sendToChat(ref + gap + lane + ' 上的 ' + op + '(' + dur + 'ms) ');
-    } else if (act === 'analyze') {
-      sendToChat(ref + gap + lane + ' 上的算子 ' + op + '，耗时 ' + dur + 'ms，请分析它的计算上下游，诊断它的性能。');
     }
   }
 
@@ -2677,7 +2795,7 @@
     });
     });
 
-    // 详情栏「完整调用链」里的任务条:右键复用同一套菜单(含「置入智能对话 / 智能分析」),
+    // 详情栏「完整调用链」里的任务条:右键复用同一套菜单(含「置入智能对话」),
     // 上下文从任务数据取,lane 用叶子泳道名,和泳道里右键得到的一致。不改当前选中。
     const chain = document.getElementById('msiCallChain');
     chain?.addEventListener('contextmenu', (e) => {

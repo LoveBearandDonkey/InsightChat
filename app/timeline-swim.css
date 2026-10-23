@@ -310,7 +310,6 @@
 }
 
 /* Static system view in the timeline footer. */
-.msi-content-foot.is-system-active .msi-chain-analyze { display: none; }
 .msi-content-foot.is-system-active .msi-foot-right {
   padding: 0; overflow: hidden;
 }
