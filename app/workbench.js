@@ -3078,7 +3078,7 @@
       .map((id) => document.getElementById(id)).filter(Boolean);
     const modified = !!(zoomIdx > 0 || timelineToolStateDirty || boxTimeSelection ||
       selectedTraceTaskId || selectedPreviewBar || selectedLaneId !== DEFAULT_SELECTED_LANE_ID ||
-      pinnedLaneIds.size || isLaneExpansionModified() ||
+      isLaneExpansionModified() ||
       bodies.some((body) => body.scrollLeft || body.scrollTop ||
         body.querySelector('.is-box-selected')));
     ['msiTimelineReset', 'msiPinnedTimelineReset'].forEach((id) => {
@@ -3091,7 +3091,6 @@
     zoomIdx = 0;
     selectedLaneId = DEFAULT_SELECTED_LANE_ID;
     LANES = buildLanes();
-    pinnedLaneIds.clear();
     clearBoxSelection();
     clearTraceTaskFocus();
     resetMouseTools();

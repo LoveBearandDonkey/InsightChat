@@ -1061,6 +1061,10 @@ ${issuesText || '（暂无）'}
       title: 'PP 流水线 Bubble',
       desc: '查看 4 个 stage 的 1F1B 调度窗口与空泡分布',
     },
+    code: {
+      title: '代码变更',
+      desc: '2 个文件 · +7 行 / −3 行',
+    },
   };
   const ANSWER_VIZ_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
     '<path d="M4 19V9M10 19V5M16 19v-7M3 21h18"></path></svg>';
@@ -1154,6 +1158,181 @@ ${issuesText || '（暂无）'}
     scheduleFadeUpdate();
   }
 
+  // 代码变更演示与性能诊断结论对应：把一个 Decoder 层从过载的末级移到 stage 2。
+  // 工程树是这轮对话的示例工程快照，改动行与左侧统计卡片保持一致。
+  const CODE_CHANGE_FILES = {
+    'model/config.py': {
+      added: 3, removed: 1,
+      lines: [
+        ['context', 16, '    pipeline_stages: int = 4'],
+        ['context', 17, '    num_layers: int = 32'],
+        ['removed', 18, '    stage_layer_counts = (8, 8, 8, 8)'],
+        ['added', 18, '    stage_layer_counts = (8, 8, 9, 7)'],
+        ['added', 19, '    if sum(stage_layer_counts) != num_layers:'],
+        ['added', 20, '        raise ValueError("stage layers must match num_layers")'],
+        ['context', 21, '    hidden_size: int = 4096'],
+      ],
+    },
+    'model/pipeline.py': {
+      added: 4, removed: 2,
+      lines: [
+        ['context', 38, 'def build_stage_layers(config, stage_id):'],
+        ['context', 39, '    """Return the decoder layers assigned to this PP stage."""'],
+        ['removed', 40, '    start = stage_id * layers_per_stage'],
+        ['added', 40, '    start = sum(config.stage_layer_counts[:stage_id])'],
+        ['removed', 41, '    end = start + layers_per_stage'],
+        ['added', 41, '    end = start + config.stage_layer_counts[stage_id]'],
+        ['added', 42, '    if stage_id == config.pipeline_stages - 1:'],
+        ['added', 43, '        assert end == config.num_layers'],
+        ['context', 44, '    return [DecoderLayer(config, i) for i in range(start, end)]'],
+      ],
+    },
+  };
+  const CODE_PROJECT_TREE = {
+    name: 'openpangu-flash', children: [
+      { name: 'configs', children: [
+        { name: 'pretrain_8npu.yaml' }, { name: 'parallel.yaml' },
+      ] },
+      { name: 'data', children: [
+        { name: '__init__.py' }, { name: 'dataset.py' }, { name: 'tokenizer.py' },
+      ] },
+      { name: 'model', children: [
+        { name: '__init__.py' }, { name: 'attention.py' }, { name: 'config.py', modified: true },
+        { name: 'decoder.py' }, { name: 'embedding.py' }, { name: 'moe.py' },
+        { name: 'pipeline.py', modified: true }, { name: 'rotary.py' },
+      ] },
+      { name: 'scripts', children: [
+        { name: 'profile.sh' }, { name: 'train.sh' },
+      ] },
+      { name: 'tests', children: [
+        { name: 'test_model.py' }, { name: 'test_pipeline.py' },
+      ] },
+      { name: '.gitignore' }, { name: 'README.md' }, { name: 'requirements.txt' }, { name: 'train.py' },
+    ],
+  };
+
+  function createCodeChangeView() {
+    const view = document.createElement('div');
+    view.className = 'wzh-code-review';
+    view.innerHTML =
+      '<section class="pto-ide-frame__pane wzh-code-diff-pane" aria-label="代码变更详情">' +
+        '<header class="wzh-code-pane-head"><span class="wzh-code-pane-title">变更</span>' +
+          '<span class="wzh-code-pane-summary">已编辑 2 个文件 <b>+7</b> <em>−3</em></span></header>' +
+        '<div class="pto-ide-frame__pane-body wzh-code-file-list">' +
+          '<div class="wzh-code-file-strip" aria-label="已更改的文件"></div>' +
+          '<p class="wzh-code-no-change" hidden></p>' +
+        '</div>' +
+      '</section>' +
+      '<section class="pto-ide-frame__pane wzh-code-tree-pane" aria-label="完整代码工程树">' +
+        '<header class="wzh-code-pane-head"><span class="wzh-code-pane-title">资源管理器</span>' +
+          '<span class="wzh-code-pane-caption">示例工程</span></header>' +
+        '<label class="wzh-code-search"><span aria-hidden="true">⌕</span>' +
+          '<input type="search" placeholder="筛选文件…" aria-label="筛选工程文件"></label>' +
+        '<div class="wzh-code-tree-label">OPENPANGU-FLASH <span>2 个已修改</span></div>' +
+        '<div class="pto-ide-frame__pane-body wzh-code-tree" role="tree"></div>' +
+      '</section>';
+
+    const tree = view.querySelector('.wzh-code-tree');
+    const renderNodes = (nodes, parent, prefix = '') => {
+      nodes.forEach((node) => {
+        const path = prefix ? prefix + '/' + node.name : node.name;
+        if (node.children) {
+          const folder = document.createElement('div');
+          folder.className = 'wzh-code-folder';
+          folder.dataset.path = path;
+          folder.innerHTML = '<button class="wzh-code-tree-row wzh-code-folder-toggle" type="button" aria-expanded="true">' +
+            '<span class="wzh-code-chevron" aria-hidden="true">' + ANSWER_VIZ_ARROW + '</span>' +
+            '<span class="wzh-code-tree-name"></span></button><div class="wzh-code-folder-children" role="group"></div>';
+          folder.querySelector('.wzh-code-tree-name').textContent = node.name;
+          folder.querySelector('.wzh-code-folder-toggle').addEventListener('click', (event) => {
+            const button = event.currentTarget;
+            button.setAttribute('aria-expanded', String(button.getAttribute('aria-expanded') !== 'true'));
+          });
+          renderNodes(node.children, folder.querySelector('.wzh-code-folder-children'), path);
+          if (folder.querySelector('[data-modified="true"]')) folder.classList.add('has-changes');
+          parent.appendChild(folder);
+        } else {
+          const file = document.createElement('button');
+          file.type = 'button';
+          file.className = 'wzh-code-tree-row wzh-code-tree-file' + (node.modified ? ' is-modified' : '');
+          file.dataset.path = path;
+          file.dataset.modified = String(Boolean(node.modified));
+          file.setAttribute('role', 'treeitem');
+          file.innerHTML = '<span class="wzh-code-tree-name"></span>' +
+            (node.modified ? '<span class="wzh-code-status" aria-label="已修改">M</span>' : '');
+          file.querySelector('.wzh-code-tree-name').textContent = node.name;
+          parent.appendChild(file);
+        }
+      });
+    };
+    renderNodes(CODE_PROJECT_TREE.children, tree);
+
+    const strip = view.querySelector('.wzh-code-file-strip');
+    Object.entries(CODE_CHANGE_FILES).forEach(([path, file]) => {
+      const entry = document.createElement('div');
+      entry.className = 'wzh-code-file-entry';
+      entry.dataset.path = path;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'wzh-code-changed-file';
+      button.dataset.path = path;
+      button.setAttribute('aria-expanded', 'false');
+      button.innerHTML = '<span class="wzh-code-file-icon" aria-hidden="true">PY</span>' +
+        '<span class="wzh-code-changed-name"></span><span class="wzh-code-line-stats"><b>+' + file.added + '</b> <em>−' + file.removed + '</em></span>' +
+        '<span class="wzh-code-expand-icon" aria-hidden="true">' + ANSWER_VIZ_ARROW + '</span>';
+      button.querySelector('.wzh-code-changed-name').textContent = path;
+      const diff = document.createElement('div');
+      diff.className = 'wzh-code-diff-body';
+      diff.hidden = true;
+      diff.innerHTML = '<div class="wzh-code-hunk">@@ ' +
+        (path.endsWith('config.py') ? '-16,4 +16,6' : '-38,4 +38,6') + ' @@</div>' +
+        file.lines.map(([kind, line, source]) =>
+          '<div class="wzh-code-line is-' + kind + '"><span class="wzh-code-line-num">' + line + '</span>' +
+          '<span class="wzh-code-line-mark">' + (kind === 'added' ? '+' : kind === 'removed' ? '−' : ' ') + '</span>' +
+          '<code>' + escHtml(source) + '</code></div>').join('');
+      entry.append(button, diff);
+      strip.appendChild(entry);
+    });
+
+    let openPath = null;
+    const selectFile = (path, toggle = false) => {
+      const file = CODE_CHANGE_FILES[path];
+      openPath = toggle && openPath === path ? null : path;
+      view.querySelectorAll('.wzh-code-file-entry').forEach((entry) => {
+        const expanded = entry.dataset.path === openPath;
+        entry.classList.toggle('is-selected', expanded);
+        entry.querySelector('.wzh-code-changed-file').setAttribute('aria-expanded', String(expanded));
+        entry.querySelector('.wzh-code-diff-body').hidden = !expanded;
+      });
+      view.querySelectorAll('.wzh-code-tree-file').forEach((node) => {
+        node.classList.toggle('is-selected', node.dataset.path === openPath);
+      });
+      const note = view.querySelector('.wzh-code-no-change');
+      if (!file) {
+        note.textContent = path + ' 没有本轮代码变更。';
+        note.hidden = false;
+        return;
+      }
+      note.hidden = true;
+    };
+    view.addEventListener('click', (event) => {
+      const file = event.target.closest('.wzh-code-tree-file, .wzh-code-changed-file');
+      if (file) selectFile(file.dataset.path, file.classList.contains('wzh-code-changed-file'));
+    });
+    view.querySelector('.wzh-code-search input').addEventListener('input', (event) => {
+      const query = event.target.value.trim().toLowerCase();
+      tree.querySelectorAll('.wzh-code-tree-file').forEach((file) => {
+        file.hidden = Boolean(query && !file.dataset.path.toLowerCase().includes(query));
+      });
+      Array.from(tree.querySelectorAll('.wzh-code-folder')).reverse().forEach((folder) => {
+        folder.hidden = Boolean(query && !folder.querySelector('.wzh-code-tree-file:not([hidden])'));
+        if (query && !folder.hidden) folder.querySelector('.wzh-code-folder-toggle').setAttribute('aria-expanded', 'true');
+      });
+    });
+    selectFile('model/pipeline.py');
+    return view;
+  }
+
   function createChatVisualizationTab(moduleId, title) {
     const tabs = $('trainChatVizTabs');
     const viewport = $('trainChatVizViewport');
@@ -1199,13 +1378,15 @@ ${issuesText || '（暂无）'}
     });
     tabs.appendChild(tab);
 
-    const frame = document.createElement('iframe');
-    frame.className = 'wzh-chat-viz-frame';
+    const frame = moduleId === 'code' ? createCodeChangeView() : document.createElement('iframe');
+    frame.classList.add('wzh-chat-viz-frame');
     frame.dataset.vizModule = moduleId;
     frame.title = title || meta.title;
-    frame.loading = 'lazy';
+    if (moduleId !== 'code') {
+      frame.loading = 'lazy';
+      frame.src = visualizationFrameSrc(moduleId);
+    }
     frame.hidden = true;
-    frame.src = visualizationFrameSrc(moduleId);
     viewport.appendChild(frame);
   }
 
@@ -1999,6 +2180,66 @@ ${issuesText || '（暂无）'}
   let profilingHistoryContext = { directory: PROFILING_DATA_DIR, codePath: '' };
   const PROFILING_SESSION_TITLE = 'profile_dir 单机多卡性能分析';
 
+  function runCodeChangeScenario(text, opts) {
+    const msgEl = $('trainChatMessages');
+    if (!msgEl) return;
+    if (!opts?.alreadyDisplayed) appendQuestionCard(text, {
+      context: opts?.context,
+      sessionTitle: '流水线末级过载 · 模型代码调整',
+    });
+    chatHistory.push({ role: 'user', content: text });
+    const { el, bodyEl } = createAiMessageShell();
+    msgEl.appendChild(el);
+    activeRoundBody = bodyEl;
+    chatStreaming = true;
+    chatStopped = false;
+    setChatBusy(true);
+    const epoch = chatEpoch;
+    const think = createThinkBlock(bodyEl, {});
+    const steps = [
+      { kind: 'thinking', title: '核对性能瓶颈', doneTitle: '已定位 PP 末级过载',
+        text: 'stage 3 计算约 9.26 s/step，其他 stage 约 6.15 s。先调整层分配，减少末级等待。' },
+      { kind: 'usetool', title: '检查模型分层代码', doneTitle: '已检查配置与层范围',
+        text: '检查 model/config.py 和 model/pipeline.py：保持 32 层总数，并让每级按配置计算起止层。' },
+    ];
+    const markdown = 'Profiling 显示 PP 末级计算约 9.26 s/step，明显重于其他 stage。我已调整示例模型的层分配：stage 3 的 Decoder 层数从 8 降到 7，stage 2 从 8 增到 9。`model/pipeline.py` 现在按配置计算每级的层范围，并校验末级边界。实际收益还需要重新采集 Profiling 验证。';
+    scrollChatToBottom(msgEl);
+
+    (async () => {
+      for (const step of steps) {
+        think.startNode(step);
+        await think.typeText(step.text, 12);
+        await chatSleep(180);
+        if (epoch !== chatEpoch) return;
+        if (chatStopped) return finalizeStoppedRound(think, bodyEl);
+      }
+      think.finish();
+      const answer = document.createElement('div');
+      answer.className = 'wzh-chat-answer';
+      bodyEl.appendChild(answer);
+      await typeMarkdownInto(answer, markdown, 18, 3);
+      if (epoch !== chatEpoch) return;
+      if (chatStopped) return finalizeStoppedRound(think, bodyEl);
+
+      const card = createAnswerVisualizationCard('code');
+      card.classList.add('wzh-chat-viz-card--code');
+      card.querySelector('.wzh-chat-viz-card-desc').innerHTML =
+        '2 个文件 · <b>+7 行</b> / <em>−3 行</em>';
+      card.insertAdjacentHTML('beforeend',
+        '<span class="wzh-code-card-files">' +
+          '<span class="wzh-code-card-file"><span>model/config.py</span><b>+3</b><em>−1</em></span>' +
+          '<span class="wzh-code-card-file"><span>model/pipeline.py</span><b>+4</b><em>−2</em></span>' +
+        '</span>');
+      answer.appendChild(card);
+      answer.appendChild(buildAnswerActions());
+      chatHistory.push({ role: 'assistant', content: markdown });
+      chatStreaming = false;
+      activeRoundBody = null;
+      setChatBusy(false);
+      scrollChatToBottom(msgEl, { onlyIfNearBottom: true });
+    })();
+  }
+
   // 演示流程一分钟不到就跑完,但计时按真实排查节奏展示(实测墙钟约 10~15 分钟),
   // 否则每个节点都是「2s」,看不出"这活确实花了时间"。真实对话不做任何缩放。
   const PROFILING_DEMO_CLOCK_SCALE = 24;
@@ -2686,6 +2927,11 @@ ${issuesText || '（暂无）'}
     if (!msgEl) return;
     stoppedRound = null; // 发起新一轮后，之前被停止的回答不再可续
     syncSendState();
+
+    if (document.documentElement.dataset.entryView === 'overview' && text.includes('修改代码')) {
+      runCodeChangeScenario(text, sendOpts);
+      return;
+    }
 
     if (scenario === 'module-statistic-ready') {
       runModuleStatisticReadyScenario(sendOpts);

@@ -17,6 +17,7 @@ function renderPage(view) {
     fs.readFileSync(path.join(pages, file), 'utf8').trimEnd());
   // 概览页已有两处专属外观；生成时保留它们，其余结构仍共用 shell 和视图片段。
   const overview = view === 'overview';
+  if (!overview) html = html.replace(/  <link rel="stylesheet" href="\.\.\/code-change\.css">\r?\n/, '');
   const variants = {
     __COMPARE_ICON__: overview
       ? '<span class="msi-compare-icon" aria-hidden="true"></span>'

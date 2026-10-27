@@ -6013,7 +6013,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     .wzh-chat-viz-card:hover {
       border-color: color-mix(in srgb, var(--brand-accent) 42%, var(--surface-1));
       background: linear-gradient(100deg,
-        color-mix(in srgb, var(--brand-accent) 12%, var(--surface-1)) 0%,
+        color-mix(in srgb, var(--brand-accent) 6%, var(--surface-1)) 0%,
         var(--surface-1) 100%);
     }
     .wzh-chat-viz-card:focus-visible {
@@ -6023,7 +6023,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     .wzh-chat-viz-card.is-active {
       border-color: color-mix(in srgb, var(--brand-accent) 58%, var(--surface-1));
       background: linear-gradient(100deg,
-        color-mix(in srgb, var(--brand-accent) 18%, var(--surface-1)) 0%,
+        color-mix(in srgb, var(--brand-accent) 6%, var(--surface-1)) 0%,
         var(--surface-1) 100%);
     }
     .wzh-chat-viz-card-icon {
