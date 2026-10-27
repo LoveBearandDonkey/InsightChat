@@ -1063,7 +1063,7 @@ ${issuesText || '（暂无）'}
     },
     code: {
       title: '代码变更',
-      desc: '2 个文件 · +7 行 / −3 行',
+      desc: '2 个文件 · +7 −3',
     },
   };
   const ANSWER_VIZ_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
@@ -1277,7 +1277,7 @@ ${issuesText || '（暂无）'}
       button.className = 'wzh-code-changed-file';
       button.dataset.path = path;
       button.setAttribute('aria-expanded', 'false');
-      button.innerHTML = '<span class="wzh-code-file-icon" aria-hidden="true">PY</span>' +
+      button.innerHTML = '<img class="wzh-code-file-icon" src="../../src/pic/icon/python.png" alt="">' +
         '<span class="wzh-code-changed-name"></span><span class="wzh-code-line-stats"><b>+' + file.added + '</b> <em>−' + file.removed + '</em></span>' +
         '<span class="wzh-code-expand-icon" aria-hidden="true">' + ANSWER_VIZ_ARROW + '</span>';
       button.querySelector('.wzh-code-changed-name').textContent = path;
@@ -2179,6 +2179,21 @@ ${issuesText || '（暂无）'}
   const PROFILING_DATA_DIR = 'profile_dir'; // 预置历史会话的任务目录
   let profilingHistoryContext = { directory: PROFILING_DATA_DIR, codePath: '' };
   const PROFILING_SESSION_TITLE = 'profile_dir 单机多卡性能分析';
+  const CODE_CHANGE_HISTORY_QUESTION = '请修改 #{model/pipeline.py} 的 PP 分层逻辑，减轻 stage 3 的计算过载；如果相关配置文件也需要调整，请一并修改代码。';
+  const CODE_CHANGE_ANSWER_MARKDOWN = 'Profiling 显示 PP 末级计算约 9.26 s/step，明显重于其他 stage。我已调整示例模型的层分配：stage 3 的 Decoder 层数从 8 降到 7，stage 2 从 8 增到 9。`model/pipeline.py` 现在按配置计算每级的层范围，并校验末级边界。实际收益还需要重新采集 Profiling 验证。';
+
+  function createCodeChangeAnswerCard() {
+    const card = createAnswerVisualizationCard('code');
+    card.classList.add('wzh-chat-viz-card--code');
+    card.querySelector('.wzh-chat-viz-card-desc').innerHTML =
+      '2 个文件 · <b>+7</b> <em>−3</em>';
+    card.insertAdjacentHTML('beforeend',
+      '<span class="wzh-code-card-files">' +
+        '<span class="wzh-code-card-file"><span>model/config.py</span><b>+3</b><em>−1</em></span>' +
+        '<span class="wzh-code-card-file"><span>model/pipeline.py</span><b>+4</b><em>−2</em></span>' +
+      '</span>');
+    return card;
+  }
 
   function runCodeChangeScenario(text, opts) {
     const msgEl = $('trainChatMessages');
@@ -2188,6 +2203,20 @@ ${issuesText || '（暂无）'}
       sessionTitle: '流水线末级过载 · 模型代码调整',
     });
     chatHistory.push({ role: 'user', content: text });
+    if (!opts?.context?.codePath) {
+      const reply = '请先在输入框上方标签处，为本性能文件绑定长期的代码目录。或在输入框直接输入代码目录，作为本轮对话临时使用的上下文';
+      const { el, bodyEl } = createAiMessageShell();
+      const answer = document.createElement('div');
+      answer.className = 'wzh-chat-answer';
+      answer.innerHTML = renderMarkdown(reply);
+      answer.appendChild(buildAnswerActions());
+      bodyEl.appendChild(answer);
+      msgEl.appendChild(el);
+      chatHistory.push({ role: 'assistant', content: reply });
+      scrollChatToBottom(msgEl);
+      flushChatQueue();
+      return;
+    }
     const { el, bodyEl } = createAiMessageShell();
     msgEl.appendChild(el);
     activeRoundBody = bodyEl;
@@ -2202,7 +2231,7 @@ ${issuesText || '（暂无）'}
       { kind: 'usetool', title: '检查模型分层代码', doneTitle: '已检查配置与层范围',
         text: '检查 model/config.py 和 model/pipeline.py：保持 32 层总数，并让每级按配置计算起止层。' },
     ];
-    const markdown = 'Profiling 显示 PP 末级计算约 9.26 s/step，明显重于其他 stage。我已调整示例模型的层分配：stage 3 的 Decoder 层数从 8 降到 7，stage 2 从 8 增到 9。`model/pipeline.py` 现在按配置计算每级的层范围，并校验末级边界。实际收益还需要重新采集 Profiling 验证。';
+    const markdown = CODE_CHANGE_ANSWER_MARKDOWN;
     scrollChatToBottom(msgEl);
 
     (async () => {
@@ -2221,16 +2250,7 @@ ${issuesText || '（暂无）'}
       if (epoch !== chatEpoch) return;
       if (chatStopped) return finalizeStoppedRound(think, bodyEl);
 
-      const card = createAnswerVisualizationCard('code');
-      card.classList.add('wzh-chat-viz-card--code');
-      card.querySelector('.wzh-chat-viz-card-desc').innerHTML =
-        '2 个文件 · <b>+7 行</b> / <em>−3 行</em>';
-      card.insertAdjacentHTML('beforeend',
-        '<span class="wzh-code-card-files">' +
-          '<span class="wzh-code-card-file"><span>model/config.py</span><b>+3</b><em>−1</em></span>' +
-          '<span class="wzh-code-card-file"><span>model/pipeline.py</span><b>+4</b><em>−2</em></span>' +
-        '</span>');
-      answer.appendChild(card);
+      answer.appendChild(createCodeChangeAnswerCard());
       answer.appendChild(buildAnswerActions());
       chatHistory.push({ role: 'assistant', content: markdown });
       chatStreaming = false;
@@ -2743,6 +2763,55 @@ ${issuesText || '（暂无）'}
     });
   }
 
+  function restoreCompletedDemoHistory(question, sessionTitle, markdown, options = {}) {
+    const msgEl = $('trainChatMessages');
+    if (!msgEl) return;
+    resetConversation();
+    appendQuestionCard(question, {
+      context: options.context || { directory: PROFILING_DATA_DIR, codePath: '' },
+      sessionTitle,
+    });
+    const { el, bodyEl } = createAiMessageShell();
+    const answer = document.createElement('div');
+    answer.className = 'wzh-chat-answer';
+    answer.innerHTML = renderMarkdown(markdown);
+    if (options.codeChange) answer.appendChild(createCodeChangeAnswerCard());
+    answer.appendChild(buildAnswerActions());
+    bodyEl.appendChild(answer);
+    msgEl.appendChild(el);
+    chatHistory = [
+      { role: 'user', content: question },
+      { role: 'assistant', content: markdown },
+    ];
+    stickToBottom = false;
+    requestAnimationFrame(() => {
+      msgEl.scrollTop = 0;
+      updateChatFade(msgEl);
+    });
+  }
+
+  function restoreConstructedHistory(key) {
+    if (key === 'profile') return restoreProfilingHistory();
+    if (key === 'code') {
+      return restoreCompletedDemoHistory(CODE_CHANGE_HISTORY_QUESTION,
+        '流水线末级过载 · 模型代码调整', CODE_CHANGE_ANSWER_MARKDOWN, {
+          codeChange: true,
+          context: {
+            directory: PROFILING_DATA_DIR,
+            codePath: $('trainChatCodePath')?.dataset.fullPath || '',
+          },
+        });
+    }
+    if (key === 'statistics') {
+      return restoreCompletedDemoHistory(KNOWLEDGE_QUESTION, '耗时拆解统计',
+        buildModuleStatisticReadyAnswerMarkdown());
+    }
+    if (key === 'guidance') {
+      return restoreCompletedDemoHistory(KNOWLEDGE_QUESTION, '耗时拆解方法指导',
+        buildKnowledgeAnswerMarkdown());
+    }
+  }
+
   function runKnowledgeQaScenario(opts) {
     if (chatStreaming) return;
     const msgEl = $('trainChatMessages');
@@ -2928,7 +2997,7 @@ ${issuesText || '（暂无）'}
     stoppedRound = null; // 发起新一轮后，之前被停止的回答不再可续
     syncSendState();
 
-    if (document.documentElement.dataset.entryView === 'overview' && text.includes('修改代码')) {
+    if (document.documentElement.dataset.entryView === 'overview' && text.includes('代码')) {
       runCodeChangeScenario(text, sendOpts);
       return;
     }
@@ -3604,9 +3673,8 @@ ${issuesText || '（暂无）'}
     const wrap = $('trainChatHistoryWrap');
     const btn = $('trainChatHistoryBtn');
     const pop = $('trainChatHistoryPop');
-    const profileBtn = $('trainChatHistoryProfileBtn');
     const panel = $('trainChatPanel');
-    if (!wrap || !btn || !pop || !profileBtn) return;
+    if (!wrap || !btn || !pop) return;
 
     function syncPopWidth() {
       if (!panel) return;
@@ -3627,9 +3695,12 @@ ${issuesText || '（暂无）'}
     btn.addEventListener('click', () => {
       pop.hidden ? openPop() : closePop();
     });
-    profileBtn.addEventListener('click', () => {
+    pop.addEventListener('click', (event) => {
+      const item = event.target.closest('.wzh-chat-history-item[data-chat-history]');
+      if (!item) return;
       closePop();
-      restoreProfilingHistory();
+      closeChatVisualization({ restoreFocus: false });
+      restoreConstructedHistory(item.dataset.chatHistory);
     });
     document.addEventListener('click', (e) => {
       if (!pop.hidden && !wrap.contains(e.target)) closePop();
