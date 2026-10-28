@@ -44,6 +44,23 @@
 
   const maxButton = document.getElementById('msiWindowMaximize');
   const taskbarApp = document.getElementById('msiTaskbarApp');
+  const taskbarStart = document.getElementById('msiTaskbarStart');
+  const WALLPAPER_KEY = 'msi-desktop-wallpaper';
+
+  function setLightWallpaper(light) {
+    desktop.classList.toggle('is-light-wallpaper', light);
+    if (taskbarStart) {
+      taskbarStart.setAttribute('aria-pressed', String(light));
+      const label = light ? '切换为深色桌面壁纸' : '切换为浅色桌面壁纸';
+      taskbarStart.title = label;
+      taskbarStart.setAttribute('aria-label', label);
+    }
+    try { localStorage.setItem(WALLPAPER_KEY, light ? 'light' : 'dark'); } catch (_) { /* Optional preference. */ }
+  }
+
+  try { setLightWallpaper(localStorage.getItem(WALLPAPER_KEY) === 'light'); }
+  catch (_) { setLightWallpaper(false); }
+  taskbarStart?.addEventListener('click', () => setLightWallpaper(!desktop.classList.contains('is-light-wallpaper')));
 
   function render() {
     shown = fit(state.customized ? state : defaultGeometry());

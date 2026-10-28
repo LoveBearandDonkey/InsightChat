@@ -3765,7 +3765,10 @@ body.pto-is-pane-resizing[data-pto-resize-direction="vertical"] * {
     radial-gradient(circle at top right, rgb(var(--ide-glow-right) / var(--ide-gradient-right-alpha)), transparent 30%),
     radial-gradient(circle at 48% 6%, rgb(var(--ide-glow-center) / var(--ide-gradient-center-alpha)), transparent 34%),
     radial-gradient(circle at 18% 86%, rgb(var(--ide-glow-lower) / var(--ide-gradient-lower-alpha)), transparent 34%),
-    linear-gradient(180deg, var(--ide-bg-start) 0%, var(--ide-bg-mid) 44%, var(--ide-bg-end) 100%);
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--ide-bg-start) 92%, transparent) 0%,
+      color-mix(in srgb, var(--ide-bg-mid) 92%, transparent) 44%,
+      color-mix(in srgb, var(--ide-bg-end) 92%, transparent) 100%);
   --ide-aura-bg:
     radial-gradient(circle at var(--ide-cursor-x) var(--ide-cursor-y), rgb(var(--ide-cursor-color) / var(--ide-cursor-alpha)) 0, transparent var(--ide-cursor-radius)),
     radial-gradient(circle at 12% 12%, rgb(var(--ide-glow-left) / var(--ide-aura-left-alpha)), transparent 0 22rem),
@@ -3815,7 +3818,7 @@ body.pto-is-pane-resizing[data-pto-resize-direction="vertical"] * {
   --ide-gradient-left-alpha: 0.16;
   --ide-gradient-right-alpha: 0.14;
   --ide-gradient-center-alpha: 0.08;
-  --ide-gradient-lower-alpha: 0.06;
+  --ide-gradient-lower-alpha: 0.08;
   --ide-aura-left-alpha: 0.22;
   --ide-aura-right-alpha: 0.18;
   --ide-aura-center-alpha: 0.10;
@@ -3826,7 +3829,10 @@ body.pto-is-pane-resizing[data-pto-resize-direction="vertical"] * {
     radial-gradient(circle at top right, rgb(var(--ide-glow-right) / var(--ide-gradient-right-alpha)), transparent 30%),
     radial-gradient(circle at 48% 6%, rgb(var(--ide-glow-center) / var(--ide-gradient-center-alpha)), transparent 34%),
     radial-gradient(circle at 18% 86%, rgb(var(--ide-glow-lower) / var(--ide-gradient-lower-alpha)), transparent 34%),
-    linear-gradient(180deg, var(--ide-bg-start) 0%, var(--ide-bg-mid) 42%, var(--ide-bg-end) 100%);
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--ide-bg-start) 92%, transparent) 0%,
+      color-mix(in srgb, var(--ide-bg-mid) 92%, transparent) 42%,
+      color-mix(in srgb, var(--ide-bg-end) 92%, transparent) 100%);
   --ide-aura-bg:
     radial-gradient(circle at var(--ide-cursor-x) var(--ide-cursor-y), rgb(var(--ide-cursor-color) / var(--ide-cursor-alpha)) 0, transparent var(--ide-cursor-radius)),
     radial-gradient(circle at 12% 12%, rgb(var(--ide-glow-left) / var(--ide-aura-left-alpha)), transparent 0 22rem),
@@ -3904,6 +3910,12 @@ body.pto-is-pane-resizing[data-pto-resize-direction="vertical"] * {
   box-shadow:
     0 18px 54px rgba(0, 0, 0, 0.32),
     inset 0 0 0 1px color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+
+:root[data-theme='light'] .pto-ide-frame,
+:root[data-theme='dark'] .pto-ide-frame {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .pto-ide-frame::before,
