@@ -119,7 +119,9 @@ if (unresolvedMemoryRefs) throw new Error('内存快照仍引用外部资源: ' 
 const memoryFrame = 'data:text/html;base64,' + Buffer.from(memoryFrameDoc, 'utf8').toString('base64');
 html = html.replace(/<link rel="stylesheet" href="(app\/[\w.-]+\.css)">/g, (_, ref) => {
   const css = fs.readFileSync(path.join(ROOT, ref), 'utf8')
-    .replaceAll("url('../src/pic/icon/", "url('src/pic/icon/");
+    .replaceAll("url('../src/pic/icon/", "url('src/pic/icon/")
+    .replaceAll("url('../src/pic/wallpaper.jpg')",
+      "url('data:image/jpeg;base64," + fs.readFileSync(path.join(ROOT, 'src', 'pic', 'wallpaper.jpg')).toString('base64') + "')");
   return '<style>\n' + css + '\n</style>';
 });
 html = html.replace(/<script defer src="(app\/[\w.-]+\.js)"><\/script>/g, (_, ref) => {
@@ -150,7 +152,9 @@ const dynamic = [
   [`'<img src="src/pic/icon/' + a.icon + '" alt="">'`, `'<img src="' + WZH_ICON[a.icon] + '" alt="">'`],
   [`'<img class="wzh-chat-guide-icon" src="src/pic/icon/' + c.icon + '" alt="">'`, `'<img class="wzh-chat-guide-icon" src="' + WZH_ICON[c.icon] + '" alt="">'`],
   [`const src = 'src/pic/icon/' + cur.icon;`, `const src = WZH_ICON[cur.icon];`],
-  [`const src = stopMode ? 'src/pic/icon/stop.svg' : 'src/pic/icon/sent.svg';`, `const src = stopMode ? WZH_ICON['stop.svg'] : WZH_ICON['sent.svg'];`],
+  [`const src = stopMode ? 'src/pic/icon/stop.svg'\n        : resumeMode ? 'src/pic/icon/play.svg' : 'src/pic/icon/sent.svg';`,
+    `const src = stopMode ? WZH_ICON['stop.svg']\n        : resumeMode ? WZH_ICON['play.svg'] : WZH_ICON['sent.svg'];`],
+  [`icon.src = 'src/pic/icon/folder.svg';`, `icon.src = WZH_ICON['folder.svg'];`],
 ];
 for (const [a, b] of dynamic) {
   const n = html.split(a).length - 1;

@@ -1398,9 +1398,13 @@ ${issuesText || '（暂无）'}
 
     if (!panel.classList.contains('is-visualizing')) {
       const rect = panel.getBoundingClientRect();
+      const floating = panel.classList.contains('is-floating') && panel.parentElement?.id === 'msiDesktop';
+      const frameRect = (floating ? panel.parentElement :
+        panel.closest('.pto-ide-frame__body') || panel.closest('.pto-ide-frame'))?.getBoundingClientRect() ||
+        { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth };
       const startWidth = panel.clientWidth;
-      const fullWidth = window.innerWidth - 16 - (rect.width - startWidth);
-      const availableWidth = fullWidth - 8;
+      const fullWidth = frameRect.width - 16 - (rect.width - startWidth);
+      const availableWidth = fullWidth - (floating ? 184 : 8);
       const targetWidth = Math.min(Math.max(startWidth, availableWidth * .25), availableWidth * .75);
       const state = chatVizState = {
         widthValue: panel.style.getPropertyValue('--wzh-chat-w'),
@@ -1409,10 +1413,12 @@ ${issuesText || '（暂无）'}
         triggers: new Map(),
       };
       panel.style.setProperty('--wzh-chat-w', Math.round(rect.width) + 'px');
-      panel.style.setProperty('--wzh-viz-top', Math.max(8, Math.round(rect.top)) + 'px');
-      panel.style.setProperty('--wzh-viz-bottom', Math.max(8, Math.round(window.innerHeight - rect.bottom)) + 'px');
-      panel.style.setProperty('--wzh-viz-left', rect.left + 'px');
-      panel.style.setProperty('--wzh-viz-right', (window.innerWidth - rect.right) + 'px');
+      panel.style.setProperty('--wzh-viz-top', floating
+        ? Math.max(8, Math.round(rect.top - frameRect.top)) + 'px'
+        : '0px');
+      panel.style.setProperty('--wzh-viz-bottom', Math.max(8, Math.round(frameRect.bottom - rect.bottom)) + 'px');
+      panel.style.setProperty('--wzh-viz-left', Math.max(8, Math.round(rect.left - frameRect.left)) + 'px');
+      panel.style.setProperty('--wzh-viz-right', Math.max(8, Math.round(frameRect.right - rect.right)) + 'px');
       panel.style.setProperty('--wzh-viz-chat-w', startWidth + 'px');
       panel.classList.add('is-visualizing', 'is-viz-expanding');
       pane.hidden = false;
@@ -1420,8 +1426,13 @@ ${issuesText || '（暂无）'}
       void panel.offsetWidth;
       state.expandFrame = requestAnimationFrame(() => {
         if (chatVizState !== state) return;
-        panel.style.setProperty('--wzh-viz-left', '8px');
-        panel.style.setProperty('--wzh-viz-right', '8px');
+        const nowFloating = panel.classList.contains('is-floating') && panel.parentElement?.id === 'msiDesktop';
+        panel.style.setProperty('--wzh-viz-left', nowFloating ? '100px' : '8px');
+        panel.style.setProperty('--wzh-viz-right', nowFloating ? '100px' : '8px');
+        if (nowFloating) {
+          panel.style.setProperty('--wzh-viz-top', '48px');
+          panel.style.setProperty('--wzh-viz-bottom', '90px');
+        }
         panel.style.setProperty('--wzh-viz-chat-w', targetWidth + 'px');
         const settleDelay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 340;
         state.expandTimer = setTimeout(() => {
@@ -3069,7 +3080,14 @@ ${issuesText || '（暂无）'}
       }
     }
 
-    toggle.addEventListener('click', () => setOpen(!panel.classList.contains('is-open')));
+    toggle.addEventListener('click', () => {
+      if (panel.classList.contains('is-floating') && panel.classList.contains('is-open') &&
+          $('msiDesktop')?.dataset.activeWindow === 'main') {
+        document.dispatchEvent(new Event('msi:focus-chat-window'));
+        return;
+      }
+      setOpen(!panel.classList.contains('is-open'));
+    });
     closeBtn?.addEventListener('click', () => setOpen(false));
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape' || !panel.classList.contains('is-open')) return;
@@ -3699,7 +3717,6 @@ ${issuesText || '（暂无）'}
       const item = event.target.closest('.wzh-chat-history-item[data-chat-history]');
       if (!item) return;
       closePop();
-      closeChatVisualization({ restoreFocus: false });
       restoreConstructedHistory(item.dataset.chatHistory);
     });
     document.addEventListener('click', (e) => {

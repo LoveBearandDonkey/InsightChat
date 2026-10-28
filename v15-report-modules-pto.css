@@ -68,12 +68,27 @@ html[data-embed-chart="true"] .pto-ide-frame__split {
   padding: 0;
 }
 
+/* 嵌入图表沿用宿主扩展区的整块底色。 */
+html[data-embed-chart="true"] body,
+html[data-embed-chart="true"] .rp-frame,
+html[data-embed-chart="true"] .rp-module.rp-view {
+  background: transparent;
+}
+
+html[data-embed-chart="true"] .rp-frame::before,
+html[data-embed-chart="true"] .rp-frame::after {
+  display: none;
+}
+
 html[data-embed-chart="true"] [data-ide-pane="editor-preview"] {
   width: 100% !important;
   flex: 1 1 auto !important;
   border: 0;
   border-radius: 0;
+  background: transparent;
   box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 html[data-embed-chart="true"] .rp-view {

@@ -1,0 +1,212 @@
+/* Shared desktop presentation for the three generated chat pages. */
+body.chat-shell-page { background: #183047; }
+
+.msi-desktop {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+  background-color: #183047;
+  background-image: url('../src/pic/wallpaper.jpg');
+  background-size: cover;
+  background-position: left top;
+  background-repeat: no-repeat;
+}
+
+.msi-desktop .pto-ide-frame {
+  position: absolute;
+  z-index: 2;
+  top: 40px;
+  left: 80px;
+  width: calc(100% - 160px);
+  height: calc(100% - 122px);
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: auto;
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  border-radius: 9px;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 12%),
+    0 12px 32px rgb(0 0 0 / 42%),
+    0 34px 96px rgb(0 0 0 / 55%);
+  container: desktop-window / inline-size;
+}
+.msi-desktop[data-active-window='main'] > .pto-ide-frame:not(.is-desktop-maximized) { z-index: 7; }
+
+.msi-desktop .pto-ide-frame.is-desktop-maximized {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.msi-desktop .pto-ide-frame.is-desktop-hidden { display: none; }
+body.is-desktop-dragging .msi-desktop > .pto-ide-frame { pointer-events: none; }
+.msi-desktop .pto-ide-frame__topbar { cursor: grab; user-select: none; touch-action: none; }
+.msi-desktop .pto-ide-frame__topbar:active { cursor: grabbing; }
+.msi-desktop .pto-ide-frame.is-desktop-maximized .pto-ide-frame__topbar { cursor: default; }
+.msi-desktop .pto-ide-frame__topbar button,
+.msi-desktop .pto-ide-frame__topbar a { cursor: pointer; }
+.msi-desktop .pto-ide-frame__topbar-right { position: relative; z-index: 4; }
+.msi-desktop .msi-window-control { width: 34px; height: 30px; border-radius: 3px; }
+.msi-desktop #trainChatToggle { margin-left: 8px; }
+.msi-desktop #msiWindowMinimize { margin-left: 8px; }
+.msi-desktop .msi-window-control svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.35; }
+.msi-desktop .msi-window-control--close:hover { background: #c42b1c; color: #fff; }
+.msi-desktop .msi-window-control--close:hover svg { stroke: #fff; }
+.msi-window-restore-icon,
+.is-desktop-maximized .msi-window-max-icon { display: none; }
+.is-desktop-maximized .msi-window-restore-icon { display: block; }
+
+.msi-window-resize { position: absolute !important; z-index: 5 !important; touch-action: none; }
+.is-desktop-maximized .msi-window-resize { display: none; }
+.msi-window-resize--n { top: 0; left: 12px; right: 12px; height: 6px; cursor: n-resize; }
+.msi-window-resize--s { bottom: 0; left: 12px; right: 12px; height: 6px; cursor: s-resize; }
+.msi-window-resize--e { right: 0; top: 12px; bottom: 12px; width: 6px; cursor: e-resize; }
+.msi-window-resize--w { left: 0; top: 12px; bottom: 12px; width: 6px; cursor: w-resize; }
+.msi-window-resize--ne { top: 0; right: 0; width: 14px; height: 14px; cursor: ne-resize; }
+.msi-window-resize--se { bottom: 0; right: 0; width: 14px; height: 14px; cursor: se-resize; }
+.msi-window-resize--sw { bottom: 0; left: 0; width: 14px; height: 14px; cursor: sw-resize; }
+.msi-window-resize--nw { top: 0; left: 0; width: 14px; height: 14px; cursor: nw-resize; }
+
+.msi-desktop-shortcut {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 70px;
+  min-height: 86px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 3px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: #fff;
+  font: 11px/1.25 'Segoe UI', var(--font-sans);
+  text-shadow: 0 1px 3px rgb(0 0 0 / 75%);
+  cursor: default;
+}
+.msi-desktop-shortcut:hover,
+.msi-desktop-shortcut:focus-visible { background: rgb(255 255 255 / 16%); border-color: rgb(255 255 255 / 28%); }
+.msi-desktop-shortcut img { width: 38px; height: 38px; object-fit: contain; }
+.msi-desktop-shortcut span { max-width: 100%; overflow-wrap: anywhere; }
+
+.msi-taskbar {
+  position: absolute;
+  z-index: 3;
+  inset: auto 0 0;
+  height: 42px;
+  display: flex;
+  align-items: stretch;
+  background: rgb(24 31 38 / 87%);
+  color: #f7f7f7;
+  font-family: 'Segoe UI', var(--font-sans);
+  box-shadow: 0 -1px 0 rgb(255 255 255 / 12%);
+  backdrop-filter: blur(18px);
+}
+.msi-desktop:has(.is-desktop-maximized:not(.is-desktop-hidden)) .msi-taskbar { display: none; }
+.msi-taskbar-start { width: 48px; display: grid; place-items: center; flex: 0 0 auto; }
+.msi-taskbar-start svg { width: 18px; height: 18px; fill: currentColor; }
+.msi-taskbar-search {
+  width: 265px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 12px;
+  background: rgb(255 255 255 / 9%);
+  color: rgb(255 255 255 / 82%);
+  box-shadow: inset 1px 0 rgb(255 255 255 / 9%), inset -1px 0 rgb(255 255 255 / 9%);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.msi-taskbar-search svg { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.msi-taskbar-app { width: 40px; margin: 4px; position: relative; display: grid; place-items: center; border: 0; background: transparent; cursor: pointer; }
+.msi-taskbar-app:hover { background: rgb(255 255 255 / 13%); }
+.msi-taskbar-app.is-active { background: rgb(255 255 255 / 10%); }
+.msi-taskbar-app.is-active::after { content: ''; position: absolute; bottom: 0; left: 6px; right: 6px; height: 2px; background: #7dc5ff; }
+.msi-taskbar-app img { width: 25px; height: 25px; object-fit: contain; }
+.msi-taskbar-spacer { flex: 1; }
+.msi-taskbar-tray { width: 32px; display: grid; place-items: center; }
+.msi-taskbar-tray svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.msi-taskbar-clock { width: 87px; align-self: center; text-align: center; white-space: pre-line; font-size: 11px; line-height: 17px; }
+.msi-taskbar-show-desktop { width: 5px; margin-left: 4px; border-left: 1px solid rgb(255 255 255 / 35%); }
+
+/* The assistant becomes a sibling of the main app while floating. */
+.msi-desktop > .wzh-chat-panel.is-floating {
+  position: absolute;
+  z-index: 5;
+  top: var(--msi-float-y, 48px);
+  left: var(--msi-float-x, calc(100% - 504px));
+  right: auto;
+  bottom: auto;
+  width: var(--msi-float-w, 480px);
+  height: var(--msi-float-h, 700px);
+  max-width: none;
+  flex: none;
+  transform: none;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 38%), 0 3px 12px rgb(0 0 0 / 18%);
+}
+.msi-desktop > .wzh-chat-panel.is-floating:not(.is-open) { display: none; }
+.msi-desktop > .wzh-chat-panel.is-floating .wzh-chat-head { cursor: move; user-select: none; touch-action: none; }
+.msi-desktop > .wzh-chat-panel.is-floating .wzh-chat-viz-head { cursor: move; user-select: none; touch-action: none; }
+.msi-desktop > .wzh-chat-panel.is-floating .wzh-chat-head button { cursor: pointer; }
+.msi-desktop > .wzh-chat-panel.is-floating .wzh-chat-viz-head button { cursor: pointer; }
+.msi-desktop > .wzh-chat-panel.is-floating.is-viz-expanding #trainChatFloatBtn { pointer-events: none; }
+.msi-desktop > .wzh-chat-panel.is-floating.is-open.is-visualizing {
+  z-index: 6;
+  top: var(--wzh-viz-top, 48px);
+  left: var(--wzh-viz-left, 100px);
+  right: var(--wzh-viz-right, 100px);
+  bottom: var(--wzh-viz-bottom, 90px);
+  width: auto;
+  height: auto;
+  max-width: none;
+}
+.msi-desktop > .wzh-chat-panel.is-floating.is-viz-expanding {
+  transition: top 320ms var(--easing-default), bottom 320ms var(--easing-default),
+    left 320ms var(--easing-default), right 320ms var(--easing-default),
+    grid-template-columns 320ms var(--easing-default);
+}
+.msi-chat-window-resize { position: absolute; z-index: 10; touch-action: none; }
+.wzh-chat-panel:not(.is-floating) > .msi-chat-window-resize { display: none; }
+.msi-chat-window-resize--n { top: 0; left: 12px; right: 12px; height: 7px; cursor: n-resize; }
+.msi-chat-window-resize--s { bottom: 0; left: 12px; right: 12px; height: 7px; cursor: s-resize; }
+.msi-chat-window-resize--e { right: 0; top: 12px; bottom: 12px; width: 7px; cursor: e-resize; }
+.msi-chat-window-resize--w { left: 0; top: 12px; bottom: 12px; width: 7px; cursor: w-resize; }
+.msi-chat-window-resize--ne { top: 0; right: 0; width: 15px; height: 15px; cursor: ne-resize; }
+.msi-chat-window-resize--se { bottom: 0; right: 0; width: 15px; height: 15px; cursor: se-resize; }
+.msi-chat-window-resize--sw { bottom: 0; left: 0; width: 15px; height: 15px; cursor: sw-resize; }
+.msi-chat-window-resize--nw { top: 0; left: 0; width: 15px; height: 15px; cursor: nw-resize; }
+body.is-chat-window-dragging,
+body.is-chat-window-dragging * { user-select: none !important; }
+
+.msi-desktop .wzh-chat-panel.is-open.is-visualizing,
+.msi-desktop .pto-ide-frame.is-sidebar-collapsed .msi-sidebar { position: absolute; }
+.msi-desktop .pto-ide-frame.is-sidebar-collapsed .pto-ide-frame__body { overflow: visible; }
+.msi-desktop .pto-ide-frame.is-sidebar-collapsed .msi-sidebar {
+  top: -48px;
+  width: min(300px, 90%);
+}
+.msi-desktop .wzh-chat-panel.is-open.is-visualizing { max-width: none; }
+
+@container desktop-window (max-width: 1120px) {
+  .msi-sidebar { width: 190px; flex-basis: 190px; }
+  .wzh-chat-panel:not(.is-floating):not(.is-visualizing) { --wzh-chat-w: min(42%, 420px); }
+  .msi-ov-runtime-controls { flex-wrap: wrap; }
+}
+
+@container desktop-window (max-width: 960px) {
+  .msi-overview { padding: 12px; }
+  .msi-ov-watch-grid,
+  .msi-ov-issues { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .msi-desktop-shortcut { display: none; }
+  .msi-taskbar-search { width: 44px; justify-content: center; padding: 0; }
+  .msi-taskbar-search span { display: none; }
+}

@@ -32,8 +32,14 @@
   <link rel="stylesheet" href="../chat.css">
   <link rel="stylesheet" href="../code-change.css">
   <link rel="stylesheet" href="../timeline-swim.css">
+  <link rel="stylesheet" href="../desktop.css">
 </head>
 <body class="chat-shell-page" data-theme="light" data-theme-id="calc" data-brand="calc">
+  <div class="msi-desktop" id="msiDesktop" aria-label="模拟电脑桌面">
+    <button class="msi-desktop-shortcut" id="msiDesktopShortcut" type="button" aria-label="打开 MindStudio Insight" title="打开 MindStudio Insight">
+      <img src="../../src/pic/icon/MSInsight.ico" alt="">
+      <span>MindStudio Insight</span>
+    </button>
   <section class="pto-ide-frame" data-host="standalone" aria-label="智能对话工作台">
     <header class="pto-ide-frame__topbar pto-ide-frame__standalone-chrome">
       <div class="pto-ide-frame__topbar-left">
@@ -55,10 +61,19 @@
               <path d="M12 3a6.5 6.5 0 0 0 7.8 8.8A8 8 0 1 1 12 3z"></path>
             </svg>
           </button>
-          <span class="pto-ide-frame__window-separator" aria-hidden="true"></span>
           <!-- 智能对话:AI 入口,默认收起,面板与逻辑见页尾内联的 training-chat-panel 脚本 -->
           <button class="pto-ide-frame__window-action" id="trainChatToggle" type="button" aria-controls="trainChatPanel" aria-expanded="false" aria-pressed="false" title="打开智能对话" aria-label="打开智能对话">
             <img class="pto-ide-frame__window-icon pto-ide-frame__window-icon--image" src="../../src/pic/icon/msinsightbotAvatar.png" alt="">
+          </button>
+          <button class="pto-ide-frame__window-action msi-window-control" id="msiWindowMinimize" type="button" title="最小化" aria-label="最小化">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10"></path></svg>
+          </button>
+          <button class="pto-ide-frame__window-action msi-window-control" id="msiWindowMaximize" type="button" title="最大化" aria-label="最大化" aria-pressed="false">
+            <svg class="msi-window-max-icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx=".5"></rect></svg>
+            <svg class="msi-window-restore-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 5V2.5h8.5V11H11M2.5 5H11v8.5H2.5z"></path></svg>
+          </button>
+          <button class="pto-ide-frame__window-action msi-window-control msi-window-control--close" id="msiWindowClose" type="button" title="关闭窗口" aria-label="关闭窗口">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.5 3.5 9 9m0-9-9 9"></path></svg>
           </button>
         </div>
       </div>
@@ -140,7 +155,7 @@
            aria-orientation="vertical" aria-label="调整智能对话面板宽度" tabindex="0" hidden></div>
 
       <!-- 智能对话:默认「挤入式」——作为 workarea 的第二列,和左边内容区形成左右关系,展开时把内容区
-               挤窄而不是盖在上面;点右上角悬浮窗图标(#trainChatFloatBtn)切成浮动抽屉(.is-floating)。
+               挤窄而不是盖在上面;点右上角悬浮窗图标(#trainChatFloatBtn)移到桌面成为独立窗口(.is-floating)。
                开关入口是右上角 #trainChatToggle,默认展开。逻辑见页尾内联脚本(原 js/training-chat-panel.js)。 -->
       <aside class="wzh-chat-panel" id="trainChatPanel" aria-label="智能对话" aria-hidden="true">
         <header class="wzh-chat-head">
@@ -373,7 +388,27 @@
       </aside>
       </div>
     </div>
+    <div class="msi-window-resize msi-window-resize--n" data-resize-edge="n" role="separator" aria-label="调整窗口上边缘" tabindex="0"></div>
+    <div class="msi-window-resize msi-window-resize--e" data-resize-edge="e" role="separator" aria-label="调整窗口右边缘" tabindex="0"></div>
+    <div class="msi-window-resize msi-window-resize--s" data-resize-edge="s" role="separator" aria-label="调整窗口下边缘" tabindex="0"></div>
+    <div class="msi-window-resize msi-window-resize--w" data-resize-edge="w" role="separator" aria-label="调整窗口左边缘" tabindex="0"></div>
+    <div class="msi-window-resize msi-window-resize--ne" data-resize-edge="ne" role="separator" aria-label="调整窗口右上角" tabindex="0"></div>
+    <div class="msi-window-resize msi-window-resize--se" data-resize-edge="se" role="separator" aria-label="调整窗口右下角" tabindex="0"></div>
+    <div class="msi-window-resize msi-window-resize--sw" data-resize-edge="sw" role="separator" aria-label="调整窗口左下角" tabindex="0"></div>
+    <div class="msi-window-resize msi-window-resize--nw" data-resize-edge="nw" role="separator" aria-label="调整窗口左上角" tabindex="0"></div>
   </section>
+    <footer class="msi-taskbar" aria-label="模拟 Windows 任务栏">
+      <span class="msi-taskbar-start" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 4.5 10.5 3v8H2zm10 0L22 3v8h-10zM2 13h8.5v8L2 19.5zm10 0h10v8l-10-1.5z"></path></svg></span>
+      <span class="msi-taskbar-search" aria-hidden="true"><svg viewBox="0 0 20 20"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="m12.5 12.5 4 4"></path></svg><span>在这里输入你要搜索的内容</span></span>
+      <button class="msi-taskbar-app is-active" id="msiTaskbarApp" type="button" aria-label="MindStudio Insight 窗口" title="MindStudio Insight"><img src="../../src/pic/icon/MSInsight.ico" alt=""></button>
+      <span class="msi-taskbar-spacer"></span>
+      <span class="msi-taskbar-tray" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="m3 10 5-5 5 5"></path></svg></span>
+      <span class="msi-taskbar-tray" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M2 7.5a10 10 0 0 1 14 0M4.5 10a6.6 6.6 0 0 1 9 0M7 12.5a3 3 0 0 1 4 0"></path><circle cx="9" cy="15" r="1" fill="currentColor" stroke="none"></circle></svg></span>
+      <span class="msi-taskbar-tray" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M2 7h3l4-3v10l-4-3H2zM12 6a5 5 0 0 1 0 6m2-8a8 8 0 0 1 0 10"></path></svg></span>
+      <time class="msi-taskbar-clock" id="msiTaskbarClock" aria-label="当前时间"></time>
+      <span class="msi-taskbar-show-desktop" aria-hidden="true"></span>
+    </footer>
+  </div>
 
   <dialog class="msi-import-dialog" id="msiImportDialog" aria-labelledby="msiImportTitle">
     <div class="msi-import-head">
@@ -417,5 +452,7 @@
 
   <!-- ── 窗口控制:三条分隔条的拖动逻辑 ── -->
   <script defer src="../resizers.js"></script>
+  <script defer src="../desktop.js"></script>
+  <script defer src="../desktop-chat.js"></script>
 </body>
 </html>

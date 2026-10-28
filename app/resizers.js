@@ -78,7 +78,7 @@
       const extra = foot.getBoundingClientRect().height - footBody.getBoundingClientRect().height;
       const max = content.clientHeight * MAX_RATIO - extra;
       return content.querySelector('.msi-timeline-swims.is-compare')
-        ? Math.min(max, window.innerHeight * 0.18) : max;
+        ? Math.min(max, content.closest('.pto-ide-frame').clientHeight * 0.18) : max;
     }
     const footRead = () => footBody.getBoundingClientRect().height || FOOT_DEFAULT;
     function footApply(px) {
@@ -185,11 +185,14 @@
       bindDrag(vizHandle, 'x', vizRead, vizApply, vizReset, 1);
     }
 
-    window.addEventListener('resize', () => {
+    const clampToWindow = () => {
       footClamp();
       chatClamp();
       if (vizHandle && !chat.classList.contains('is-viz-expanding')) vizClamp();
-    });
+    };
+    window.addEventListener('resize', clampToWindow);
+    const frame = workarea?.closest('.pto-ide-frame');
+    if (frame && typeof ResizeObserver === 'function') new ResizeObserver(clampToWindow).observe(frame);
   }
 
   if (document.readyState === 'loading') {
