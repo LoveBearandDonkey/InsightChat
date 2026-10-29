@@ -2040,7 +2040,6 @@
     const chain = document.getElementById('msiCallChain');
     const row = bar.closest('.msi-lane-row');
     if (!basics || !chain || !row) return;
-    setSelectionPanelCollapsed(false);
     const activeTab = document.querySelector('#msiSelectionPanel .msi-foot-tab.is-active');
     activateFootTab(activeTab?.dataset.footTab === 'list' ||
       (activeTab?.dataset.footTab === 'system' && document.getElementById('msiSystemView'))
@@ -2190,9 +2189,7 @@
       activateFootTab(activeTab?.dataset.footTab || 'chain');
       return;
     }
-    // 选中了任务条就一定把面板拉开——用户手动收起后再点泳道,也要重新弹出详情。
-    // 右栏若停在别的页签就切回「调用链」,保证点一下泳道就能看到调用流。
-    setSelectionPanelCollapsed(false);
+    // 选中任务只更新详情和页签，面板的展开状态由用户控制。
     const activeTab = document.querySelector('#msiSelectionPanel .msi-foot-tab.is-active');
     activateFootTab(activeTab?.dataset.footTab === 'list' ||
       (activeTab?.dataset.footTab === 'system' && document.getElementById('msiSystemView'))
@@ -2393,6 +2390,10 @@
       if (tab) {
         setSelectionPanelCollapsed(false);
         activateFootTab(tab.dataset.footTab);
+        return;
+      }
+      if (panel.classList.contains('is-collapsed') && event.target.closest('.msi-foot-head')) {
+        setSelectionPanelCollapsed(false);
       }
     });
     // 每次进页面都从收起态开始(不记忆上次状态):标记里已写 is-collapsed,这里再走一遍
@@ -2545,8 +2546,8 @@
   }
 
   // 把任务条滚到泳道可视区正中(只动泳道自己的滚动容器,不用 scrollIntoView 免得整页跟着滚)。
-  // 一定要放在 renderSelectionDetail 之后、下一帧再量尺寸:底部详情面板一拉开,
-  // .msi-swim-body 立刻被挤矮,若按拉开前的高度算中点,靠下的条正好落在被面板盖住的那一截。
+  // 一定要放在 renderSelectionDetail 之后、下一帧再量尺寸:详情栏的尺寸可能在这时变化,
+  // 若按变化前的泳道高度算中点,靠下的条可能落在可视区域外。
   // 右键路径不走这里——菜单锚在条上,容器一滚菜单就会被关掉。
   function centerTraceTaskInView(taskId, flash) {
     const body = traceSwimBody();
@@ -3098,7 +3099,6 @@
       const body = document.getElementById(id);
       if (body) { body.scrollLeft = 0; body.scrollTop = 0; }
     });
-    setSelectionPanelCollapsed(true);
     renderSwimlanes();
     syncTimelineControls();
     updateTimelineResetButton();
@@ -3432,7 +3432,6 @@
               showBoxTimeSelection(panel, Math.max(0, Math.min(1, start)), Math.max(0, Math.min(1, end)));
             }
             announce('已框选 ' + count + ' 个事件');
-            setSelectionPanelCollapsed(false);
             activateFootTab('list');
             updateTimelineResetButton();
           } else if (!drag.started && event.type !== 'pointercancel') {

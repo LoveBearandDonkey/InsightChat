@@ -6,7 +6,7 @@
   min-height: 0;
   display: flex; flex-direction: column;
   margin: 0;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--divider-strong);
   border-radius: var(--radius-md);
   background: var(--surface-1);
   overflow: hidden;
@@ -23,7 +23,7 @@
   position: absolute; z-index: 14; top: 110px; right: 20px;
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   box-sizing: border-box; width: 32px; padding: 2px;
-  border: 1px solid var(--border-subtle); border-radius: 7px;
+  border: 1px solid var(--border-line); border-radius: 7px;
   background: var(--surface-1); color: var(--foreground-secondary);
   box-shadow: 0 5px 12px color-mix(in srgb, #253d66 15%, transparent);
 }
@@ -32,7 +32,7 @@
   width: 26px; height: 14px; padding: 0;
   display: flex; align-items: center; justify-content: center;
   border: 0; border-radius: 4px; background: transparent;
-  color: var(--border-default); cursor: ns-resize; touch-action: none;
+  color: var(--divider-strong); cursor: ns-resize; touch-action: none;
 }
 .msi-mouse-tools-grip:hover { background: var(--state-hover); color: color-mix(in srgb, var(--msi-accent) 62%, transparent); }
 .msi-mouse-tools-grip:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
@@ -53,7 +53,7 @@
 .msi-mouse-tool.is-active { background: color-mix(in srgb, var(--msi-accent) 30%, var(--surface-1)); color: var(--msi-accent); }
 .msi-mouse-tool:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .msi-mouse-tool svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.msi-mouse-tool-separator { display: block; width: 18px; height: 1px; margin: 1px 0; background: var(--border-default); }
+.msi-mouse-tool-separator { display: block; width: 18px; height: 1px; margin: 1px 0; background: var(--divider-strong); }
 .msi-mouse-tools.is-collapsed { width: 32px; padding: 2px; }
 .msi-mouse-tools.is-collapsed .msi-mouse-tools-main,
 .msi-mouse-tools.is-collapsed > .msi-mouse-tool-separator,
@@ -62,7 +62,7 @@
 .msi-mouse-help {
   position: absolute; top: 0; right: calc(100% + 8px);
   width: max-content; max-width: 220px; padding: 10px 12px;
-  border: 1px solid var(--border-subtle); border-radius: 8px;
+  border: 1px solid var(--border-line); border-radius: 8px;
   background: var(--surface-1); box-shadow: 0 8px 24px color-mix(in srgb, #253d66 14%, transparent);
   color: var(--foreground); font-size: 12px; line-height: 1.9;
 }
@@ -79,18 +79,18 @@
 .msi-time-selection-line { position: absolute; top: 0; bottom: 0; border-left: 2px dashed var(--msi-accent); }
 .msi-time-selection-line[hidden] { display: none; }
 @media (max-width: 820px) { .msi-mouse-tools { top: 100px; right: 16px; } }
-.msi-swim-title { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px 12px; border-bottom: 1px solid var(--border-subtle); color: var(--foreground); font-size: 12px; font-weight: 600; }
+.msi-swim-title { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px 12px; border-bottom: 1px solid var(--divider-weak); color: var(--foreground); font-size: 12px; font-weight: 600; }
 .msi-swim-title[hidden] { display: none; }
 .msi-swim-title .msi-tree-compare-role { margin-left: 0; cursor: default; }
 .msi-swim-title-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .msi-swim-empty { padding: 24px 12px; color: var(--foreground-muted); font-size: 12px; text-align: center; }
-.msi-swim-head { position: relative; flex: 0 0 auto; display: flex; height: 30px; border-bottom: 1px solid var(--border-subtle); overflow: hidden; }
+.msi-swim-head { position: relative; flex: 0 0 auto; display: flex; height: 30px; border-bottom: 1px solid var(--divider-weak); overflow: hidden; }
 .msi-swim-head[hidden] { display: none; }
 .msi-timeline-reset {
   position: absolute; z-index: 13; top: 2px; right: 6px;
   display: grid; place-items: center;
   width: 25px; height: 25px; padding: 0;
-  border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+  border: 1px solid var(--border-line); border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--surface-1) 80%, transparent);
   color: var(--foreground-secondary); cursor: pointer;
 }
@@ -98,14 +98,14 @@
 .msi-timeline-reset:hover { color: var(--foreground); background: var(--surface-1); }
 .msi-timeline-reset:focus-visible { outline: 2px solid var(--msi-accent); outline-offset: -2px; }
 .msi-timeline-reset svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.msi-swim-corner { position: relative; z-index: 1; width: var(--msi-lane-w, 220px); flex: 0 0 var(--msi-lane-w, 220px); border-right: 1px solid var(--border-subtle); background: var(--surface-1); }
+.msi-swim-corner { position: relative; z-index: 1; width: var(--msi-lane-w, 220px); flex: 0 0 var(--msi-lane-w, 220px); border-right: 1px solid var(--divider-weak); background: var(--surface-1); }
 .msi-swim-ruler { position: relative; flex: 0 0 var(--msi-track-w, 100%); width: var(--msi-track-w, 100%); min-width: 0; }
 /* 末格 1000ms 的标签往左收,否则会被 .msi-swim 的 overflow:hidden 切掉 */
-.msi-ruler-tick--end { padding: 0 6px 0 0; text-align: right; border-left: 0; border-right: 1px solid var(--border-subtle); transform: translateX(-100%); }
+.msi-ruler-tick--end { padding: 0 6px 0 0; text-align: right; border-left: 0; border-right: 1px solid var(--divider-weak); transform: translateX(-100%); }
 .msi-ruler-tick {
   position: absolute; top: 0; bottom: 0;
   padding-left: 6px;
-  border-left: 1px solid var(--border-subtle);
+  border-left: 1px solid var(--divider-weak);
   color: var(--foreground-muted);
   font-size: 11px; line-height: 30px;
   white-space: nowrap; pointer-events: none;
@@ -118,14 +118,14 @@
   overflow: auto;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
-  scrollbar-color: var(--border-default) transparent;
+  scrollbar-color: var(--divider-strong) transparent;
 }
 .msi-swim-body > .msi-lane-row,
 .msi-swim-body > .msi-pinned-pair { width: calc(var(--msi-lane-w, 220px) + var(--msi-track-w, 0px)); }
 .msi-swim-body .msi-pinned-pair > .msi-lane-row { width: 100%; }
 .msi-swim-body::-webkit-scrollbar { width: 8px; height: 8px; }
 .msi-swim-body::-webkit-scrollbar-track { background: transparent; }
-.msi-swim-body::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 4px; }
+.msi-swim-body::-webkit-scrollbar-thumb { background: var(--divider-strong); border-radius: 4px; }
 .msi-swim-body::-webkit-scrollbar-thumb:hover { background: var(--foreground-muted); }
 
 /* 同名置顶是两张 msi-swim 之前的独立卡片。 */
@@ -148,7 +148,7 @@
   display: flex;
   align-items: center;
   padding: 4px 8px 4px 12px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--divider-weak);
   color: var(--foreground);
   font-size: 12px;
   font-weight: 700;
@@ -157,7 +157,7 @@
 .msi-pinned-domain { position: absolute; inset: 0 auto 0 0; }
 .msi-pinned-body { flex: 0 0 auto; max-height: min(34vh, 280px); overflow: auto; scrollbar-gutter: auto; }
 .msi-pinned-body > .msi-link-layer { width: 100%; height: 100%; }
-.msi-pinned-pair { border-top: 1px solid var(--border-subtle); }
+.msi-pinned-pair { border-top: 1px solid var(--divider-weak); }
 .msi-pinned-remove {
   margin-left: auto;
   width: 20px;
@@ -184,7 +184,7 @@
 .msi-pinned-task-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .msi-pinned-lane-name { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.msi-lane-row { cursor: pointer; display: flex; align-items: stretch; border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 60%, transparent); }
+.msi-lane-row { cursor: pointer; display: flex; align-items: stretch; border-bottom: 1px solid var(--divider-weak); }
 .msi-lane-row.is-auto-empty { display: none; }
 .msi-lane-row:last-child { border-bottom: 0; }
 /* 选中的泳道整行浅蓝底,和还原稿里的 Ascend Hardware 一致 */
@@ -206,7 +206,7 @@
   flex: 0 0 var(--msi-lane-w, 220px);
   display: flex; align-items: center; gap: 5px;
   padding: 0 10px 0 12px;
-  border: 0; border-right: 1px solid var(--border-subtle);
+  border: 0; border-right: 1px solid var(--divider-weak);
   color: var(--foreground);
   font-size: 13px; text-align: left;
   background: var(--surface-1);
@@ -334,11 +334,11 @@
 .msi-system-sidebar {
   display: flex; flex-direction: column; gap: 10px;
   padding: 10px 12px;
-  border-right: 1px solid var(--border-subtle); overflow: auto;
+  border-right: 1px solid var(--divider-weak); overflow: auto;
 }
 .msi-system-view select {
   min-width: 0; height: 32px; padding: 0 26px 0 10px;
-  border: 1px solid var(--border-subtle); border-radius: 3px;
+  border: 1px solid var(--border-line); border-radius: 3px;
   background: var(--surface-1); color: var(--foreground);
   font: inherit; font-size: 12px; text-overflow: ellipsis;
 }
@@ -368,7 +368,7 @@
 .msi-system-detail-table th,
 .msi-system-detail-table td {
   height: 32px; padding: 0 8px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--divider-weak);
   text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .msi-system-table th,
@@ -383,16 +383,16 @@
   flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 6px 12px;
   align-items: center; justify-content: space-between;
   min-height: 32px; padding: 5px 8px;
-  border-top: 1px solid var(--border-subtle); color: var(--foreground-secondary);
+  border-top: 1px solid var(--divider-weak); color: var(--foreground-secondary);
 }
 .msi-system-detail {
   display: flex; flex-direction: column;
-  border-left: 1px solid var(--border-subtle);
+  border-left: 1px solid var(--divider-weak);
 }
 .msi-system-detail-title {
   flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
   min-height: 32px; padding: 0 8px;
-  border-bottom: 1px solid var(--border-subtle); font-size: 13px;
+  border-bottom: 1px solid var(--divider-weak); font-size: 13px;
 }
 .msi-system-detail-title span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--foreground-muted); font-size: 11px; }
 .msi-system-detail-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; }

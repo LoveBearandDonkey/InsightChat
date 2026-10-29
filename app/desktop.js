@@ -128,6 +128,7 @@
   }
 
   titlebar.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
     if (state.maximized || frame.classList.contains('is-desktop-maximized')) return;
     if (event.target.closest('button, a, input, select, textarea, [data-no-window-drag]')) return;
     const start = { ...shown };
