@@ -204,8 +204,8 @@
   --foreground-placeholder: #808080;
 
   --divider-weak: rgba(255, 255, 255, .10);
-  --divider-strong: rgba(255, 255, 255, .20);
-  --border-line: rgba(255, 255, 255, .20);
+  --divider-strong: rgba(255, 255, 255, .10);
+  --border-line: rgba(255, 255, 255, .10);
   --border-subtle: var(--divider-weak);
   --border-default: var(--divider-strong);
   --border-strong: var(--border-line);
@@ -410,9 +410,9 @@
   --button-solid-fg:       var(--background);
   --button-solid-shadow:   none;
   --button-secondary-bg: color-mix(in srgb, var(--surface-2) 92%, white 3%);
-  --button-secondary-bg-hover: var(--surface-3);
-  --button-secondary-bg-press: color-mix(in srgb, var(--surface-3) 84%, black);
-  --button-secondary-border: var(--border-line);
+  --button-secondary-bg-hover: var(--button-secondary-bg);
+  --button-secondary-bg-press: var(--button-secondary-bg);
+  --button-secondary-border: var(--divider-strong);
   --button-secondary-fg: var(--foreground);
   --button-secondary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 2px 8px rgba(0, 0, 0, 0.16);
   --button-ghost-bg-hover: var(--state-hover);
@@ -578,9 +578,9 @@
 
 :root[data-theme='light'] {
   --button-secondary-bg: color-mix(in srgb, var(--surface-1) 92%, var(--surface-2));
-  --button-secondary-bg-hover: color-mix(in srgb, var(--surface-1) 28%, var(--surface-2));
-  --button-secondary-bg-press: color-mix(in srgb, var(--surface-2) 84%, var(--surface-3));
-  --button-secondary-border: var(--border-line);
+  --button-secondary-bg-hover: var(--button-secondary-bg);
+  --button-secondary-bg-press: var(--button-secondary-bg);
+  --button-secondary-border: var(--divider-strong);
   --button-secondary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78), 0 1px 2px rgba(0, 0, 0, 0.06);
   --ide-frame-page-bg: var(--background-elevated);
   --ide-frame-bg: var(--background);
@@ -602,9 +602,9 @@
   --button-solid-fg: #08111f;
   --button-solid-shadow: var(--glass-surface-highlight), 0 8px 20px rgba(0, 0, 0, 0.18);
   --button-secondary-bg: rgba(255, 255, 255, 0.105);
-  --button-secondary-bg-hover: rgba(255, 255, 255, 0.16);
-  --button-secondary-bg-press: rgba(255, 255, 255, 0.08);
-  --button-secondary-border: rgba(255, 255, 255, 0.12);
+  --button-secondary-bg-hover: var(--button-secondary-bg);
+  --button-secondary-bg-press: var(--button-secondary-bg);
+  --button-secondary-border: var(--divider-strong);
   --button-secondary-shadow: var(--glass-surface-highlight), 0 8px 24px rgba(0, 0, 0, 0.14);
   --button-ghost-bg-hover: rgba(255, 255, 255, 0.10);
   --button-ghost-bg-press: rgba(255, 255, 255, 0.15);
@@ -4922,14 +4922,14 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     }
     .wzh-chat-agent-foot-btn {
       display: block; width: 100%; box-sizing: border-box; min-width: 0;
-      padding: 9px 10px; border: 1px solid var(--border-line);
+      padding: 9px 10px; border: 1px solid var(--divider-strong);
       border-radius: var(--radius-md, 8px); background: transparent; cursor: pointer;
       font: 400 14px/1.4 var(--font-sans); color: var(--foreground); text-align: center;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       transition: background var(--duration-fast) var(--easing-default);
     }
-    .wzh-chat-agent-foot-btn:hover { background: var(--state-hover); }
-    .wzh-chat-agent-foot-btn:focus-visible { outline: none; background: var(--state-hover); }
+    .wzh-chat-agent-foot-btn:hover { border-color: var(--brand-blue); color: var(--brand-blue); }
+    .wzh-chat-agent-foot-btn:focus-visible { outline: none; }
     /* 刷新过程中按钮暂时不可点,避免连点重复重建列表 */
     .wzh-chat-agent-foot-btn:disabled { opacity: .6; cursor: default; }
     .wzh-chat-head-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
@@ -5184,7 +5184,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       position: absolute; top: 5px; right: 5px;
       display: inline-flex; align-items: center; justify-content: center;
       width: 22px; height: 22px; padding: 0;
-      border: 1px solid var(--border-line); border-radius: var(--radius-sm);
+      border: 1px solid var(--divider-strong); border-radius: var(--radius-sm);
       background: var(--surface-1); color: var(--foreground-secondary);
       cursor: pointer; opacity: 0;
       transition: opacity var(--duration-fast) var(--easing-default),
@@ -5193,7 +5193,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     }
     .wzh-chat-codeblock:hover .wzh-chat-copy,
     .wzh-chat-copy:focus-visible { opacity: 1; }
-    .wzh-chat-copy:hover { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+    .wzh-chat-copy:hover { color: var(--brand-blue); border-color: var(--brand-blue); }
     /* 复制成功的回执:图标换成对勾并暂时常驻,1.6s 后自己退回去(见 boot 里的委托) */
     .wzh-chat-copy.is-done { opacity: 1; color: var(--brand-green); border-color: color-mix(in srgb, var(--brand-green) 45%, transparent); }
     .wzh-chat-copy svg {
@@ -6182,7 +6182,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       position: absolute; left: 50%; bottom: 12px; transform: translate(-50%, 6px);
       width: 32px; height: 32px; padding: 0;
       display: inline-flex; align-items: center; justify-content: center;
-      border: 1px solid var(--border-line); border-radius: 50%;
+      border: 1px solid var(--divider-strong); border-radius: 50%;
       background: var(--surface-1); color: var(--foreground-secondary);
       box-shadow: 0 4px 12px -4px rgba(0, 0, 0, .28);
       cursor: pointer; opacity: 0; pointer-events: none;
@@ -6190,7 +6190,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
                   transform var(--duration-fast) var(--easing-default);
     }
     .wzh-chat-jump-btn.is-visible { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
-    .wzh-chat-jump-btn:hover { background: var(--surface-2); border-color: var(--border-line); }
+    .wzh-chat-jump-btn:hover { border-color: var(--brand-blue); color: var(--brand-blue); }
     .wzh-chat-jump-btn svg {
       width: 15px; height: 15px; fill: none; stroke: currentColor;
       stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
@@ -6455,7 +6455,7 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
   padding: 0 9px;
   flex-shrink: 0;
   border-radius: var(--radius-md, 8px);
-  border: 1px solid var(--border-line);
+  border: 1px solid var(--divider-strong);
   background: var(--surface-1);
   color: var(--foreground);
   font-size: 12.5px;
@@ -6514,14 +6514,14 @@ html[data-entry-view="overview"] .msi-compare-icon {
 .msi-manage-delete {
   height: 28px;
   padding: 0 9px;
-  border: 1px solid var(--border-line);
+  border: 1px solid var(--divider-strong);
   border-radius: var(--radius-md, 8px);
   background: var(--surface-1);
   color: var(--foreground);
   font-size: 12px;
   cursor: pointer;
 }
-.msi-manage-delete:hover:not(:disabled) { background: var(--state-hover); }
+.msi-manage-delete:hover:not(:disabled) { border-color: var(--brand-blue); color: var(--brand-blue); }
 .msi-manage-delete:disabled { color: var(--foreground-muted); opacity: .45; cursor: default; }
 .msi-compare-back[hidden], .msi-compare-heading[hidden], .msi-manage-select-all[hidden], .msi-manage-delete[hidden], .msi-side-normal-action[hidden], .msi-tree-expand-all[hidden] { display: none; }
 /* 设置 / 收起靠右贴边,和「导入」「对比」拉开 */
@@ -6723,7 +6723,7 @@ html[data-entry-view="overview"] .msi-compare-icon {
   min-width: 0; max-width: 220px; height: 20px;
   display: inline-flex; align-items: center; gap: 3px;
   padding: 0 3px 0 6px;
-  border: 1px solid var(--border-line);
+  border: 1px solid var(--divider-strong);
   border-radius: 5px;
   background: var(--surface-2);
   color: var(--foreground-secondary); font-size: 11px; font-weight: 400;
@@ -6759,7 +6759,7 @@ html[data-entry-view="overview"] .msi-compare-icon {
   align-items: center;
   gap: 6px;
   padding: 0 9px;
-  border: 1px solid var(--border-line);
+  border: 1px solid var(--divider-strong);
   border-radius: var(--radius-md);
   background: #fff;
   color: #191919;
@@ -6770,13 +6770,13 @@ html[data-entry-view="overview"] .msi-compare-icon {
 }
 .msi-smart-compare[hidden] { display: none; }
 .msi-smart-compare img { width: 16px; height: 16px; flex: 0 0 16px; }
-.msi-smart-compare:hover:not(:disabled) { background: color-mix(in srgb, #fff 94%, var(--mi-brand-blue)); }
+.msi-smart-compare:hover:not(:disabled) { border-color: var(--brand-blue); color: var(--brand-blue); }
 .msi-smart-compare:disabled { opacity: .45; cursor: default; }
 .msi-smart-compare:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .msi-more-btn {
   width: 28px; height: 28px;
   display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid var(--border-line); border-radius: var(--radius-md);
+  border: 1px solid var(--divider-strong); border-radius: var(--radius-md);
   background: var(--surface-1); color: var(--foreground-muted); cursor: pointer;
 }
 .msi-more-btn svg { width: 16px; height: 16px; fill: currentColor; }
@@ -6815,19 +6815,19 @@ html[data-entry-view="overview"] .msi-compare-icon {
   height: 32px;
   display: inline-flex; align-items: center; gap: 6px;
   padding: 0 12px;
-  border: 1px solid var(--border-line); border-radius: var(--radius-md);
+  border: 1px solid var(--divider-strong); border-radius: var(--radius-md);
   background: var(--surface-1);
   color: var(--foreground);
   font-size: 13px; cursor: pointer; white-space: nowrap;
 }
-.msi-tb-btn:hover { background: color-mix(in srgb, var(--foreground) 4%, var(--surface-1)); }
+.msi-tb-btn:hover { border-color: var(--brand-blue); color: var(--brand-blue); }
 .msi-tb-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .msi-tb-caret { width: 13px !important; height: 13px !important; opacity: .7; }
 /* 时间轴缩放:左减右加,中间是当前时间窗长度 */
 .msi-tb-zoom {
   height: 32px;
   display: inline-flex; align-items: center;
-  border: 1px solid var(--border-line); border-radius: var(--radius-md);
+  border: 1px solid var(--divider-strong); border-radius: var(--radius-md);
   background: var(--surface-1);
   overflow: hidden;
 }
@@ -6837,7 +6837,7 @@ html[data-entry-view="overview"] .msi-compare-icon {
   border: 0; background: transparent;
   color: var(--foreground); cursor: pointer;
 }
-.msi-tb-zoom-btn:hover { background: color-mix(in srgb, var(--foreground) 4%, var(--surface-1)); }
+.msi-tb-zoom-btn:hover { color: var(--brand-blue); }
 .msi-tb-zoom-btn:disabled { color: var(--foreground-muted); opacity: .45; cursor: default; background: transparent; }
 .msi-tb-zoom-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 .msi-tb-zoom-val {
@@ -7103,7 +7103,7 @@ html[data-entry-view="overview"] .msi-compare-icon {
   gap: 6px;
   overflow: hidden;
   padding: 0 6px;
-  border: 1px solid var(--border-line);
+  border: 1px solid var(--divider-strong);
   border-radius: var(--radius-md);
   background: #fff;
   color: #191919;
@@ -8286,7 +8286,7 @@ html[data-entry-view="overview"] .msi-compare-icon {
   top: 10px;
   right: 10px;
   padding: 0;
-  border: 1px solid var(--border-line);
+  border: 1px solid var(--divider-strong);
   border-radius: 50%;
   background: var(--surface-1);
   color: var(--foreground-muted);
@@ -8298,7 +8298,7 @@ html[data-entry-view="overview"] .msi-compare-icon {
 }
 .msi-ov-metric-help:hover,
 .msi-ov-metric-help:focus-visible {
-  border-color: color-mix(in srgb, var(--msi-accent) 40%, var(--border-line));
+  border-color: var(--brand-blue);
   color: var(--msi-accent);
   outline: none;
 }
@@ -8393,7 +8393,7 @@ html[data-entry-view="overview"] .msi-compare-icon {
 .msi-ov-detail-action {
   min-height: 28px;
   padding: 4px 10px;
-  border: 1px solid color-mix(in srgb, var(--msi-accent) 30%, var(--border-line));
+  border: 1px solid var(--divider-strong);
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--msi-accent) 7%, var(--surface-1));
   color: var(--msi-accent);
@@ -8401,7 +8401,7 @@ html[data-entry-view="overview"] .msi-compare-icon {
   font-size: 11px;
   cursor: pointer;
 }
-.msi-ov-detail-action:hover { background: color-mix(in srgb, var(--msi-accent) 12%, var(--surface-1)); }
+.msi-ov-detail-action:hover { border-color: var(--brand-blue); }
 @media (max-width: 1180px) {
   .msi-ov-runtime-controls { flex-wrap: wrap; }
 }
@@ -8524,8 +8524,8 @@ html[data-entry-view="overview"] .msi-compare-icon {
 .msi-import-clear[hidden] { display: none; }
 .msi-import-confirm,
 .msi-import-cancel { min-height: 34px; padding: 0 18px; border-radius: 3px; font: inherit; font-size: 13px; cursor: pointer; }
-.msi-import-cancel { border: 1px solid var(--border-line); background: var(--surface-1); color: var(--foreground); }
-.msi-import-cancel:hover { background: var(--state-hover); }
+.msi-import-cancel { border: 1px solid var(--divider-strong); background: var(--surface-1); color: var(--foreground); }
+.msi-import-cancel:hover { border-color: var(--brand-blue); color: var(--brand-blue); }
 .msi-import-browser {
   flex: 1 1 auto;
   min-height: 120px;
@@ -8575,4 +8575,57 @@ html[data-entry-view="overview"] .msi-compare-icon {
   .msi-import-dialog { width: calc(100vw - 24px); height: calc(100vh - 24px); }
   .msi-import-head { min-height: 60px; padding: 0 18px; }
   .msi-import-body { padding: 20px 18px; }
+}
+
+/* 共用次要按钮状态：保持各自填充色，只用品牌蓝标识悬浮、聚焦和选中。 */
+.btn:not(.btn-solid, .btn-ghost) { --secondary-action-fill: var(--button-secondary-bg); }
+.wzh-chat-agent-foot-btn { --secondary-action-fill: transparent; }
+.msi-smart-compare,
+.msi-chain-analyze { --secondary-action-fill: #fff; }
+.msi-timeline-reset { --secondary-action-fill: color-mix(in srgb, var(--surface-1) 80%, transparent); }
+.msi-ov-detail-action { --secondary-action-fill: color-mix(in srgb, var(--msi-accent) 7%, var(--surface-1)); }
+
+:is(
+  .btn:not(.btn-solid, .btn-ghost),
+  .wzh-chat-agent-foot-btn,
+  .wzh-chat-copy:not(.is-done),
+  .wzh-chat-jump-btn,
+  .msi-side-btn:not(.msi-side-btn--primary),
+  .msi-manage-delete,
+  .msi-smart-compare,
+  .msi-more-btn,
+  .msi-tb-btn,
+  .msi-tb-zoom,
+  .msi-chain-analyze,
+  .msi-timeline-reset,
+  .msi-ov-metric-help,
+  .msi-ov-detail-action,
+  .msi-import-cancel
+) { border-color: var(--divider-strong); }
+
+:is(
+  .btn:not(.btn-solid, .btn-ghost),
+  .wzh-chat-agent-foot-btn,
+  .wzh-chat-copy:not(.is-done),
+  .wzh-chat-jump-btn,
+  .msi-side-btn:not(.msi-side-btn--primary),
+  .msi-manage-delete,
+  .msi-smart-compare,
+  .msi-more-btn,
+  .msi-tb-btn,
+  .msi-tb-zoom,
+  .msi-chain-analyze,
+  .msi-timeline-reset,
+  .msi-ov-metric-help,
+  .msi-ov-detail-action,
+  .msi-import-cancel
+):is(:hover, :focus-visible, :focus-within, .is-active, .is-selected, [aria-pressed='true'], [aria-expanded='true']):not(:disabled) {
+  background: var(--secondary-action-fill, var(--surface-1));
+  border-color: var(--brand-blue);
+  color: var(--brand-blue);
+}
+
+.msi-tb-zoom:is(:hover, :focus-within) :is(.msi-tb-zoom-btn:not(:disabled), .msi-tb-zoom-val) {
+  background: transparent;
+  color: var(--brand-blue);
 }

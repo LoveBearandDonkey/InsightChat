@@ -58,8 +58,8 @@
     try { localStorage.setItem(WALLPAPER_KEY, light ? 'light' : 'dark'); } catch (_) { /* Optional preference. */ }
   }
 
-  try { setLightWallpaper(localStorage.getItem(WALLPAPER_KEY) === 'light'); }
-  catch (_) { setLightWallpaper(false); }
+  try { setLightWallpaper(localStorage.getItem(WALLPAPER_KEY) !== 'dark'); }
+  catch (_) { setLightWallpaper(true); }
   taskbarStart?.addEventListener('click', () => setLightWallpaper(!desktop.classList.contains('is-light-wallpaper')));
 
   function render() {

@@ -75,6 +75,20 @@
       return { x: rect.left, y: rect.top, w: rect.width, h: rect.height };
     }
 
+    // Capture the docked panel before the assistant's click handler changes its layout.
+    floatButton.addEventListener('click', () => {
+      if (!panel.classList.contains('is-open') || panel.classList.contains('is-floating') ||
+          panel.classList.contains('is-visualizing')) return;
+      const rect = currentRect();
+      const { width } = bounds();
+      Object.assign(state, {
+        x: Math.min(rect.x + 40, Math.max(0, width - rect.w - 8)),
+        y: rect.y,
+        w: rect.w,
+        h: rect.h,
+      });
+    }, true);
+
     function syncMainToggleLabel() {
       if (!mainChatToggle) return;
       const label = !panel.classList.contains('is-open') ? '打开智能对话' :

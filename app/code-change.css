@@ -25,6 +25,7 @@
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(215px, 32%);
   gap: 6px; padding: 6px; box-sizing: border-box;
   background: var(--ide-frame-pane-bg);
+  color: var(--foreground);
 }
 .wzh-code-review.wzh-chat-viz-frame[hidden] { display: none; }
 .wzh-code-review .pto-ide-frame__pane {
@@ -42,12 +43,12 @@
 .wzh-code-pane-summary b { margin-left: 6px; }
 .wzh-code-file-list { padding: 8px 8px 28px; }
 .wzh-code-file-strip { display: flex; flex-direction: column; gap: 5px; }
-.wzh-code-file-entry { min-width: 0; border: 1px solid var(--border-line); border-radius: 7px; overflow: hidden; }
+.wzh-code-file-entry { min-width: 0; border: 1px solid var(--divider-strong); border-radius: 7px; overflow: hidden; color: var(--foreground); }
 .wzh-code-file-entry.is-selected { border: 1px solid var(--brand-accent); }
 .wzh-code-changed-file {
   width: 100%; min-width: 0; display: flex; align-items: center; gap: 7px;
   padding: 8px 9px; border: 0; border-radius: 0;
-  background: transparent; color: var(--foreground-secondary); font: 12px var(--font-sans);
+  background: transparent; color: var(--foreground); font: 12px var(--font-sans);
   text-align: left; cursor: pointer;
 }
 .wzh-code-changed-file:hover,
@@ -55,7 +56,7 @@
 .wzh-code-changed-file[aria-expanded='true'],
 .wzh-code-tree-file.is-selected {
   background: var(--wzh-code-selected-fill);
-  color: var(--brand-accent);
+  color: var(--foreground);
 }
 .wzh-code-changed-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wzh-code-line-stats { margin-left: auto; flex: 0 0 auto; font: 11px var(--font-mono); }
@@ -92,7 +93,7 @@
   color: var(--foreground-secondary); font: 650 11px var(--font-sans);
 }
 .wzh-code-tree-label span { color: var(--foreground-muted); font-weight: 400; }
-.wzh-code-tree { padding: 0 5px 16px; font: 12px var(--font-sans); }
+.wzh-code-tree { padding: 0 5px 16px; color: var(--foreground); font: 12px var(--font-sans); }
 .wzh-code-folder-children {
   margin-left: 11px;
   padding-left: 3px;
@@ -103,7 +104,7 @@
 .wzh-code-tree-row {
   width: 100%; min-width: 0; height: 27px; display: flex; align-items: center; gap: 5px;
   padding: 0 6px; border: 0; border-radius: 5px;
-  background: transparent; color: var(--foreground-secondary); font: inherit; text-align: left; cursor: pointer;
+  background: transparent; color: var(--foreground); font: inherit; text-align: left; cursor: pointer;
 }
 .wzh-code-tree-row[hidden], .wzh-code-folder[hidden] { display: none; }
 .wzh-code-tree-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
