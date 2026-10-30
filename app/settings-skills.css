@@ -81,14 +81,16 @@
 .wzh-skills-stats-card { width: 100%; }
 .wzh-skills-stats-graph { display: grid; grid-template-columns: 30px minmax(0, 1fr); height: 220px; }
 .wzh-skills-stats-axis { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 0 0 1px; color: var(--foreground-placeholder); font: 400 10px/1 var(--font-sans); }
-.wzh-skills-stats-plot { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); align-items: end; height: 220px; border-bottom: .5px solid var(--divider-weak); background: linear-gradient(to bottom, var(--divider-weak) 1px, transparent 1px) 0 0 / 100% 50% repeat-y; }
+.wzh-skills-stats-plot { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); align-items: end; box-sizing: border-box; height: 220px; border-bottom: 1px solid var(--divider-weak); background: linear-gradient(to bottom, var(--divider-weak) 1px, transparent 1px) 0 0 / 100% calc(100% / 3) repeat-y; }
 .wzh-skills-stats-column { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 1px; min-width: 0; height: 100%; }
+.wzh-skills-stats-column:is(:hover, :focus-visible) { background: var(--state-hover); }
 .wzh-skills-stats-column:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: -2px; }
-.wzh-skills-stats-tooltip { position: absolute; z-index: 3; bottom: min(calc(var(--column-bar-height, 0px) + 9px), 146px); left: 50%; box-sizing: border-box; min-width: 140px; padding: 8px 10px; border: 1px solid var(--border-line); border-radius: 8px; background: var(--surface-1); color: var(--foreground); box-shadow: 0 8px 24px rgb(0 0 0 / 16%); opacity: 0; visibility: hidden; transform: translateX(-50%); pointer-events: none; text-align: left; }
-.wzh-skills-stats-column:has(.wzh-skills-stats-bar:hover) .wzh-skills-stats-tooltip, .wzh-skills-stats-column:focus-visible .wzh-skills-stats-tooltip { opacity: 1; visibility: visible; }
+.wzh-skills-stats-tooltip { position: absolute; z-index: 3; bottom: min(calc(var(--column-bar-height, 0px) + 9px), 146px); left: 50%; box-sizing: border-box; width: 172px; padding: 8px 10px; border: 1px solid var(--divider-strong); border-radius: 8px; background: var(--surface-1); color: var(--foreground); box-shadow: 0 8px 24px rgb(0 0 0 / 16%); opacity: 0; visibility: hidden; transform: translateX(-50%); pointer-events: none; text-align: left; }
+.wzh-skills-stats-column:is(:hover, :focus-visible) .wzh-skills-stats-tooltip { opacity: 1; visibility: visible; }
 .wzh-skills-stats-column:nth-child(-n+3) .wzh-skills-stats-tooltip { left: 0; transform: none; }
 .wzh-skills-stats-column:nth-last-child(-n+3) .wzh-skills-stats-tooltip { right: 0; left: auto; transform: none; }
-.wzh-skills-stats-tooltip-date { display: block; margin-bottom: 6px; font: 600 12px/1.4 var(--font-sans); }
+.wzh-skills-stats-tooltip-head { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-bottom: 6px; white-space: nowrap; font: 600 11px/1.4 var(--font-sans); }
+.wzh-skills-stats-tooltip-total { font: inherit; }
 .wzh-skills-stats-tooltip-row { display: flex; align-items: center; gap: 7px; margin-top: 4px; color: var(--foreground-secondary); font: 400 12px/1.4 var(--font-sans); }
 .wzh-skills-stats-tooltip-row strong { margin-left: auto; color: var(--foreground); font: 600 12px/1.4 var(--font-sans); }
 .wzh-skills-stats-bar { display: block; width: min(18px, 64%); flex: 0 0 auto; }

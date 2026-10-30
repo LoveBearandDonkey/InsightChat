@@ -30,6 +30,7 @@
       const custom = empty ? 0 : 2 + ((index * 5 + 2) % 7);
       return {
         label: `${date.getMonth() + 1}月${date.getDate()}日`,
+        weekday: '日一二三四五六'[date.getDay()],
         system: index === 13 ? 43 : system,
         custom: index === 13 ? 4 : custom,
       };
@@ -110,8 +111,10 @@
       const graph = element('div', 'wzh-skills-stats-graph');
       const axis = element('div', 'wzh-skills-stats-axis');
       const maxTotal = Math.max(...usageDays.map(day => day.system + day.custom));
-      const scale = Math.max(60, Math.ceil(maxTotal / 20) * 20);
-      [scale, scale / 2, 0].forEach(value => axis.appendChild(element('span', '', String(value))));
+      const tickUnit = maxTotal <= 30 ? 1 : 5;
+      const step = Math.max(1, Math.ceil(maxTotal / (3 * tickUnit)) * tickUnit);
+      const scale = step * 3;
+      [scale, step * 2, step, 0].forEach(value => axis.appendChild(element('span', '', String(value))));
       const plot = element('div', 'wzh-skills-stats-plot');
       plot.setAttribute('role', 'img');
       plot.setAttribute('aria-label', `近 14 天 Skill 调用次数，蓝色为系统内置，橙色为自定义。${usageDays.map(day => `${day.label}系统${day.system}次、自定义${day.custom}次`).join('；')}`);
@@ -137,7 +140,12 @@
         }
         const tooltip = element('div', 'wzh-skills-stats-tooltip');
         tooltip.setAttribute('aria-hidden', 'true');
-        tooltip.appendChild(element('span', 'wzh-skills-stats-tooltip-date', day.label));
+        const tooltipHead = element('div', 'wzh-skills-stats-tooltip-head');
+        tooltipHead.append(
+          element('span', 'wzh-skills-stats-tooltip-date', `${day.label}（周${day.weekday}）`),
+          element('strong', 'wzh-skills-stats-tooltip-total', `${day.system + day.custom} 次`),
+        );
+        tooltip.appendChild(tooltipHead);
         [['system', '系统内置', day.system], ['custom', '自定义', day.custom]].forEach(([kind, label, value]) => {
           const row = element('div', 'wzh-skills-stats-tooltip-row');
           row.append(element('i', `wzh-skills-stats-legend-dot wzh-skills-stats-legend-dot--${kind}`), element('span', '', label), element('strong', '', `${value} 次`));

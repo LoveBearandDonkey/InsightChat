@@ -21,22 +21,22 @@
   overflow: hidden;
   border: 1px solid var(--divider-strong);
   border-radius: var(--radius-xl);
-  background: transparent;
+  background: var(--ide-frame-bg);
   color: var(--foreground);
   box-shadow: 0 24px 72px rgb(0 0 0 / 24%);
+  backdrop-filter: var(--ide-frame-backdrop-filter);
+  -webkit-backdrop-filter: var(--ide-frame-backdrop-filter);
 }
 .wzh-settings-dialog[open] { display: block; }
 .wzh-settings-layout {
   display: grid;
   grid-template-columns: 160px minmax(0, 1fr);
   height: 100%;
-  background: color-mix(in srgb, var(--ide-frame-pane-bg) 76%, transparent);
-  backdrop-filter: var(--ide-frame-pane-backdrop-filter, blur(18px) saturate(1.18));
-  -webkit-backdrop-filter: var(--ide-frame-pane-backdrop-filter, blur(18px) saturate(1.18));
+  overflow: hidden;
+  border-radius: inherit;
 }
 .wzh-settings-sidebar {
   padding: 20px 8px;
-  border-right: 1px solid var(--divider-weak);
 }
 .wzh-settings-sidebar h2 { margin: 0 10px 20px; color: var(--foreground); font: 700 18px/1.4 var(--font-sans); }
 .wzh-settings-nav { display: grid; gap: 6px; }
@@ -52,7 +52,7 @@
 .wzh-settings-nav-icon { width: 18px; height: 18px; flex: 0 0 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .wzh-settings-nav-icon--asset { display: block; overflow: hidden; }
 .wzh-settings-nav-icon--asset img { display: block; width: 18px; height: 18px; max-width: none; transform: translateX(-24px); filter: drop-shadow(24px 0 currentColor); }
-.wzh-settings-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--surface-1); border-radius: 16px 0 0 16px; overflow: hidden; }
+.wzh-settings-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; border-radius: var(--radius-xl) 0 0 var(--radius-xl); background: var(--surface-1); }
 .wzh-settings-head { display: flex; align-items: center; justify-content: space-between; flex: 0 0 48px; box-sizing: border-box; height: 48px; margin-bottom: 8px; padding: 16px 24px 0; cursor: grab; touch-action: none; user-select: none; }
 .wzh-settings-head.is-dragging { cursor: grabbing; }
 .wzh-settings-head h3 { margin: 0; font: 700 16px/1.4 var(--font-sans); }
@@ -128,7 +128,8 @@
 @media (max-width: 640px) {
   .wzh-settings-dialog { width: calc(100% - 16px); height: calc(100% - 16px); max-width: calc(100% - 16px); max-height: calc(100% - 16px); }
   .wzh-settings-layout { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
-  .wzh-settings-sidebar { padding: 20px 16px; border-right: 0; border-bottom: 1px solid var(--divider-weak); }
+  .wzh-settings-sidebar { padding: 20px 16px; }
+  .wzh-settings-main { border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
   .wzh-settings-sidebar h2 { margin: 0 0 8px; }
   .wzh-settings-nav { display: flex; gap: 4px; overflow-x: auto; }
   .wzh-settings-nav-item { width: auto; white-space: nowrap; }

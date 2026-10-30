@@ -53,6 +53,7 @@
       const empty = index === 4 || index === 10;
       return {
         label: `${date.getMonth() + 1}月${date.getDate()}日`,
+        weekday: '日一二三四五六'[date.getDay()],
         huggingface: empty ? 0 : (index === 13 ? 11 : 7 + ((index * 7 + 3) % 12)),
         github: empty ? 0 : (index === 13 ? 3 : 1 + ((index * 3 + 1) % 5)),
       };
@@ -138,8 +139,10 @@
       const graph = element('div', 'wzh-skills-stats-graph');
       const axis = element('div', 'wzh-skills-stats-axis');
       const maxTotal = Math.max(...usageDays.map(day => day.huggingface + day.github));
-      const scale = Math.max(20, Math.ceil(maxTotal / 10) * 10);
-      [scale, scale / 2, 0].forEach(value => axis.appendChild(element('span', '', String(value))));
+      const tickUnit = maxTotal <= 30 ? 1 : 5;
+      const step = Math.max(1, Math.ceil(maxTotal / (3 * tickUnit)) * tickUnit);
+      const scale = step * 3;
+      [scale, step * 2, step, 0].forEach(value => axis.appendChild(element('span', '', String(value))));
       const plot = element('div', 'wzh-skills-stats-plot');
       plot.setAttribute('role', 'img');
       plot.setAttribute('aria-label', `近 14 天 MCP 调用次数，蓝色为 Hugging Face，橙色为 GitHub。${usageDays.map(day => `${day.label}Hugging Face ${day.huggingface}次、GitHub ${day.github}次`).join('；')}`);
@@ -165,7 +168,12 @@
         }
         const tooltip = element('div', 'wzh-skills-stats-tooltip');
         tooltip.setAttribute('aria-hidden', 'true');
-        tooltip.appendChild(element('span', 'wzh-skills-stats-tooltip-date', day.label));
+        const tooltipHead = element('div', 'wzh-skills-stats-tooltip-head');
+        tooltipHead.append(
+          element('span', 'wzh-skills-stats-tooltip-date', `${day.label}（周${day.weekday}）`),
+          element('strong', 'wzh-skills-stats-tooltip-total', `${day.huggingface + day.github} 次`),
+        );
+        tooltip.appendChild(tooltipHead);
         [['system', 'Hugging Face', day.huggingface], ['custom', 'GitHub', day.github]].forEach(([kind, label, value]) => {
           const row = element('div', 'wzh-skills-stats-tooltip-row');
           row.append(element('i', `wzh-skills-stats-legend-dot wzh-skills-stats-legend-dot--${kind}`), element('span', '', label), element('strong', '', `${value} 次`));

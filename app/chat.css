@@ -3777,6 +3777,7 @@ body.pto-is-pane-resizing[data-pto-resize-direction="vertical"] * {
     radial-gradient(circle at 72% 86%, rgb(var(--ide-glow-bottom) / var(--ide-aura-bottom-alpha)), transparent 0 18rem);
   --ide-frame-page-bg: var(--ide-gradient-bg);
   --ide-frame-bg: var(--ide-gradient-bg);
+  --ide-frame-backdrop-filter: blur(8px);
   --ide-frame-chrome-bg: transparent;
   --ide-frame-pane-bg: var(--background);
   --ide-frame-pane-fill: color-mix(in srgb, var(--ide-frame-pane-bg) 80%, transparent);
@@ -3906,8 +3907,8 @@ body.pto-is-pane-resizing[data-pto-resize-direction="vertical"] * {
 
 :root[data-theme='light'] .pto-ide-frame,
 :root[data-theme='dark'] .pto-ide-frame {
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: var(--ide-frame-backdrop-filter);
+  -webkit-backdrop-filter: var(--ide-frame-backdrop-filter);
 }
 
 .pto-ide-frame::before,
