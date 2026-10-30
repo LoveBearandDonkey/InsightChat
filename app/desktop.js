@@ -46,21 +46,31 @@
   const taskbarApp = document.getElementById('msiTaskbarApp');
   const taskbarStart = document.getElementById('msiTaskbarStart');
   const WALLPAPER_KEY = 'msi-desktop-wallpaper';
+  const WALLPAPERS = ['light', 'dark', 'purple'];
+  const WALLPAPER_LABELS = { light: '浅色', dark: '深色', purple: '紫色' };
 
-  function setLightWallpaper(light) {
-    desktop.classList.toggle('is-light-wallpaper', light);
+  function setWallpaper(wallpaper) {
+    desktop.classList.toggle('is-light-wallpaper', wallpaper === 'light');
+    desktop.classList.toggle('is-purple-wallpaper', wallpaper === 'purple');
     if (taskbarStart) {
-      taskbarStart.setAttribute('aria-pressed', String(light));
-      const label = light ? '切换为深色桌面壁纸' : '切换为浅色桌面壁纸';
+      const next = WALLPAPERS[(WALLPAPERS.indexOf(wallpaper) + 1) % WALLPAPERS.length];
+      const label = '切换为' + WALLPAPER_LABELS[next] + '桌面壁纸';
       taskbarStart.title = label;
       taskbarStart.setAttribute('aria-label', label);
     }
-    try { localStorage.setItem(WALLPAPER_KEY, light ? 'light' : 'dark'); } catch (_) { /* Optional preference. */ }
+    try { localStorage.setItem(WALLPAPER_KEY, wallpaper); } catch (_) { /* Optional preference. */ }
   }
 
-  try { setLightWallpaper(localStorage.getItem(WALLPAPER_KEY) !== 'dark'); }
-  catch (_) { setLightWallpaper(true); }
-  taskbarStart?.addEventListener('click', () => setLightWallpaper(!desktop.classList.contains('is-light-wallpaper')));
+  let wallpaper = 'light';
+  try {
+    const saved = localStorage.getItem(WALLPAPER_KEY);
+    if (WALLPAPERS.includes(saved)) wallpaper = saved;
+  } catch (_) { /* Optional preference. */ }
+  setWallpaper(wallpaper);
+  taskbarStart?.addEventListener('click', () => {
+    wallpaper = WALLPAPERS[(WALLPAPERS.indexOf(wallpaper) + 1) % WALLPAPERS.length];
+    setWallpaper(wallpaper);
+  });
 
   function render() {
     shown = fit(state.customized ? state : defaultGeometry());

@@ -123,7 +123,9 @@ html = html.replace(/<link rel="stylesheet" href="(app\/[\w.-]+\.css)">/g, (_, r
     .replaceAll("url('../src/pic/wallpaper.jpg')",
       "url('data:image/jpeg;base64," + fs.readFileSync(path.join(ROOT, 'src', 'pic', 'wallpaper.jpg')).toString('base64') + "')")
     .replaceAll("url('../src/pic/wallpaper-light.jpg')",
-      "url('data:image/jpeg;base64," + fs.readFileSync(path.join(ROOT, 'src', 'pic', 'wallpaper-light.jpg')).toString('base64') + "')");
+      "url('data:image/jpeg;base64," + fs.readFileSync(path.join(ROOT, 'src', 'pic', 'wallpaper-light.jpg')).toString('base64') + "')")
+    .replaceAll("url('../src/pic/wallpaper-purple.png')",
+      "url('data:image/png;base64," + fs.readFileSync(path.join(ROOT, 'src', 'pic', 'wallpaper-purple.png')).toString('base64') + "')");
   return '<style>\n' + css + '\n</style>';
 });
 html = html.replace(/<script defer src="(app\/[\w.-]+\.js)"><\/script>/g, (_, ref) => {

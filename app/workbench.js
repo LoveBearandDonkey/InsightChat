@@ -782,8 +782,13 @@
     const sidebar = document.getElementById('msiSidebar');
     const menu = document.getElementById('msiSidebarMenu');
     const fold = document.getElementById('msiSidebarFold');
-    if (!frame || !sidebar || !menu || !fold) return;
+    const content = document.getElementById('contentCard');
+    if (!frame || !sidebar || !menu || !fold || !content) return;
+    const AUTO_COLLAPSE_WIDTH = 800;
     let closeTimer;
+    let autoCollapsed = false;
+    let collapseGain = 0;
+    let manualExpandedWidth = null;
     const isCollapsed = () => frame.classList.contains('is-sidebar-collapsed');
     const clearCloseTimer = () => { window.clearTimeout(closeTimer); };
     const setDrawerOpen = (open) => {
@@ -803,28 +808,40 @@
         setDrawerOpen(false);
       }, 160);
     };
-    const restore = () => {
+    const restore = (focus = true) => {
       clearCloseTimer();
       frame.classList.remove('is-sidebar-collapsed', 'is-sidebar-drawer-open');
+      autoCollapsed = false;
       sidebar.removeAttribute('aria-hidden');
       menu.setAttribute('aria-expanded', 'false');
       menu.hidden = true;
       fold.title = '收起侧栏';
       fold.setAttribute('aria-label', fold.title);
-      const focusTarget = fold.hidden ? sidebar.querySelector('button:not([hidden])') : fold;
-      requestAnimationFrame(() => focusTarget?.focus({ preventScroll: true }));
+      if (focus) {
+        manualExpandedWidth = content.getBoundingClientRect().width;
+        const focusTarget = fold.hidden ? sidebar.querySelector('button:not([hidden])') : fold;
+        requestAnimationFrame(() => focusTarget?.focus({ preventScroll: true }));
+      }
+    };
+    const collapse = (automatic = false) => {
+      const expandedWidth = content.getBoundingClientRect().width;
+      frame.classList.add('is-sidebar-collapsed');
+      autoCollapsed = automatic;
+      manualExpandedWidth = null;
+      menu.hidden = false;
+      fold.title = '固定工程树侧栏';
+      fold.setAttribute('aria-label', fold.title);
+      setDrawerOpen(false);
+      // Compare future widths against the space the content would have with the tree visible.
+      collapseGain = content.getBoundingClientRect().width - expandedWidth;
+      if (!automatic || sidebar.contains(document.activeElement)) menu.focus({ preventScroll: true });
     };
     fold.addEventListener('click', () => {
       if (isCollapsed()) {
         restore();
         return;
       }
-      frame.classList.add('is-sidebar-collapsed');
-      menu.hidden = false;
-      fold.title = '固定工程树侧栏';
-      fold.setAttribute('aria-label', fold.title);
-      setDrawerOpen(false);
-      menu.focus({ preventScroll: true });
+      collapse();
     });
     menu.addEventListener('pointerenter', () => setDrawerOpen(true));
     menu.addEventListener('pointerleave', scheduleClose);
@@ -836,7 +853,7 @@
           !sidebar.matches(':hover')) setDrawerOpen(false);
       }, 0);
     });
-    menu.addEventListener('click', restore);
+    menu.addEventListener('click', () => restore());
     menu.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowDown' || !isCollapsed()) return;
       event.preventDefault();
@@ -849,6 +866,22 @@
       setDrawerOpen(false);
       menu.focus({ preventScroll: true });
     });
+    const syncWidth = () => {
+      const width = content.getBoundingClientRect().width;
+      if (!width) return;
+      if (isCollapsed()) {
+        if (autoCollapsed && width - collapseGain >= AUTO_COLLAPSE_WIDTH) restore(false);
+        return;
+      }
+      if (manualExpandedWidth !== null) {
+        // Keep an explicit pin open until the content width changes again.
+        if (Math.abs(width - manualExpandedWidth) < 1) return;
+        manualExpandedWidth = null;
+      }
+      if (width < AUTO_COLLAPSE_WIDTH) collapse(true);
+    };
+    const observer = new ResizeObserver(() => requestAnimationFrame(syncWidth));
+    observer.observe(content);
   }
 
   // 选中一级任务后，内容区、标题下拉与对话锚点统一挂到该任务目录。

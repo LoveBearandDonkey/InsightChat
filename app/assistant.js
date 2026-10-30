@@ -1,28 +1,14 @@
-// 智能对话:训练场景 AI 助手,右上角 #trainChatToggle 打开,默认收起(见 training-monitoring-v2.html
-// 里的 #trainChatPanel)。参考 MindStudioNext 的右侧 AI 对话 inspector(前端直连 DeepSeek API、
-// 用户自带 Key、按浏览器/天限额),但系统提示改为围绕当前训练运行(模型/step/loss/MFU/已定位问题)
-// 作答,而不是解读离线性能分析报告。训练态由 training-run-twin.js 暴露的 window.twinGetTrainingContext()
-// 实时读取,本文件不维护自己的训练状态副本。
+// 智能对话：由 #trainChatToggle 控制面板，内容由本地演示场景提供。
 (function () {
   const $ = (id) => document.getElementById(id);
-
-  const DEEPSEEK = {
-    endpoint: 'https://api.deepseek.com/chat/completions',
-    model: 'deepseek-chat',
-    temperature: 0.3,
-  };
-  const KEY_STORE = 'pto_train_chat_deepseek_key';
-  const QUOTA_STORE = 'pto_train_chat_daily_quota';
-  const DAILY_LIMIT = 20;
 
   let chatHistory = [];
   let chatStreaming = false;
   let chatStopped = false;    // 本轮回答是否被用户按「停止回答」打断
-  let chatAbortCtrl = null;   // 真实流式请求的 AbortController,停止时用它掐断 fetch
   let activeResumeRound = null;
   let stoppedRound = null;    // 只保留最近一轮被用户停止的回答
-  // 会话世代号:新建对话或插队中断当前回答时 +1。回答是一串 await 串起来的异步流程,掐断请求只能
-  // 让它停下,停不住它接着要做的收尾(往 chatHistory 里塞、改 chatStreaming、往 DOM 上补
+  // 会话世代号：重置或插队中断当前回答时 +1。回答是一串异步流程，停止标志挡不住后续收尾
+  // (改 chatStreaming、往 DOM 上补
   // 「已停止回答」)。这些收尾一旦落到新会话上就是污染,所以每轮开跑时记下当时的世代号,
   // 收尾前对一下:对不上说明"我这轮已经被丢掉了",直接撒手。
   let chatEpoch = 0;
@@ -298,67 +284,6 @@
     typeWelcomeText(el, WELCOME_TEXT);
   }
 
-  function getApiKey() { return (localStorage.getItem(KEY_STORE) || '').trim(); }
-  function setApiKey(k) {
-    if (k) localStorage.setItem(KEY_STORE, k.trim());
-    else localStorage.removeItem(KEY_STORE);
-    updateKeyUI();
-  }
-
-  // 弹窗设置/修改 Key,返回最新 key;留空确定可清除已保存的 Key。
-  window.promptTrainChatApiKey = function () {
-    const cur = getApiKey();
-    const k = window.prompt(
-      '请输入你自己的 DeepSeek API Key（以 sk- 开头）：\n\n' +
-      '· 仅保存在你当前浏览器（localStorage），除了直接发给 DeepSeek 官方接口外不会上传到任何地方。\n' +
-      '· 在 https://platform.deepseek.com 申请。\n' +
-      '· 留空并确定可清除已保存的 Key。',
-      cur
-    );
-    if (k === null) return cur;
-    setApiKey(k);
-    return getApiKey();
-  };
-
-  // Key 状态改用抽屉右上角齿轮按钮承载(见 #trainChatKeyBtn):按钮本身即入口,
-  // 配置与否只通过图标颜色(.is-configured)和 title/aria-label 文案区分,不再单独占一行。
-  function updateKeyUI() {
-    const has = !!getApiKey();
-    const btn = $('trainChatKeyBtn');
-    if (btn) {
-      btn.classList.toggle('is-configured', has);
-      btn.title = has ? '设置 DeepSeek API Key（已配置）' : '设置 DeepSeek API Key（未配置）';
-      btn.setAttribute('aria-label', btn.title);
-    }
-  }
-
-  // ── 每日问答额度(纯前端,按浏览器/天;软限制,清缓存/无痕即可绕过,如需硬限制需配合后端)──
-  // 额度条 UI 已去掉,这里只保留限额判定本身(sendMessage 里读 quotaLeft() 拦截超额提问)。
-  function todayStr() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-  function getQuota() {
-    let q;
-    try { q = JSON.parse(localStorage.getItem(QUOTA_STORE) || '{}'); } catch (e) { q = {}; }
-    if (q.date !== todayStr()) q = { date: todayStr(), count: 0 };
-    return q;
-  }
-  function quotaUsed() { return getQuota().count; }
-  function quotaLeft() { return Math.max(0, DAILY_LIMIT - quotaUsed()); }
-  function bumpQuota() {
-    const q = getQuota();
-    q.count += 1;
-    localStorage.setItem(QUOTA_STORE, JSON.stringify(q));
-  }
-
-  // ── 消息区滚动手感 ────────────────────────────────────────────────────────
-  // 原来每次追加消息都是 msgEl.scrollTop = msgEl.scrollHeight 硬跳,新内容"啪"地闪到底,
-  // 加上默认的系统滚动条,整体观感很生硬。这里统一收口成三件事:
-  //   1) 普通追加走 scrollTo({behavior:'smooth'}),让视线跟着滑下去而不是瞬移;
-  //   2) 用户往回翻历史时(onlyIfNearBottom)不再被强行拽回底部;
-  //   3) 滚动位置变化时同步上下渐隐类名(见 .wzh-chat-messages 的 --wzh-chat-fade-* 遮罩),
-  //      内容在标题栏/提示语栏边界处淡出,而不是被一刀切断。
   const STICK_THRESHOLD = 64;  // 距底部小于这个像素数即视为"贴着底部看最新消息"
   // 是否还要跟着最新内容走。一轮问答开始时置 true;用户自己滚了(滚轮/触摸/方向键/拖滚动条)
   // 就置 false,思考和回答继续往下长但视口不动;等用户自己滑回底部(或点「回到底部」)再恢复。
@@ -540,97 +465,6 @@
     return out.join('');
   }
 
-  function getTrainingContext() {
-    return typeof window.twinGetTrainingContext === 'function' ? window.twinGetTrainingContext() : null;
-  }
-
-  function buildSystemPrompt(ctx) {
-    const nowStr = new Date().toLocaleString('zh-CN', { dateStyle: 'full', timeStyle: 'short' });
-    if (!ctx) {
-      return `你是 PTO（Ascend NPU 训练监控大盘）内置的 AI 助手。当前真实时间：${nowStr}。训练态数据暂未就绪，如实告知用户，不要编造具体数字。一律用中文回答，专业简洁。`;
-    }
-    const pct = ctx.totalSteps ? ((ctx.step / ctx.totalSteps) * 100).toFixed(1) : '--';
-    const issuesText = (ctx.diagnosisMarkers || []).map((m) => {
-      const stepText = m.stepFrom != null ? `step ${m.stepFrom}~${m.stepTo}` : `step ${m.step}`;
-      return '- [问题' + m.num + ' · ' + String(m.severity).toUpperCase() + ' · ' + m.category + '] ' + stepText + '：' + m.label + '（' + m.sub + '）';
-    }).join('\n');
-    return `你是 PTO（Ascend NPU 训练监控大盘）内置的 AI 助手，服务对象是正在盯着这块训练监控大盘的算法/训练工程师。当前真实时间：${nowStr}。
-
-当前监控的训练任务：
-- 模型：${ctx.model.name}${ctx.model.summary ? '（' + ctx.model.summary + '）' : ''}
-- 任务类型：${ctx.task}；并行策略：${ctx.model.parallel || '—'}；序列长度：${ctx.model.seq || '—'}；batch：${ctx.model.batch || '—'}
-- 硬件规模：${ctx.hardwareLabel}
-- 当前进度：step ${ctx.step.toLocaleString()} / ${ctx.totalSteps.toLocaleString()}（${pct}%）
-- 实时指标：loss=${ctx.loss}（EMA ${ctx.lossEMA}）val_loss=${ctx.val}，MFU=${(ctx.mfu * 100).toFixed(1)}%
-- 已训练 token 数：约 ${Number(ctx.seenTokens).toExponential(2)}
-- 当前前向阶段：${ctx.phase}
-
-本次训练已定位的问题（对应进度条上的标记，点击可查看详情与修复建议）：
-${issuesText || '（暂无）'}
-
-回答规则：
-1. 先判断用户问题是否与"这次训练任务 / 当前这块监控大盘 / 上面列出的问题"相关。
-   • 相关时（如"现在训练怎么样""loss 正常吗""MFU 达标吗""有哪些问题""这个问题怎么修""该不该继续跑"）：紧扣上方训练态和问题列表作答，以其中的数字为准，不编造未列出的数字或结论；确实没有涉及的就如实说"当前监控数据未涵盖"。
-   • 用户说"这个/当前/这次 + 训练/任务/模型/step/问题"等指代，一律指上面这个正在监控的训练任务。
-2. 与训练无关的常识、闲聊问题：直接简洁回答，不要硬扯到训练。
-3. 一律用中文，专业、简洁，可用 Markdown（加粗/列表/代码块），先给结论再给依据。回答口吻像一位训练值班工程师在讨论当前这次训练，不要套用性能分析报告的模板措辞。`;
-  }
-
-  // 直接流式调用 DeepSeek;onToken(累积文本) 在每次增量到达时回调
-  async function streamChat(messages, onToken, signal) {
-    const resp = await fetch(DEEPSEEK.endpoint, {
-      method: 'POST',
-      signal,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + getApiKey(),
-      },
-      body: JSON.stringify({
-        model: DEEPSEEK.model,
-        messages,
-        stream: true,
-        temperature: DEEPSEEK.temperature,
-      }),
-    });
-
-    if (!resp.ok) {
-      let detail = '';
-      try { detail = (await resp.json())?.error?.message || ''; } catch (e) { try { detail = await resp.text(); } catch (e2) { /* 忽略 */ } }
-      if (resp.status === 401) throw new Error('API Key 无效或未授权（401）。请点右上角齿轮图标检查。');
-      if (resp.status === 402) throw new Error('该 Key 对应账户余额不足（402）。');
-      if (resp.status === 429) throw new Error('请求过于频繁或额度用尽（429），请稍后再试。');
-      throw new Error(`HTTP ${resp.status}${detail ? '：' + detail : ''}`);
-    }
-
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '', full = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-      const parts = buf.split('\n');
-      buf = parts.pop();
-      for (const line of parts) {
-        const t = line.trim();
-        if (!t.startsWith('data:')) continue;
-        const data = t.slice(5).trim();
-        if (data === '[DONE]') continue;
-        try {
-          const delta = JSON.parse(data).choices?.[0]?.delta?.content || '';
-          if (delta) { full += delta; onToken(full); }
-        } catch (e) { /* 忽略心跳/不完整分片 */ }
-      }
-    }
-    return full;
-  }
-
-  // 提问一律走置顶问题卡片(见 appendQuestionCard):思考过程动辄几屏,右对齐小气泡一滚就没了,
-  // 而"我问的是什么"恰恰是看思考过程时最需要一直在眼前的东西。
-  function appendUserMessage(text, opts) {
-    appendQuestionCard(text, opts);
-  }
-
   // AI 回复统一走"缩进正文"外壳(不加背景气泡、不加头像行——表格/卡片这类内容挤在有色
   // 气泡里会很难看),流式更新/脚本演示/错误提示都只需要改 bodyEl.innerHTML。
   function createAiMessageShell() {
@@ -639,25 +473,6 @@ ${issuesText || '（暂无）'}
     div.innerHTML = '<div class="wzh-chat-body-content"></div>';
     return { el: div, bodyEl: div.querySelector('.wzh-chat-body-content') };
   }
-
-  function appendSystemNotice(text) {
-    const msgEl = $('trainChatMessages');
-    if (!msgEl) return;
-    msgEl.querySelector('.wzh-chat-welcome')?.remove();
-    if (welcomeDots) { welcomeDots.destroy(); welcomeDots = null; } // 连同点阵 canvas 的 RAF/监听一起收掉
-    const { el, bodyEl } = createAiMessageShell();
-    bodyEl.innerHTML = '<div class="wzh-chat-answer">' + renderMarkdown(text) + '</div>';
-    msgEl.appendChild(el);
-    scrollChatToBottom(msgEl);
-  }
-
-
-  // ── 问题卡片 / 思考过程 / 回到底部 ────────────────────────────────────────
-  // 一轮问答的三件套：
-  //   1) 提问渲染成置顶卡片(锚点 + 原文，超过 3 行自动折叠)，思考过程再长也能回头看到题面；
-  //   2) 思考过程按 thinking / usetool 两类节点串成一条竖轨，进行中的节点圆点呼吸，
-  //      整体和每个节点各自计时；正式回答一开始，整段思考自动收起成一行；
-  //   3) 用户往回翻时，对话框上方浮出「回到底部」——思考中它是跳动的三个点。
 
   let thinkingActive = false;   // 供「回到底部」按钮切换形态用（三个点 / 下箭头）
   let activeThink = null;       // 当前这轮的思考块,「新建对话」丢弃这一轮时要停掉它的秒表
@@ -861,7 +676,6 @@ ${issuesText || '（暂无）'}
   //   node.setText(...) / node.appendText(...); think.finishNode();
   //   think.finish();   // 正式回答开始时调用：停表 + 自动收起
   // clockScale 只服务于固定脚本演示——演示流程压到几秒跑完，但计时按真实排查节奏展示；
-  // 真实对话（sendMessage）走默认的 1，显示的就是实际耗时。
   function createThinkBlock(container, opts) {
     const o = opts || {};
     const scale = o.clockScale || 1;
@@ -1742,12 +1556,11 @@ ${issuesText || '（暂无）'}
     bar.classList.toggle('is-flowing', chatStreaming && !chatStopped && !chatInputTyped);
   }
 
-  // 按下停止键:置停止标志 + abort 掉真实请求。打字机脚本每一拍都会看这个标志,
+  // 按下停止键后，打字机脚本每一拍都会检查停止标志，
   // 所以固定演示的那套回答也能立刻停在半截,不用等它把剩下的字吐完。
   function stopAnswering() {
     if (!chatStreaming || chatStopped) return;
     chatStopped = true;
-    if (chatAbortCtrl) { try { chatAbortCtrl.abort(); } catch (e) { /* 已结束 */ } }
     syncSendState();
   }
 
@@ -1772,7 +1585,6 @@ ${issuesText || '（暂无）'}
       note.textContent = '已停止回答';
       bodyEl.appendChild(note);
     }
-    chatAbortCtrl = null;
     chatStreaming = false;
     activeRoundBody = null;
     stoppedRound = chatQueue.length ? null : activeResumeRound;
@@ -1820,7 +1632,6 @@ ${issuesText || '（暂无）'}
       }
       if (profiling) addProfilingVisualizationCards(answer);
       answer.appendChild(buildAnswerActions());
-      chatHistory.push({ role: 'assistant', content: sections.join(profiling ? '\n' : '') });
       chatStreaming = false;
       activeRoundBody = null;
       activeResumeRound = null;
@@ -1839,8 +1650,6 @@ ${issuesText || '（暂无）'}
       const inputEl = $('trainChatInput');
       if (inputEl && document.activeElement !== inputEl) focusChatInput();
     }
-    // 「新建对话」不跟着回答状态置灰:任何时候都能开新对话,包括回答到一半——当前这轮
-    // 会被就地掐断并整个丢弃,见 resetConversation
     const input = $('trainChatInput');
     if (input) input.placeholder = INPUT_PLACEHOLDER; // 回答期间也照常可输入
     syncSendState();
@@ -1938,12 +1747,10 @@ ${issuesText || '（暂无）'}
 
   function interruptRoundForQueuedMessage() {
     if (!chatStreaming) return;
-    chatEpoch++; // 旧打字机与流式请求的异步回调不能再改写当前会话
+    chatEpoch++; // 旧打字机的异步回调不能再改写当前会话
     stoppedRound = null;
     activeResumeRound = null;
     chatStopped = true;
-    if (chatAbortCtrl) { try { chatAbortCtrl.abort(); } catch (e) { /* 已结束 */ } }
-    chatAbortCtrl = null;
     const wasThinking = thinkingActive;
     if (wasThinking && activeThink) activeThink.interrupt();
     else activeThink = null;
@@ -2079,8 +1886,7 @@ ${issuesText || '（暂无）'}
     renderChatQueue();
   }
 
-  // 新建对话:按用户诉求只是"清空当前面板内容"——重置消息区回到欢迎屏 + 重放一次打字机效果,
-  // 欢迎屏模板:与 HTML 里那份静态结构一致,新建对话时按这份重建。标题文本留空,
+  // 欢迎屏模板与 HTML 里那份静态结构一致。重置演示时按这份重建，标题文本留空，
   // 由 playWelcomeTypewriter 打字机补上(见 WELCOME_TEXT)。
   const KNOWLEDGE_QUESTION = '帮我统计拆分模型每一层的耗时，MoE模块每个算子耗时，所有层平均下来MoE模块耗时多少';
   let pendingGuideScenario = '';
@@ -2130,9 +1936,7 @@ ${issuesText || '（暂无）'}
   // 下一拍就会自行退出，避免欢迎页已经重置后旧文字又继续写回输入框。
   let demoInputEpoch = 0;
 
-  // 「新建对话」任何时候都能点,包括回答到一半:当前这轮就地掐断——abort 掉真实请求、
-  // 让打字机脚本停在原地,然后整段对话直接丢弃。真实业务里这一下应该把当前会话归档进
-  // 历史列表,这个 demo 没有历史对话,所以就是销毁,不做二次确认。
+  // 自动录屏重新开始时，停止当前演示脚本并清空会话。
   function resetConversation() {
     const msgEl = $('trainChatMessages');
     if (!msgEl) return;
@@ -2143,8 +1947,6 @@ ${issuesText || '（暂无）'}
     activeResumeRound = null;
     if (chatStreaming) {
       chatStopped = true; // 打字机和 chatSleep 每一拍都看这个标志,能立刻停在半截
-      if (chatAbortCtrl) { try { chatAbortCtrl.abort(); } catch (e) { /* 已结束 */ } }
-      chatAbortCtrl = null;
       chatStreaming = false;
     }
     if (activeThink) { activeThink.dispose(); activeThink = null; }
@@ -2181,13 +1983,13 @@ ${issuesText || '（暂无）'}
     focusChatInput();
   }
 
-  // ── 「性能诊断」场景:固定的演示流程,不经 DeepSeek——提问、思考过程、诊断报告全部写死,
+  // ── 「性能诊断」场景:固定的演示流程，提问、思考过程、诊断报告全部写死。
   // 输入框里敲什么都只用来触发。演示的是"把一次落盘 profiling 整个交给 Agent 自己查完"这件事:
   // 思考过程按真实排查节奏走「确认数据形态 → 定分析路线 → 跑集群分析 → 交叉验证 → 证伪假设 →
   // 实算指标」,回答则是一份完整的 markdown 诊断报告(结论速览 / 行动清单 / 问题详情 /
   // 已确认无问题 / 数据与方法)。其中三个关键证据点补轻量可视化入口，正文仍可整段复制。──
   const CHAT_TASK_NAME = 'openPanGu2.0flash预训练_v1';
-  const PROFILING_DATA_DIR = 'profile_dir'; // 预置历史会话的任务目录
+  const PROFILING_DATA_DIR = 'profile_dir';
   let profilingHistoryContext = { directory: PROFILING_DATA_DIR, codePath: '' };
   const PROFILING_SESSION_TITLE = 'profile_dir 单机多卡性能分析';
   const CODE_CHANGE_HISTORY_QUESTION = '请修改 #{model/pipeline.py} 的 PP 分层逻辑，减轻 stage 3 的计算过载；如果相关配置文件也需要调整，请一并修改代码。';
@@ -2213,7 +2015,6 @@ ${issuesText || '（暂无）'}
       context: opts?.context,
       sessionTitle: '流水线末级过载 · 模型代码调整',
     });
-    chatHistory.push({ role: 'user', content: text });
     if (!opts?.context?.codePath) {
       const reply = '请先在输入框上方标签处，为本性能文件绑定长期的代码目录。或在输入框直接输入代码目录，作为本轮对话临时使用的上下文';
       const { el, bodyEl } = createAiMessageShell();
@@ -2223,7 +2024,6 @@ ${issuesText || '（暂无）'}
       answer.appendChild(buildAnswerActions());
       bodyEl.appendChild(answer);
       msgEl.appendChild(el);
-      chatHistory.push({ role: 'assistant', content: reply });
       scrollChatToBottom(msgEl);
       flushChatQueue();
       return;
@@ -2263,7 +2063,6 @@ ${issuesText || '（暂无）'}
 
       answer.appendChild(createCodeChangeAnswerCard());
       answer.appendChild(buildAnswerActions());
-      chatHistory.push({ role: 'assistant', content: markdown });
       chatStreaming = false;
       activeRoundBody = null;
       setChatBusy(false);
@@ -2272,7 +2071,7 @@ ${issuesText || '（暂无）'}
   }
 
   // 演示流程一分钟不到就跑完,但计时按真实排查节奏展示(实测墙钟约 10~15 分钟),
-  // 否则每个节点都是「2s」,看不出"这活确实花了时间"。真实对话不做任何缩放。
+  // 否则每个节点都是「2s」,看不出"这活确实花了时间"。
   const PROFILING_DEMO_CLOCK_SCALE = 24;
 
   // 提问按普通用户的连续输入组织,不手动插入换行；长度控制在当前输入框中自然换行为 4 行。
@@ -2671,7 +2470,6 @@ ${issuesText || '（暂无）'}
       context: profilingHistoryContext,
       sessionTitle: PROFILING_SESSION_TITLE,
     });
-    chatHistory.push({ role: 'user', content: PROFILING_QUESTION.replace(/#\{([^}]+)\}/g, '$1') });
 
     const { el: aiDiv, bodyEl } = createAiMessageShell();
     msgEl.appendChild(aiDiv);
@@ -2721,7 +2519,6 @@ ${issuesText || '（暂无）'}
       if (epoch !== chatEpoch) return; // 这轮已被「新建对话」丢弃
       addProfilingVisualizationCards(answer);
       answer.appendChild(buildAnswerActions());
-      chatHistory.push({ role: 'assistant', content: sections.join('\n') });
 
       chatStreaming = false;
       activeRoundBody = null;
@@ -2832,7 +2629,6 @@ ${issuesText || '（暂无）'}
       context: opts?.context,
       sessionTitle: '统计模型层与 MoE 模块耗时',
     });
-    chatHistory.push({ role: 'user', content: KNOWLEDGE_QUESTION });
 
     const { el: aiDiv, bodyEl } = createAiMessageShell();
     msgEl.appendChild(aiDiv);
@@ -2865,7 +2661,6 @@ ${issuesText || '（暂无）'}
       if (chatStopped) return finalizeStoppedRound(think, bodyEl);
 
       answer.appendChild(buildAnswerActions());
-      chatHistory.push({ role: 'assistant', content: markdown });
       chatStreaming = false;
       activeRoundBody = null;
       activeResumeRound = null;
@@ -2883,7 +2678,6 @@ ${issuesText || '（暂无）'}
       context: opts?.context,
       sessionTitle: '统计模型层与 MoE 模块耗时',
     });
-    chatHistory.push({ role: 'user', content: KNOWLEDGE_QUESTION });
 
     const { el: aiDiv, bodyEl } = createAiMessageShell();
     msgEl.appendChild(aiDiv);
@@ -2916,7 +2710,6 @@ ${issuesText || '（暂无）'}
       if (chatStopped) return finalizeStoppedRound(think, bodyEl);
 
       answer.appendChild(buildAnswerActions());
-      chatHistory.push({ role: 'assistant', content: markdown });
       chatStreaming = false;
       activeRoundBody = null;
       activeResumeRound = null;
@@ -2925,80 +2718,7 @@ ${issuesText || '（暂无）'}
     })();
   }
 
-  async function runLiveRound(round, resuming = false) {
-    const { bodyEl, answerEl, think } = round;
-    const msgEl = $('trainChatMessages');
-    if (resuming) bodyEl.querySelector('.wzh-chat-stopped')?.remove();
-    stoppedRound = null;
-    activeResumeRound = round;
-    activeRoundBody = bodyEl;
-    chatStreaming = true;
-    chatStopped = false;
-    chatAbortCtrl = new AbortController();
-    setChatBusy(true);
-    const epoch = chatEpoch;
-    const prefix = round.partialText;
-    const messages = [
-      { role: 'system', content: buildSystemPrompt(getTrainingContext()) },
-      ...chatHistory,
-    ];
-    if (resuming) messages.push({ role: 'user', content: '请从上一条回答中断的位置继续，不要重复已经给出的内容。' });
-    try {
-      const full = await streamChat(messages, (partial) => {
-        if (epoch !== chatEpoch || chatStopped) return;
-        round.partialText = prefix + partial;
-        if (thinkingActive) think.finish();
-        answerEl.innerHTML = renderMarkdown(round.partialText);
-        scrollChatToBottom(msgEl, { instant: true, onlyIfNearBottom: true });
-      }, chatAbortCtrl.signal);
-      if (epoch !== chatEpoch || chatStopped) return;
-      if (full && full.trim()) {
-        round.partialText = prefix + full;
-        if (round.hasHistoryAnswer) chatHistory[chatHistory.length - 1].content = round.partialText;
-        else {
-          chatHistory.push({ role: 'assistant', content: round.partialText });
-          round.hasHistoryAnswer = true;
-        }
-        bumpQuota();
-        answerEl.appendChild(buildAnswerActions());
-      } else if (!round.partialText) {
-        answerEl.innerHTML = renderMarkdown('（未返回内容，请重试）');
-      }
-    } catch (e) {
-      if (epoch !== chatEpoch) return;
-      if (!chatStopped) {
-        if (!resuming) chatHistory.pop();
-        const msg = (e && e.message) ? e.message : String(e);
-        const hint = /Failed to fetch|NetworkError/i.test(msg)
-          ? '网络请求失败：请检查网络连接，或确认 API Key 是否正确（点右上角齿轮图标）。'
-          : msg;
-        answerEl.innerHTML = '错误：' + escHtml(hint);
-      }
-    } finally {
-      if (epoch === chatEpoch) {
-        if (chatStopped) {
-          if (round.partialText.trim()) {
-            if (round.hasHistoryAnswer) chatHistory[chatHistory.length - 1].content = round.partialText;
-            else {
-              chatHistory.push({ role: 'assistant', content: round.partialText });
-              round.hasHistoryAnswer = true;
-            }
-          }
-          finalizeStoppedRound(think, bodyEl);
-        } else {
-          if (thinkingActive) think.finish();
-          chatAbortCtrl = null;
-          chatStreaming = false;
-          activeRoundBody = null;
-          activeResumeRound = null;
-          setChatBusy(false);
-        }
-        scrollChatToBottom(msgEl, { onlyIfNearBottom: true });
-      }
-    }
-  }
-
-  async function sendMessage(text, scenario, opts) {
+  function sendMessage(text, scenario, opts) {
     if (!text) return;
     const sendOpts = { ...opts, context: opts?.context || captureComposerContext() };
     // 回答期间不打断当前这轮:新问题排进队列,等这轮答完自动接上(见 flushChatQueue)
@@ -3022,37 +2742,8 @@ ${issuesText || '（暂无）'}
       return;
     }
 
-    // 没配 DeepSeek key 时不再弹窗要 key,直接走「性能诊断」这套固定脚本演示:
-    // 提问卡片、思考过程、诊断报告全部是写死的内容,输入框里敲的那句只用来触发,不发任何网络请求。
-    if (!getApiKey()) {
-      runProfilingDiagnosisScenario(sendOpts);
-      return;
-    }
-
-    if (quotaLeft() <= 0) {
-      if (!sendOpts.alreadyDisplayed) appendUserMessage(text, sendOpts);
-      appendSystemNotice(`提示：今日问答已达上限（${DAILY_LIMIT} 次/天），请明天再来。`);
-      return;
-    }
-
-    if (!sendOpts.alreadyDisplayed) appendUserMessage(text, sendOpts);
-    chatHistory.push({ role: 'user', content: text });
-
-    const { el: aiDiv, bodyEl } = createAiMessageShell();
-    msgEl.appendChild(aiDiv);
-    activeRoundBody = bodyEl;
-    // 真实对话拿不到模型的中间推理，思考块就只有一个 thinking 节点:从发出请求计时，
-    // 首个 token 落地即结束并自动收起。clockScale 不缩放，显示的就是真实等待时长。
-    const think = createThinkBlock(bodyEl, {});
-    think.startNode({ kind: 'thinking', title: '思考中', doneTitle: '思考完成' });
-    const answerEl = document.createElement('div');
-    answerEl.className = 'wzh-chat-answer';
-    bodyEl.appendChild(answerEl);
-    scrollChatToBottom(msgEl);
-
-    const round = { bodyEl, answerEl, think, partialText: '', hasHistoryAnswer: false };
-    round.resume = () => runLiveRound(round, true);
-    await runLiveRound(round);
+    // 其余输入触发本地「性能诊断」演示。
+    runProfilingDiagnosisScenario(sendOpts);
   }
 
   function initPanelToggle() {
@@ -3091,8 +2782,7 @@ ${issuesText || '（暂无）'}
     closeBtn?.addEventListener('click', () => setOpen(false));
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape' || !panel.classList.contains('is-open')) return;
-      // 可视化栏是独立的持久工作区：展开时 Esc 只交给内部弹层处理，
-      // 不关闭可视化栏或整个智能对话。关闭入口只保留两处：整体关闭键与可视化栏自己的 ×。
+      // 可视化栏展开时，Esc 只交给内部弹层处理。
       if (!panel.classList.contains('is-visualizing')) setOpen(false);
     });
 
@@ -4112,52 +3802,70 @@ ${issuesText || '（暂无）'}
       if (contextGroup) contextGroup.hidden = empty;
       if (contextChips) contextChips.hidden = empty;
     };
-    let fitCodePath = () => {};
-    if (codePath) {
-      const context = document.createElement('canvas').getContext('2d');
-      fitCodePath = () => {
-        const fullPath = codePath.dataset.fullPath || '';
-        const width = codePath.clientWidth;
-        if (!width || !context) return;
-        context.font = getComputedStyle(codePath).font;
-        const fits = (value) => context.measureText(value).width <= width - 2;
-        if (fits(fullPath)) {
-          codePath.textContent = fullPath;
-          return;
-        }
-        let start = 3;
-        let end = 3;
-        const middle = () => fullPath.slice(0, start) + '…' + fullPath.slice(-end);
-        if (!fits(middle())) {
-          codePath.textContent = '…';
-          return;
-        }
-        while (start + end < fullPath.length) {
-          const moreStart = fullPath.slice(0, start + 1) + '…' + fullPath.slice(-end);
-          const moreEnd = fullPath.slice(0, start) + '…' + fullPath.slice(-(end + 1));
-          const startFits = fits(moreStart);
-          const endFits = fits(moreEnd);
-          if (!startFits && !endFits) break;
-          if (startFits && (!endFits || start <= end)) start++;
-          else end++;
-        }
-        codePath.textContent = middle();
-      };
-      if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fitCodePath).observe(codePath);
-      else window.addEventListener('resize', fitCodePath);
-      document.fonts?.ready.then(fitCodePath);
-    }
+    const codePopover = document.createElement('div');
+    codePopover.className = 'wzh-chat-code-popover';
+    codePopover.id = 'trainChatCodePopover';
+    codePopover.setAttribute('role', 'group');
+    codePopover.setAttribute('aria-label', '已绑定项目目录');
+    codePopover.hidden = true;
+    const popoverPath = document.createElement('span');
+    popoverPath.className = 'wzh-chat-code-popover-path';
+    const openDirectory = document.createElement('a');
+    openDirectory.className = 'wzh-chat-code-popover-open';
+    openDirectory.textContent = '打开目录';
+    openDirectory.target = '_blank';
+    openDirectory.rel = 'noopener noreferrer';
+    codePopover.append(popoverPath, openDirectory);
+    document.body.append(codePopover);
+    let hideCodePopoverTimer;
+    const hideCodePopover = () => { codePopover.hidden = true; };
+    const scheduleHideCodePopover = () => {
+      clearTimeout(hideCodePopoverTimer);
+      hideCodePopoverTimer = setTimeout(hideCodePopover, 120);
+    };
+    const positionCodePopover = () => {
+      if (codePopover.hidden || !codeChip) return;
+      const rect = codeChip.getBoundingClientRect();
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - codePopover.offsetWidth - 8));
+      const above = rect.top - codePopover.offsetHeight - 8;
+      codePopover.style.left = left + 'px';
+      codePopover.style.top = (above >= 8 ? above : rect.bottom + 8) + 'px';
+    };
+    const showCodePopover = () => {
+      if (!codePath || !codeChip || codeChip.hidden) return;
+      clearTimeout(hideCodePopoverTimer);
+      const fullPath = codePath.dataset.fullPath || '';
+      popoverPath.textContent = fullPath;
+      openDirectory.href = 'file:///' + fullPath.replace(/\\/g, '/');
+      codePopover.hidden = false;
+      positionCodePopover();
+    };
+    codeChip?.addEventListener('mouseenter', showCodePopover);
+    codeChip?.addEventListener('mouseleave', scheduleHideCodePopover);
+    codeChip?.addEventListener('focusin', showCodePopover);
+    codeChip?.addEventListener('focusout', scheduleHideCodePopover);
+    codePopover.addEventListener('mouseenter', () => clearTimeout(hideCodePopoverTimer));
+    codePopover.addEventListener('mouseleave', scheduleHideCodePopover);
+    codePopover.addEventListener('focusin', () => clearTimeout(hideCodePopoverTimer));
+    codePopover.addEventListener('focusout', scheduleHideCodePopover);
+    window.addEventListener('resize', positionCodePopover);
+    window.addEventListener('scroll', positionCodePopover, true);
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') hideCodePopover();
+    });
     const syncCodeBinding = () => {
       const boundPath = codeBindings.get(currentTaskName) || '';
       if (codeAddBtn) codeAddBtn.hidden = !!boundPath;
       if (codeChip) {
         codeChip.hidden = !boundPath;
-        if (boundPath) codeChip.title = '已绑定项目目录：' + boundPath;
+        if (!boundPath) hideCodePopover();
       }
-      if (codePath) codePath.dataset.fullPath = boundPath || defaultCodePath;
+      if (codePath) {
+        codePath.dataset.fullPath = boundPath || defaultCodePath;
+        codePath.textContent = boundPath.split(/[\\/]/).filter(Boolean).pop() || '';
+      }
       codeContext?.classList.toggle('is-bound', !!boundPath);
       if (localCodePath) localCodePath.value = boundPath;
-      if (boundPath) requestAnimationFrame(fitCodePath);
     };
     restoreChatContext = (taskName = window.MSI_ANCHOR_NAME || CHAT_TASK_NAME) => {
       currentTaskName = taskName;
@@ -4196,7 +3904,6 @@ ${issuesText || '（暂无）'}
       e.stopPropagation();
       stopAnswering();
     }, { capture: true });
-    updateKeyUI();
     initPanelToggle();
     initFloatMode();
     initHistoryMenu();
@@ -4314,7 +4021,6 @@ ${issuesText || '（暂无）'}
         }, 1600);
       });
     });
-    $('trainChatKeyBtn')?.addEventListener('click', () => window.promptTrainChatApiKey());
     $('trainChatNewBtn')?.addEventListener('click', resetConversation);
     $('trainChatVizCloseBtn')?.addEventListener('click', () => closeChatVisualization());
     initSessionTitle();

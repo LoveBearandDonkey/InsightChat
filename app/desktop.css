@@ -19,6 +19,7 @@ body.chat-shell-page { background: #183047; }
   --msi-frame-shadow-inactive: 0 8px 22px rgb(0 0 0 / 19%), 0 24px 56px rgb(0 0 0 / 15%);
 }
 .msi-desktop.is-light-wallpaper { background-image: url('../src/pic/wallpaper-light.jpg'); }
+.msi-desktop.is-purple-wallpaper { background-image: url('../src/pic/wallpaper-purple.png'); }
 :root[data-theme='light'] .msi-desktop {
   --msi-frame-border: rgb(39 64 100 / 20%);
   --msi-frame-border-inactive: rgb(39 64 100 / 11%);
@@ -69,7 +70,7 @@ body.is-desktop-dragging .msi-desktop > .pto-ide-frame { pointer-events: none; }
 .msi-desktop .pto-ide-frame__topbar button,
 .msi-desktop .pto-ide-frame__topbar a { cursor: pointer; }
 .msi-desktop .pto-ide-frame__topbar-right { position: relative; z-index: 4; }
-.msi-desktop .msi-window-control { width: 34px; height: 30px; border-radius: 3px; }
+.msi-desktop .msi-window-control { width: 34px; height: 30px; border-radius: 3px; color: var(--foreground); }
 .msi-desktop #trainChatToggle { margin-left: 4px; }
 .msi-desktop #msiWindowMinimize { margin-left: 8px; }
 .msi-desktop .msi-window-control svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.35; }
@@ -215,7 +216,7 @@ body.is-chat-window-dragging * { user-select: none !important; }
 .msi-desktop .wzh-chat-panel.is-open.is-visualizing { max-width: none; }
 
 @container desktop-window (max-width: 1120px) {
-  .wzh-chat-panel:not(.is-floating):not(.is-visualizing) { --wzh-chat-w: min(42%, 420px); }
+  .wzh-chat-panel:not(.is-floating):not(.is-visualizing) { --wzh-chat-w: min(36%, 420px); }
   .msi-ov-runtime-controls { flex-wrap: wrap; }
 }
 

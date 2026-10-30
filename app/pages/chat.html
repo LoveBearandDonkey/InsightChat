@@ -30,6 +30,8 @@
   </script>
   <!-- 公共页面外壳。样式与脚本在 app/ 中；单文件交付版由 npm run build:standalone 生成。 -->
   <link rel="stylesheet" href="../chat.css">
+  <link rel="stylesheet" href="../settings-dialog.css">
+  <link rel="stylesheet" href="../settings-skills.css">
   <link rel="stylesheet" href="../code-change.css">
   <link rel="stylesheet" href="../timeline-swim.css">
   <link rel="stylesheet" href="../desktop.css">
@@ -519,9 +521,7 @@
       <div class="msi-resizer msi-resizer--v" id="chatShellResizer" role="separator"
            aria-orientation="vertical" aria-label="调整智能对话面板宽度" tabindex="0" hidden></div>
 
-      <!-- 智能对话:默认「挤入式」——作为 workarea 的第二列,和左边内容区形成左右关系,展开时把内容区
-               挤窄而不是盖在上面;点右上角悬浮窗图标(#trainChatFloatBtn)移到桌面成为独立窗口(.is-floating)。
-               开关入口是右上角 #trainChatToggle,默认展开。逻辑见页尾内联脚本(原 js/training-chat-panel.js)。 -->
+      <!-- 智能对话默认作为 workarea 的第二列；悬浮窗口按钮可将其移到桌面。开关入口是 #trainChatToggle。 -->
       <aside class="wzh-chat-panel" id="trainChatPanel" aria-label="智能对话" aria-hidden="true">
         <header class="wzh-chat-head">
           <!-- 左上角品牌区同时是「切换 Agent」的入口(还原稿 src/pic/切换.png):
@@ -572,7 +572,7 @@
                 </button>
               </div>
             </div>
-            <button class="wzh-chat-head-btn" id="trainChatKeyBtn" type="button" aria-label="设置 DeepSeek API Key（未配置）" title="设置 DeepSeek API Key（未配置）">
+            <button class="wzh-chat-head-btn" id="trainChatKeyBtn" type="button" aria-label="打开助手设置" title="助手设置" aria-haspopup="dialog" aria-controls="trainChatSettingsDialog" aria-expanded="false">
               <img class="wzh-chat-key-icon" src="../../src/pic/icon/setting.svg" alt="">
             </button>
             <button class="wzh-chat-head-btn" id="trainChatFloatBtn" type="button" aria-label="悬浮窗口" title="悬浮窗口">
@@ -677,9 +677,9 @@
                 </div>
                 <div class="wzh-chat-context-item wzh-chat-code-context" id="trainChatCodeContext">
                   <button class="wzh-chat-local-code-add" id="trainChatCodeAddBtn" type="button" title="绑定当前工程的项目目录"><span class="wzh-chat-local-code-add-icon" aria-hidden="true"></span>项目目录</button>
-                  <div class="wzh-chat-code-chip" id="trainChatCodeChip" title="已绑定项目目录：D:\Projects\InsightChat\packages\training\profiling\src" hidden>
+                  <div class="wzh-chat-code-chip" id="trainChatCodeChip" hidden>
                     <img class="wzh-chat-code-icon" src="../../src/pic/icon/localfile.svg" alt="">
-                    <span class="wzh-chat-code-path" id="trainChatCodePath" data-full-path="D:\Projects\InsightChat\packages\training\profiling\src"></span>
+                    <span class="wzh-chat-code-path" id="trainChatCodePath" data-full-path="D:\Projects\training\openPangu-3.0"></span>
                     <button class="wzh-chat-anchor-close" id="trainChatCodeCloseBtn" type="button" title="移除项目目录" aria-label="移除项目目录">
                       <img src="../../src/pic/icon/close.svg" alt="">
                     </button>
@@ -763,7 +763,7 @@
     <div class="msi-window-resize msi-window-resize--nw" data-resize-edge="nw" role="separator" aria-label="调整窗口左上角" tabindex="0"></div>
   </section>
     <footer class="msi-taskbar" aria-label="模拟 Windows 任务栏">
-      <button class="msi-taskbar-start" id="msiTaskbarStart" type="button" aria-label="切换为浅色桌面壁纸" aria-pressed="false" title="切换为浅色桌面壁纸"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 4.5 10.5 3v8H2zm10 0L22 3v8h-10zM2 13h8.5v8L2 19.5zm10 0h10v8l-10-1.5z"></path></svg></button>
+      <button class="msi-taskbar-start" id="msiTaskbarStart" type="button" aria-label="切换为深色桌面壁纸" title="切换为深色桌面壁纸"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 4.5 10.5 3v8H2zm10 0L22 3v8h-10zM2 13h8.5v8L2 19.5zm10 0h10v8l-10-1.5z"></path></svg></button>
       <span class="msi-taskbar-search" aria-hidden="true"><svg viewBox="0 0 20 20"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="m12.5 12.5 4 4"></path></svg><span>在这里输入你要搜索的内容</span></span>
       <button class="msi-taskbar-app is-active" id="msiTaskbarApp" type="button" aria-label="MindStudio Insight 窗口" title="MindStudio Insight"><img src="../../src/pic/icon/MSInsight.ico" alt=""></button>
       <span class="msi-taskbar-spacer"></span>
@@ -803,8 +803,141 @@
     </div>
   </dialog>
 
+  <dialog class="wzh-settings-dialog" id="trainChatSettingsDialog" aria-labelledby="trainChatSettingsTitle">
+    <div class="wzh-settings-layout">
+      <aside class="wzh-settings-sidebar" aria-label="助手设置分类">
+        <h2 id="trainChatSettingsTitle">助手设置</h2>
+        <nav class="wzh-settings-nav" aria-label="设置分类">
+          <button type="button" class="wzh-settings-nav-item" data-settings-section="general"><span class="wzh-settings-nav-icon wzh-settings-nav-icon--asset" aria-hidden="true"><img src="../../src/pic/icon/genaral.svg" alt=""></span>通用</button>
+          <button type="button" class="wzh-settings-nav-item is-active" data-settings-section="agent" aria-current="page"><span class="wzh-settings-nav-icon wzh-settings-nav-icon--asset" aria-hidden="true"><img src="../../src/pic/icon/ai_agent.svg" alt=""></span>Agent</button>
+          <button type="button" class="wzh-settings-nav-item" data-settings-section="skills"><span class="wzh-settings-nav-icon wzh-settings-nav-icon--asset" aria-hidden="true"><img src="../../src/pic/icon/skill.svg" alt=""></span>Skills</button>
+          <button type="button" class="wzh-settings-nav-item" data-settings-section="mcp"><span class="wzh-settings-nav-icon wzh-settings-nav-icon--asset" aria-hidden="true"><img src="../../src/pic/icon/mcp.svg" alt=""></span>MCP</button>
+          <button type="button" class="wzh-settings-nav-item" data-settings-section="knowledge"><svg class="wzh-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5.5C9.7 4.1 6.8 3.8 3.5 4.5v14c3.3-.7 6.2-.4 8.5 1 2.3-1.4 5.2-1.7 8.5-1v-14c-3.3-.7-6.2-.4-8.5 1Z"/><path d="M12 5.5v14"/></svg>知识库</button>
+        </nav>
+      </aside>
+      <div class="wzh-settings-main">
+        <header class="wzh-settings-head">
+          <h3 id="trainChatSettingsHeading">Agent</h3>
+          <button class="wzh-settings-close wzh-chat-head-btn" id="trainChatSettingsClose" type="button" aria-label="关闭助手设置" title="关闭"><img src="../../src/pic/icon/close.svg" alt=""></button>
+        </header>
+        <div class="wzh-settings-scroll">
+          <section class="wzh-settings-section" data-settings-panel="agent" aria-label="Agent 设置">
+            <div class="wzh-settings-agent-grid" role="group" aria-label="选择 Agent">
+              <button class="wzh-settings-agent-card is-selected" data-settings-agent="insight" type="button" aria-pressed="true">
+                <img src="../../src/pic/icon/msinsightbotAvatar.png" alt="">
+                <span class="wzh-settings-agent-label">MS Insight Native <span class="wzh-settings-agent-badge">系统</span></span>
+              </button>
+              <button class="wzh-settings-agent-card" data-settings-agent="opencode" type="button" aria-pressed="false">
+                <img src="../../src/pic/icon/opencode.png" alt="">
+                <span>OpenCode</span>
+              </button>
+              <button class="wzh-settings-agent-card" data-settings-agent="claude" type="button" aria-pressed="false" disabled>
+                <img src="../../src/pic/icon/claude-32.svg" alt="">
+                <span class="wzh-settings-agent-label">Claude Code <span class="wzh-settings-agent-unconfigured">未配置</span></span>
+              </button>
+              <button class="wzh-settings-agent-card" data-settings-agent="codex" type="button" aria-pressed="false">
+                <img src="../../src/pic/icon/codex.svg" alt="">
+                <span>Codex</span>
+              </button>
+              <button class="wzh-settings-agent-card" data-settings-agent="trae" type="button" aria-pressed="false" disabled>
+                <img src="../../src/pic/icon/Trae.png" alt="">
+                <span class="wzh-settings-agent-label">Trae <span class="wzh-settings-agent-unconfigured">未配置</span></span>
+              </button>
+              <button class="wzh-settings-agent-card wzh-settings-agent-card--add" data-settings-agent="custom" type="button" aria-pressed="false">
+                <span class="wzh-settings-agent-plus" aria-hidden="true">＋</span>
+                <span>添加 Agent</span>
+              </button>
+            </div>
+            <p class="wzh-settings-notice"><span aria-hidden="true">i</span>工具提供内置的系统Agent，配置模型服务后即可使用，也支持切换已安装的第三方Agent，通过ACP协议接入后使用。</p>
+            <div class="wzh-settings-config-tabs" role="tablist" aria-label="配置方式">
+              <button class="is-active" id="trainChatSettingsFormTab" type="button" role="tab" aria-selected="true" aria-controls="trainChatSettingsFormPanel" data-settings-mode="form">表单式配置</button>
+              <button id="trainChatSettingsScriptTab" type="button" role="tab" aria-selected="false" aria-controls="trainChatSettingsScriptPanel" data-settings-mode="script">脚本式配置</button>
+            </div>
+            <div class="wzh-settings-config-panel" id="trainChatSettingsFormPanel" role="tabpanel" aria-labelledby="trainChatSettingsFormTab">
+              <label class="wzh-settings-field" for="trainChatSettingsAgentName"><span>Agent 名称</span><input id="trainChatSettingsAgentName" type="text" value="MS Insight Native" autocomplete="off" readonly></label>
+              <label class="wzh-settings-field" for="trainChatSettingsApiKey"><span>API 密钥</span><span class="wzh-settings-password"><input id="trainChatSettingsApiKey" type="password" autocomplete="off" placeholder="输入 API 密钥"><button id="trainChatSettingsShowKey" type="button" aria-label="显示 API 密钥" aria-pressed="false">◉</button></span></label>
+              <label class="wzh-settings-field" for="trainChatSettingsEndpoint"><span>服务地址</span><input id="trainChatSettingsEndpoint" type="url" inputmode="url" autocomplete="off" placeholder="https://api.example.com/v1"></label>
+              <label class="wzh-settings-field" for="trainChatSettingsFormat"><span>API 格式</span><select id="trainChatSettingsFormat"><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="custom">自定义</option></select></label>
+              <label class="wzh-settings-field" for="trainChatSettingsModel"><span class="wzh-settings-field-heading">默认模型 <button id="trainChatSettingsFetchModels" type="button" disabled title="当前未连接模型服务">从服务获取模型列表</button></span><input id="trainChatSettingsModel" type="text" autocomplete="off" placeholder="输入模型名称"></label>
+              <p class="wzh-settings-field-help">填写模型名称，设置会在本页关闭前保留。</p>
+            </div>
+            <div class="wzh-settings-config-panel" id="trainChatSettingsScriptPanel" role="tabpanel" aria-labelledby="trainChatSettingsScriptTab" hidden>
+              <label class="wzh-settings-field" for="trainChatSettingsScript"><span>启动脚本</span><textarea id="trainChatSettingsScript" rows="8" spellcheck="false" placeholder="输入 Agent 启动脚本或命令"></textarea></label>
+              <p class="wzh-settings-field-help">脚本仅保留在当前页面，不会执行。</p>
+            </div>
+            <details class="wzh-settings-session"><summary><svg class="msi-tree-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>会话配置</summary><p>当前没有额外的会话配置项。</p></details>
+          </section>
+          <section class="wzh-settings-section wzh-settings-empty" data-settings-panel="general" hidden><p>当前没有通用设置项。</p></section>
+          <section class="wzh-settings-section wzh-settings-skills" data-settings-panel="skills" aria-label="Skills 目录设置" hidden>
+            <div class="wzh-skills-toolbar">
+              <div class="wzh-skills-tabs" role="tablist" aria-label="筛选 Skills">
+                <button class="is-active" type="button" role="tab" aria-selected="true" data-skills-filter="all">所有</button>
+                <button type="button" role="tab" aria-selected="false" data-skills-filter="enabled">已开启 <span class="wzh-skills-group-count" id="trainChatSkillsEnabledCount"></span></button>
+                <button type="button" role="tab" aria-selected="false" data-skills-filter="disabled">未开启 <span class="wzh-skills-group-count" id="trainChatSkillsDisabledCount"></span></button>
+                <button type="button" role="tab" aria-selected="false" data-skills-filter="stats">使用统计</button>
+              </div>
+              <div class="wzh-skills-tools">
+                <label class="wzh-skills-search"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6.5"/><path d="m13.5 13.5 5 5"/></svg><input id="trainChatSkillsSearch" type="search" placeholder="搜索" aria-label="搜索 Skills"></label>
+                <button class="wzh-skills-add" id="trainChatSkillsAdd" type="button">＋ 添加</button>
+              </div>
+            </div>
+            <div id="trainChatSkillsContent" aria-live="polite"></div>
+          </section>
+          <section class="wzh-settings-section wzh-settings-mcp" data-settings-panel="mcp" aria-label="MCP 设置" hidden>
+            <div class="wzh-skills-toolbar">
+              <div class="wzh-skills-tabs" role="tablist" aria-label="筛选 MCP 服务">
+                <button class="is-active" type="button" role="tab" aria-selected="true" data-mcp-filter="all">所有</button>
+                <button type="button" role="tab" aria-selected="false" data-mcp-filter="enabled">已开启 <span class="wzh-skills-group-count" id="trainChatMcpEnabledCount"></span></button>
+                <button type="button" role="tab" aria-selected="false" data-mcp-filter="disabled">未开启 <span class="wzh-skills-group-count" id="trainChatMcpDisabledCount"></span></button>
+                <button type="button" role="tab" aria-selected="false" data-mcp-filter="stats">使用统计</button>
+              </div>
+              <div class="wzh-skills-tools">
+                <label class="wzh-skills-search"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6.5"/><path d="m13.5 13.5 5 5"/></svg><input id="trainChatMcpSearch" type="search" placeholder="搜索" aria-label="搜索 MCP 服务"></label>
+                <button class="wzh-skills-add" id="trainChatMcpAdd" type="button">＋ 添加</button>
+              </div>
+            </div>
+            <div id="trainChatMcpContent" aria-live="polite"></div>
+          </section>
+          <section class="wzh-settings-section wzh-settings-knowledge" data-settings-panel="knowledge" aria-label="知识库设置" hidden>
+            <div class="wzh-skills-toolbar">
+              <div class="wzh-skills-tabs" role="tablist" aria-label="筛选知识库">
+                <button class="is-active" type="button" role="tab" aria-selected="true" data-knowledge-filter="all">所有</button>
+                <button type="button" role="tab" aria-selected="false" data-knowledge-filter="enabled">已开启 <span class="wzh-skills-group-count" id="trainChatKnowledgeEnabledCount"></span></button>
+                <button type="button" role="tab" aria-selected="false" data-knowledge-filter="disabled">未开启 <span class="wzh-skills-group-count" id="trainChatKnowledgeDisabledCount"></span></button>
+                <button type="button" role="tab" aria-selected="false" data-knowledge-filter="stats">使用统计</button>
+              </div>
+              <div class="wzh-skills-tools">
+                <label class="wzh-skills-search"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6.5"/><path d="m13.5 13.5 5 5"/></svg><input id="trainChatKnowledgeSearch" type="search" placeholder="搜索" aria-label="搜索知识库"></label>
+                <button class="wzh-skills-add" id="trainChatKnowledgeAdd" type="button">＋ 添加</button>
+              </div>
+            </div>
+            <div id="trainChatKnowledgeContent" aria-live="polite"></div>
+          </section>
+        </div>
+        <footer class="wzh-settings-foot">
+          <button class="wzh-settings-save" id="trainChatSettingsSave" type="button" disabled>保存</button>
+          <button class="wzh-settings-cancel btn" id="trainChatSettingsCancel" type="button" disabled>取消</button>
+        </footer>
+      </div>
+    </div>
+    <div class="wzh-settings-warning" id="trainChatSettingsWarning" role="alertdialog" aria-modal="true" aria-labelledby="trainChatSettingsWarningTitle" aria-describedby="trainChatSettingsWarningText" hidden>
+      <div class="wzh-settings-warning-card">
+        <h3 id="trainChatSettingsWarningTitle">修改尚未保存</h3>
+        <p id="trainChatSettingsWarningText">当前设置有未保存的修改。</p>
+        <div class="wzh-settings-warning-actions">
+          <button class="wzh-settings-warning-save" id="trainChatSettingsWarningSave" type="button">保存</button>
+          <button class="wzh-settings-warning-discard btn" id="trainChatSettingsWarningDiscard" type="button">取消修改</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
   <script defer src="../theme.js"></script>
   <script defer src="../import-dialog.js"></script>
+  <script defer src="../settings-dialog.js"></script>
+  <script defer src="../settings-skills.js"></script>
+  <script defer src="../settings-mcp.js"></script>
+  <script defer src="../settings-knowledge.js"></script>
   <script defer src="../timeline-colors.js"></script>
   <script defer src="../trace-context-sample.js"></script>
 

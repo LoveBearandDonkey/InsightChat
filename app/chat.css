@@ -4750,7 +4750,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
                   opacity var(--duration-base) var(--easing-default);
       pointer-events: none;
       /* 挤入式展开后的宽度。480px 只是初值:拖 #chatShellResizer 会把它改成别的像素值,
-         下限 320px、上限是工作区的一半;窄屏下由下面那条媒体查询换成 46% */
+         下限 320px、上限是工作区的一半;窄窗口宽度规则见 desktop.css。 */
       --wzh-chat-w: 480px;
       /* 品牌蓝:面板内所有蓝色(发送按钮、标签、描边)统一取这一个值 */
       --mi-brand-blue: var(--brand-blue);
@@ -4770,11 +4770,6 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     }
     /* 拖分隔条时 flex-basis 每帧都在变,留着过渡就会跟不上手 */
     .wzh-chat-panel.is-resizing { transition: none; }
-    /* 挤入式下窗口窄了就别死守 480,给内容区留出可用宽度 */
-    @media (max-width: 1080px) {
-      .wzh-chat-panel:not(.is-floating) { --wzh-chat-w: 46%; }
-    }
-
     /* 「悬浮窗」模式(右上角 #trainChatFloatBtn 切换):贴右侧浮起来的抽屉,不占内容区宽度 */
     .wzh-chat-panel.is-floating {
       position: fixed;
@@ -4829,8 +4824,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     .wzh-chat-panel.is-visualizing > .wzh-chat-session { grid-column: 1; grid-row: 2; }
     .wzh-chat-panel.is-visualizing > .wzh-chat-body { grid-column: 1; grid-row: 3; min-width: 0; }
     .wzh-chat-viz-resizer { grid-column: 2; grid-row: 1 / 4; align-self: stretch; }
-    /* 标题栏下不加分割线——右上角只留"设置 Key(齿轮) + 关闭"两个图标按钮,
-       原来的上下文行/Key 状态行/额度行都收进了这一个齿轮按钮里(见 #trainChatKeyBtn)。 */
+    /* 标题栏下不加分割线。 */
     .wzh-chat-head {
       display: flex; align-items: center; justify-content: space-between;
       gap: var(--space-2); flex: 0 0 auto;
@@ -4934,7 +4928,6 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     .wzh-chat-agent-foot-btn:disabled { opacity: .6; cursor: default; }
     .wzh-chat-head-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
     .wzh-chat-head-menu { position: relative; display: inline-flex; }
-    /* 右侧窗口操作:新对话 / 历史 / 设置(= DeepSeek Key) / 悬浮窗 / 关闭,图标取自 src/pic/icon/ */
     .wzh-chat-head-btn {
       position: relative;
       width: 28px; height: 28px; padding: 0;
@@ -4943,12 +4936,11 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       color: var(--foreground); cursor: pointer;
       transition: background var(--duration-fast) var(--easing-default);
     }
-    .wzh-chat-head-btn:hover { background: var(--state-hover); }
-    .wzh-chat-head-btn[aria-expanded='true'] { background: var(--state-selected); }
-    /* 悬浮窗模式生效时,悬浮窗按钮保持按下态 */
+    .wzh-chat-head-btn:not(:disabled):hover { background: var(--state-hover); }
+    .wzh-chat-head-btn[aria-expanded='true'],
     .wzh-chat-head-btn.is-active { background: var(--state-selected); }
+    .wzh-chat-head-btn:disabled { opacity: 1; cursor: default; }
     .wzh-chat-head-btn img { width: 20px; height: 20px; display: block; }
-    /* 历史对话从头部图标正下方展开；记录标题与会话主题保持同一份文案。 */
     .wzh-chat-history-pop {
       position: absolute; top: calc(100% + 8px); right: -100px; z-index: 40;
       box-sizing: border-box; width: 300px; padding: 8px;
@@ -4972,11 +4964,6 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     .wzh-chat-history-item img { width: 18px; height: 18px; flex: 0 0 auto; }
     .wzh-chat-history-item-text {
       min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    /* Key 已配置时,齿轮右上角点一个蓝点作为唯一视觉线索(悬浮 title 给出完整文案) */
-    #trainChatKeyBtn.is-configured::after {
-      content: ''; position: absolute; right: 3px; top: 3px;
-      width: 6px; height: 6px; border-radius: 50%; background: var(--mi-brand-blue);
     }
 
 
@@ -5550,7 +5537,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       padding: 3px 8px;
     }
     .wzh-chat-code-context { max-width: 300px; }
-    .wzh-chat-code-context.is-bound { width: 300px; flex: 1 1 300px; }
+    .wzh-chat-code-context.is-bound { flex: 0 1 auto; }
     #trainChatAnchorChip:not([hidden]) + #trainChatCodeContext:not([hidden]) { padding-left: 13px; }
     #trainChatAnchorChip:not([hidden]) + #trainChatCodeContext.is-bound { padding-left: 8px; }
     #trainChatAnchorChip:not([hidden]) + #trainChatCodeContext:not([hidden])::before {
@@ -5578,14 +5565,37 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       mask: url('../src/pic/icon/addfile.svg') center / contain no-repeat;
     }
     .wzh-chat-code-chip {
-      position: relative; min-width: 0; width: 100%;
+      position: relative; min-width: 0; max-width: 100%;
       display: inline-flex; align-items: center; gap: 4px;
+      padding-right: 22px;
     }
     .wzh-chat-code-icon {
       width: 12px; height: 12px; flex-shrink: 0;
       display: block;
     }
-    .wzh-chat-code-path { min-width: 0; flex: 1 1 0; }
+    .wzh-chat-code-path { min-width: 0; flex: 0 1 auto; }
+    .wzh-chat-code-popover {
+      position: fixed; z-index: 2000;
+      box-sizing: border-box; width: max-content;
+      max-width: min(360px, calc(100vw - 16px));
+      display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+      padding: 12px; border: 1px solid var(--border-line); border-radius: 8px;
+      background: var(--surface-1); color: var(--foreground);
+      box-shadow: var(--wzh-chat-shadow);
+      font-size: 12px;
+    }
+    .wzh-chat-code-popover[hidden] { display: none; }
+    .wzh-chat-code-popover-path { overflow-wrap: anywhere; line-height: 1.5; }
+    .wzh-chat-code-popover-open {
+      padding: 5px 10px; border: 1px solid var(--divider-strong); border-radius: 6px;
+      background: var(--button-secondary-bg); color: var(--button-secondary-fg);
+      box-shadow: var(--button-secondary-shadow); text-decoration: none;
+      font-size: 12px; line-height: 1.4;
+    }
+    .wzh-chat-code-popover-open:is(:hover, :focus-visible) {
+      border-color: var(--brand-blue); color: var(--brand-blue);
+    }
+    .wzh-chat-code-popover-open:focus-visible { outline: 2px solid var(--button-focus-ring); outline-offset: 2px; }
     .wzh-chat-anchor-chip img {
       width: 12px; height: 12px; flex-shrink: 0; display: block;
     }
@@ -5621,6 +5631,8 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent calc(100% - 18px));
       mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent calc(100% - 18px));
     }
+    .wzh-chat-code-chip:hover > span,
+    .wzh-chat-code-chip:focus-within > span { -webkit-mask-image: none; mask-image: none; }
     .wzh-chat-anchor-close:hover { background: var(--state-hover); }
     .wzh-chat-anchor-close img { width: 16px; height: 16px; display: block; }
 

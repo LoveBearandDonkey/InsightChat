@@ -99,7 +99,9 @@
     }
 
     function activateWindow(which) {
-      if (!panel.classList.contains('is-floating') || !panel.classList.contains('is-open')) {
+      if (!panel.classList.contains('is-open')) {
+        desktop.dataset.activeWindow = 'main';
+      } else if (!panel.classList.contains('is-floating')) {
         delete desktop.dataset.activeWindow;
       } else {
         desktop.dataset.activeWindow = which;
@@ -109,6 +111,7 @@
 
     function syncFloating() {
       const floating = panel.classList.contains('is-floating');
+      if (!panel.classList.contains('is-open')) activateWindow('main');
       if (floating && panel.parentNode !== desktop) {
         if (panel.classList.contains('is-visualizing')) {
           panel.style.setProperty('--wzh-viz-top', '48px');
