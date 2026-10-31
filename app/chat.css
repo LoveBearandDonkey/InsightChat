@@ -7017,7 +7017,7 @@ html[data-entry-view="overview"] .msi-compare-icon {
 .msi-foot-expand-icon { display: none; }
 .msi-content-foot.is-collapsed .msi-foot-close-icon { display: none; }
 .msi-content-foot.is-collapsed .msi-foot-expand-icon { display: block; }
-.msi-content-foot.is-collapsed .msi-foot-tab.is-active {
+#msiSelectionPanel.is-collapsed .msi-foot-head .msi-foot-tab.is-active {
   color: var(--foreground-muted);
   font-weight: 400;
 }
