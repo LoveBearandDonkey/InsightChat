@@ -414,7 +414,7 @@
   --button-secondary-bg-press: var(--button-secondary-bg);
   --button-secondary-border: var(--divider-strong);
   --button-secondary-fg: var(--foreground);
-  --button-secondary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 2px 8px rgba(0, 0, 0, 0.16);
+  --button-secondary-shadow: none;
   --button-ghost-bg-hover: var(--state-hover);
   --button-ghost-bg-press: var(--state-press);
   --button-ghost-fg: var(--foreground-secondary);
@@ -581,7 +581,6 @@
   --button-secondary-bg-hover: var(--button-secondary-bg);
   --button-secondary-bg-press: var(--button-secondary-bg);
   --button-secondary-border: var(--divider-strong);
-  --button-secondary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78), 0 1px 2px rgba(0, 0, 0, 0.06);
   --ide-frame-page-bg: var(--background-elevated);
   --ide-frame-bg: var(--background);
   --ide-frame-pane-bg: var(--surface-2);
@@ -605,7 +604,6 @@
   --button-secondary-bg-hover: var(--button-secondary-bg);
   --button-secondary-bg-press: var(--button-secondary-bg);
   --button-secondary-border: var(--divider-strong);
-  --button-secondary-shadow: var(--glass-surface-highlight), 0 8px 24px rgba(0, 0, 0, 0.14);
   --button-ghost-bg-hover: rgba(255, 255, 255, 0.10);
   --button-ghost-bg-press: rgba(255, 255, 255, 0.15);
 
@@ -938,8 +936,9 @@ body {
   transform: translateY(0);
 }
 .btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--button-focus-ring), var(--button-secondary-shadow);
+  outline: 2px solid var(--brand-blue);
+  outline-offset: 2px;
+  box-shadow: none;
 }
 .btn:disabled,
 .btn[disabled] {
@@ -993,6 +992,7 @@ body {
   transform: translateY(0);
 }
 .btn-solid:focus-visible {
+  outline: none;
   box-shadow: 0 0 0 3px var(--button-focus-ring);
 }
 
@@ -4864,7 +4864,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       position: absolute; top: calc(100% + 6px); left: -10px; z-index: 30;
       box-sizing: border-box; min-width: 236px; padding: 8px;
       background: var(--surface-1);
-      border: 1px solid var(--border-line);
+      border: 1px solid var(--divider-strong);
       border-radius: var(--radius-lg);
       box-shadow: var(--wzh-chat-shadow);
     }
@@ -4945,7 +4945,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     .wzh-chat-history-pop {
       position: absolute; top: calc(100% + 8px); right: -100px; z-index: 40;
       box-sizing: border-box; width: 300px; padding: 8px;
-      background: var(--surface-1); border: 1px solid var(--border-line);
+      background: var(--surface-1); border: 1px solid var(--divider-strong);
       border-radius: var(--radius-lg); box-shadow: var(--wzh-chat-shadow);
     }
     .wzh-chat-history-pop[hidden] { display: none; }
@@ -5328,7 +5328,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       display: none; box-sizing: border-box; padding: 4px;
       max-height: 268px; overflow-y: auto; overscroll-behavior: contain;
       background: var(--surface-1);
-      border: 1px solid var(--border-line);
+      border: 1px solid var(--divider-strong);
       border-radius: var(--radius-lg);
       box-shadow: var(--wzh-chat-shadow);
     }
@@ -5399,7 +5399,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 30;
       box-sizing: border-box; min-width: 220px; padding: 8px;
       background: var(--surface-1);
-      border: 1px solid var(--border-line);
+      border: 1px solid var(--divider-strong);
       border-radius: var(--radius-lg);
       box-shadow: var(--wzh-chat-shadow);
     }
@@ -5587,7 +5587,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       box-sizing: border-box; width: max-content;
       max-width: min(360px, calc(100vw - 16px));
       display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
-      padding: 12px; border: 1px solid var(--border-line); border-radius: 8px;
+      padding: 12px; border: 1px solid var(--divider-strong); border-radius: 8px;
       background: var(--surface-1); color: var(--foreground);
       box-shadow: var(--wzh-chat-shadow);
       font-size: 12px;
@@ -6153,8 +6153,8 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     .wzh-chat-think-node.is-final .wzh-chat-think-dot { background: var(--brand-green); }
     .wzh-chat-think-node.is-final .wzh-chat-think-node-head { margin-bottom: 0; }
 
-    /* 回答尾部的操作栏:重试 / 复制 / 赞 / 踩。纯展示态的图标按钮,不加边框和底色,
-       hover 才浮出一层浅底,避免四个小图标在回答下面显得比正文还重。 */
+    /* 回答尾部的操作栏:复制 / 添加到调优笔记 / 赞 / 踩。图标按钮默认无边框和底色，
+       hover 时显示浅底。 */
     .wzh-chat-answer-actions {
       display: flex; align-items: center; gap: 4px;
       margin-top: 4px;
@@ -6388,6 +6388,16 @@ body.is-pane-resizing[data-pane-resize-axis="x"] * { cursor: col-resize !importa
 .wzh-chat-messages:hover::-webkit-scrollbar-thumb { background: var(--divider-strong); }
 .chat-shell-body::-webkit-scrollbar-thumb:hover,
 .wzh-chat-messages::-webkit-scrollbar-thumb:hover { background: var(--foreground-muted); }
+
+/* 指定滚动区的提示条悬浮绘制，不压缩内容宽度。 */
+.wzh-overlay-scrollbar-host { position: relative; }
+.wzh-overlay-vscroll { position: absolute; z-index: 6; width: 8px; pointer-events: none; opacity: 0; transition: opacity 120ms ease; }
+.wzh-overlay-vscroll[hidden] { display: none; }
+.wzh-overlay-vscroll.is-visible { opacity: 1; }
+.wzh-overlay-vscroll-thumb { position: absolute; left: 1px; width: 6px; border-radius: 6px; background: var(--divider-strong); }
+#contentCard, #msiOverviewPanel, #msiTuningDocumentPanel { scrollbar-width: none; scrollbar-gutter: auto; }
+#contentCard::-webkit-scrollbar, #msiOverviewPanel::-webkit-scrollbar,
+#msiTuningDocumentPanel::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
 /* ══ 顶栏品牌区:MSInsight 图标 + 产品名 ══ */
 .msi-sidebar-menu {
@@ -7009,6 +7019,7 @@ html[data-entry-view="overview"] .msi-compare-icon {
 .msi-content-foot.is-collapsed .msi-foot-expand-icon { display: block; }
 .msi-content-foot.is-collapsed .msi-foot-tab.is-active {
   color: var(--foreground-muted);
+  font-weight: 400;
 }
 .msi-content-foot.is-collapsed .msi-foot-tab.is-active::after { display: none; }
 /* 内容区同样两栏:左「选中详情」只占 ~28%,横向空间尽量留给右边的页签内容(调用链)。
@@ -7525,6 +7536,293 @@ html[data-entry-view="overview"] .msi-compare-icon {
 
 /* ══ 概览页：profile_dir 多机多卡训练性能诊断报告 ══════════════════ */
 .msi-analysis-stage[hidden] { display: none !important; }
+.msi-tuning-document {
+  --msi-tuning-pad-top: 20px;
+  --msi-tuning-pad-inline: 32px;
+  flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: auto;
+  padding: var(--msi-tuning-pad-top) var(--msi-tuning-pad-inline) 8px; container-type: inline-size;
+}
+.msi-tuning-document-inner {
+  flex: 1 0 auto; display: flex; flex-direction: column;
+  width: 100%; max-width: 800px; margin: 0 auto;
+}
+.msi-tuning-document-heading {
+  display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+  margin-bottom: 12px;
+}
+.msi-tuning-document-title { min-width: 0; max-width: 100%; margin: 0; }
+.msi-tuning-document-title-btn {
+  display: inline-flex; align-items: center; gap: 8px; max-width: calc(100% + 20px);
+  margin: -5px -10px; padding: 5px 10px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--foreground); cursor: pointer; text-align: left;
+  font: 600 20px/1.4 var(--font-sans);
+}
+.msi-tuning-document-title-btn:hover,
+.msi-tuning-document-title-btn:focus-visible {
+  background: color-mix(in srgb, var(--foreground) 7%, transparent); outline: none;
+}
+.msi-tuning-document-title-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msi-tuning-document-title-text strong { font-weight: 700; }
+.msi-tuning-document-title-pen {
+  display: block; width: 15px; height: 15px; flex: 0 0 auto; opacity: 0;
+  transition: opacity var(--duration-fast) var(--easing-default);
+}
+.msi-tuning-document-title-btn:hover .msi-tuning-document-title-pen,
+.msi-tuning-document-title-btn:focus-visible .msi-tuning-document-title-pen { opacity: .72; }
+:root[data-theme='dark'] .msi-tuning-document-title-pen { filter: invert(1); }
+.msi-tuning-document-title-input {
+  box-sizing: border-box; width: min(360px, 100%); height: 34px;
+  padding: 3px 9px; border: 1px solid var(--msi-accent); border-radius: 6px;
+  background: var(--surface-1); color: var(--foreground); outline: none;
+  font: 600 20px/1.4 var(--font-sans);
+}
+.msi-tuning-document-title-input[hidden] { display: none; }
+.msi-tuning-document-actions-slot--home { min-height: 32px; margin-left: auto; }
+.msi-tuning-document-actions-slot--floating { margin-left: auto; }
+.msi-tuning-document-actions-slot--floating:empty { display: none; }
+.msi-tuning-document-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.msi-tuning-document-actions button {
+  height: 32px; padding: 0 13px;
+  font: 13px var(--font-sans); white-space: nowrap; cursor: pointer;
+}
+.msi-tuning-document-actions .msi-tuning-document-contribute {
+  border: 1px solid var(--msi-accent); border-radius: var(--button-radius);
+  background: var(--msi-accent); color: var(--primary-foreground);
+}
+.msi-tuning-document-actions .msi-tuning-document-contribute:hover {
+  border-color: var(--primary-hover); background: var(--primary-hover); color: var(--primary-foreground);
+}
+.msi-tuning-visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.msi-tuning-editor {
+  flex: 1 0 auto; display: flex; flex-direction: column;
+  overflow: hidden; border: 1px solid var(--divider-weak); border-radius: 10px;
+  background: var(--surface-1);
+}
+.msi-tuning-editor:has(#msiTuningDocumentEditor.is-generating) { border-color: var(--msi-accent); }
+.msi-tuning-preview-shell {
+  display: flex; flex: 1 0 auto; align-items: stretch; gap: 0;
+  min-width: 0;
+}
+.msi-tuning-preview-shell .msi-tuning-editor { flex: 1 1 auto; min-width: 0; }
+.msi-tuning-toc-anchor {
+  position: sticky; top: 44px; z-index: 7; align-self: flex-start;
+  flex: 0 0 0; width: 0; height: 0;
+}
+.msi-tuning-toc-trigger { display: none; }
+.msi-tuning-toolbar {
+  position: sticky; top: calc(0px - var(--msi-tuning-pad-top)); z-index: 5;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 2px;
+  min-height: 32px; margin-bottom: 12px;
+}
+.msi-tuning-toolbar.is-floating {
+  box-sizing: border-box; height: 56px;
+}
+.msi-tuning-toolbar.is-floating::before {
+  content: "";
+  position: absolute; top: 0; bottom: 0;
+  left: var(--msi-tuning-float-left, 0px);
+  width: var(--msi-tuning-float-width, 100%);
+  box-sizing: border-box;
+  border: 1px solid var(--divider-weak); border-radius: 8px;
+  background: var(--surface-1);
+  pointer-events: none; z-index: -1;
+}
+.msi-tuning-toolbar > button {
+  width: 27px; height: 27px; border: 0; border-radius: 5px;
+  background: transparent; color: var(--foreground); font-size: 13px;
+}
+.msi-tuning-toolbar > button:disabled { cursor: default; opacity: 1; }
+.msi-tuning-toolbar > .msi-tuning-toolbar-icon-button {
+  display: inline-flex; align-items: center; justify-content: center; padding: 0;
+}
+.msi-tuning-toolbar-icon-button img { display: block; width: 16px; height: 16px; }
+:root[data-theme='dark'] .msi-tuning-toolbar-icon-button img { filter: invert(1); }
+.msi-tuning-toolbar > .msi-tuning-image-button:not(:disabled) { cursor: pointer; }
+.msi-tuning-toolbar > .msi-tuning-image-button:not(:disabled):hover { background: var(--surface-2); }
+.msi-tuning-toolbar > .msi-tuning-image-button:focus-visible { outline: 2px solid var(--msi-accent); outline-offset: 1px; }
+.msi-tuning-mode-tabs {
+  display: flex; align-self: center; align-items: center; gap: 2px;
+  box-sizing: border-box; flex: 0 0 112px; width: 112px;
+  margin-right: 12px; padding: 2px; border-radius: 8px; background: var(--surface-2);
+}
+.msi-tuning-mode-button {
+  flex: 1 1 0; min-width: 0; height: 28px; padding: 0 10px;
+  border: 0; border-radius: 8px; background: transparent;
+  color: var(--foreground-secondary); font: 400 12px/1 var(--font-sans); cursor: pointer;
+}
+.msi-tuning-mode-button.is-active { background: var(--surface-1); color: var(--brand-blue); }
+.msi-tuning-toolbar-divider { height: 14px; margin: 0 4px; border-left: 1px solid var(--divider-weak); }
+.msi-tuning-source-banner {
+  position: relative; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px;
+  margin-bottom: 12px; padding: 12px 48px 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--msi-accent) 25%, transparent);
+  border-radius: 8px; background: color-mix(in srgb, var(--msi-accent) 8%, var(--surface-1));
+  color: var(--foreground); font: 14px/1.5 var(--font-sans);
+}
+.msi-tuning-source-banner[hidden] { display: none; }
+.msi-tuning-source-banner-progress[hidden] { display: none; }
+.msi-tuning-source-banner.is-summarizing .msi-tuning-source-banner-context,
+.msi-tuning-source-banner.is-summarizing > button { display: none; }
+.msi-tuning-source-banner > .msi-ov-runtime-insight-icon { margin-top: 0; }
+.msi-tuning-source-banner-context { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.msi-tuning-source-banner-context img { width: 16px; height: 16px; }
+.msi-tuning-source-banner-context strong { font-weight: 700; }
+.msi-tuning-source-banner > button {
+  margin-left: auto; padding: 0; border: 0; background: transparent;
+  color: var(--msi-accent); font: 14px/1.5 var(--font-sans); cursor: pointer;
+}
+.msi-tuning-source-banner > .msi-tuning-source-banner-close {
+  position: absolute; top: 8px; right: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; margin: 0; border-radius: 6px;
+  color: var(--msi-accent);
+}
+.msi-tuning-source-banner-close:hover,
+.msi-tuning-source-banner-close:focus-visible { background: var(--state-hover); color: var(--msi-accent); }
+.msi-tuning-source-banner-close svg {
+  width: 16px; height: 16px; fill: none; stroke: currentColor;
+  stroke-width: 1.8; stroke-linecap: round;
+}
+.msi-tuning-back-to-top {
+  position: sticky; bottom: 16px; z-index: 6; align-self: flex-end;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: 0 0 36px; width: 36px; height: 36px; margin-top: -36px;
+  transform: translateX(calc(var(--msi-tuning-pad-inline) - 16px));
+  border: 1px solid var(--divider-strong); border-radius: 50%;
+  background: var(--surface-1); color: var(--foreground-secondary);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 6%); cursor: pointer;
+}
+.msi-tuning-back-to-top[hidden] { display: none; }
+.msi-tuning-back-to-top:hover { color: var(--msi-accent); border-color: var(--msi-accent); }
+.msi-tuning-back-to-top svg {
+  width: 18px; height: 18px; fill: none; stroke: currentColor;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
+#msiTuningDocumentEditor {
+  box-sizing: border-box; display: block; flex: 1 0 auto; width: 100%; min-height: 0;
+  padding: 26px 30px; resize: none; overflow: hidden; border: 0; outline: 0;
+  background: transparent; color: var(--foreground);
+  font: 14px/1.8 var(--font-sans); overflow-wrap: break-word;
+}
+#msiTuningDocumentEditor.is-generating {
+  border-radius: 9px;
+  animation: msi-tuning-generating-glow 2s ease-in-out infinite;
+}
+@keyframes msi-tuning-generating-glow {
+  0%, 100% { box-shadow: inset 0 0 36px color-mix(in srgb, var(--msi-accent) 16%, transparent); }
+  50% { box-shadow: inset 0 0 72px color-mix(in srgb, var(--msi-accent) 30%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #msiTuningDocumentEditor.is-generating {
+    animation: none;
+    box-shadow: inset 0 0 48px color-mix(in srgb, var(--msi-accent) 22%, transparent);
+  }
+}
+#msiTuningDocumentEditor::placeholder { color: var(--foreground-placeholder); }
+#msiTuningDocumentEditor[hidden], #msiTuningDocumentPreview[hidden],
+.msi-tuning-document-toc[hidden] { display: none; }
+.msi-tuning-document-toc {
+  --msi-toc-width: clamp(100px, calc(50cqw - 388px), 174px);
+  position: absolute; top: 0; right: 12px;
+  box-sizing: border-box; width: var(--msi-toc-width); max-height: min(60vh, 600px);
+  padding: 18px 0; overflow-y: auto;
+  color: var(--foreground-secondary); font: 13px/1.5 var(--font-sans);
+}
+.msi-tuning-document-toc-title { margin: 0 0 8px 10px; font-weight: 600; color: var(--foreground); }
+.msi-tuning-document-toc ol { margin: 0; padding: 0; list-style: none; }
+.msi-tuning-document-toc li { margin: 2px 0; }
+.msi-tuning-document-toc button {
+  display: block; box-sizing: border-box; width: 100%; padding: 6px 8px;
+  border: 0; border-radius: 6px; background: transparent; color: inherit;
+  font: inherit; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
+}
+.msi-tuning-document-toc button:hover,
+.msi-tuning-document-toc button[aria-current="location"] { background: var(--surface-2); color: var(--msi-accent); }
+.msi-tuning-document-toc-empty { padding: 6px 10px; color: var(--foreground-muted); }
+@container (max-width: 960px) {
+  .msi-tuning-preview-shell.is-preview .msi-tuning-toc-trigger {
+    position: absolute; top: 16px; left: calc(16px - var(--msi-tuning-pad-inline));
+    display: inline-flex; width: 36px; height: 36px;
+    border: 1px solid var(--divider-strong); border-radius: 50%;
+    background: var(--surface-1); color: var(--foreground-secondary);
+    box-shadow: 0 2px 6px rgb(0 0 0 / 6%);
+  }
+  .msi-tuning-toc-trigger:hover,
+  .msi-tuning-toc-trigger:focus-visible { color: var(--msi-accent); border-color: var(--msi-accent); }
+  .msi-tuning-document-toc {
+    display: none; top: 60px; right: auto;
+    left: calc(16px - var(--msi-tuning-pad-inline));
+    width: min(240px, calc(min(100cqw, 800px) - 16px));
+    max-height: min(60vh, 400px); padding: 12px;
+    border: 1px solid var(--divider-strong); border-radius: 8px;
+    background: var(--surface-1); box-shadow: 0 8px 28px rgb(0 0 0 / 12%);
+  }
+  .msi-tuning-toc-anchor:is(:hover, :focus-within, .is-open) .msi-tuning-document-toc:not([hidden]) { display: block; }
+}
+.msi-tuning-document-preview {
+  box-sizing: border-box; flex: 1 1 auto; min-width: 0; min-height: 0;
+  padding: 26px 30px; color: var(--foreground);
+  font: 14px/1.8 var(--font-sans); overflow-wrap: anywhere;
+}
+.msi-tuning-document-preview > :first-child { margin-top: 0; }
+.msi-tuning-document-preview > :last-child { margin-bottom: 0; }
+.msi-tuning-document-preview h1,
+.msi-tuning-document-preview h2,
+.msi-tuning-document-preview h3,
+.msi-tuning-document-preview h4,
+.msi-tuning-document-preview h5,
+.msi-tuning-document-preview h6 { margin: 22px 0 8px; line-height: 1.4; }
+.msi-tuning-document-preview h1 { font-size: 24px; }
+.msi-tuning-document-preview h2 { font-size: 20px; }
+.msi-tuning-document-preview h3 { font-size: 17px; }
+.msi-tuning-document-preview h4,
+.msi-tuning-document-preview h5,
+.msi-tuning-document-preview h6 { font-size: 15px; }
+.msi-tuning-document-preview p { margin: 0 0 12px; }
+.msi-tuning-document-preview ul,
+.msi-tuning-document-preview ol { margin: 0 0 14px; padding-left: 24px; }
+.msi-tuning-document-preview li { margin: 3px 0; }
+.msi-tuning-document-preview code {
+  padding: 2px 4px; border-radius: 4px;
+  background: var(--surface-2); font: .92em var(--font-mono);
+}
+.msi-tuning-document-preview pre {
+  margin: 0 0 14px; padding: 12px 14px; border-radius: 6px;
+  background: var(--surface-2); overflow-x: auto;
+}
+.msi-tuning-document-preview pre code { padding: 0; background: none; }
+.msi-tuning-document-preview img {
+  box-sizing: border-box; display: block; max-width: 100%; height: auto;
+  margin: 8px 0 16px; border: 1px solid var(--divider-weak); border-radius: 6px;
+}
+.msi-tuning-document-preview table { display: block; max-width: 100%; margin: 0 0 16px; border-collapse: collapse; overflow-x: auto; }
+.msi-tuning-document-preview th,
+.msi-tuning-document-preview td { padding: 7px 10px; border: 1px solid var(--divider-weak); text-align: left; white-space: nowrap; }
+.msi-tuning-document-preview th { background: var(--surface-2); font-weight: 600; }
+.msi-tuning-document-preview blockquote { margin: 0 0 14px; padding: 4px 14px; border-left: 3px solid var(--msi-accent); color: var(--foreground-secondary); }
+.msi-tuning-document-preview hr { margin: 20px 0; border: 0; border-top: 1px solid var(--divider-weak); }
+.msi-tuning-document-preview a { color: var(--msi-accent); }
+.msi-tuning-document-preview-empty { color: var(--foreground-muted); }
+.wzh-chat-selection-menu[hidden] { display: none; }
+.wzh-chat-selection-menu {
+  position: fixed; z-index: 10000; display: flex; flex-direction: column; gap: 2px; padding: 5px;
+  border: 1px solid var(--divider-strong); border-radius: 8px;
+  background: var(--surface-1); box-shadow: 0 8px 28px rgb(0 0 0 / 17%);
+}
+.wzh-chat-selection-menu button {
+  border: 0; border-radius: 5px; padding: 7px 11px; background: transparent; text-align: left;
+  color: var(--foreground); font: 14px var(--font-sans); white-space: nowrap; cursor: pointer;
+}
+.wzh-chat-selection-menu button:hover,
+.wzh-chat-selection-menu button:focus-visible { background: var(--surface-2); color: var(--msi-accent); }
+@media (max-width: 740px) {
+  .msi-tuning-document { --msi-tuning-pad-inline: 16px; }
+  .msi-tuning-document-heading { display: block; }
+  #msiTuningDocumentEditor, .msi-tuning-document-preview { padding: 18px; }
+}
 .msi-operator {
   flex: 1 1 auto;
   min-height: 0;

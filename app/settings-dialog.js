@@ -236,6 +236,7 @@
       panels.forEach((panel) => { panel.hidden = panel.dataset.settingsPanel !== section; });
       heading.textContent = { general: '通用', agent: 'Agent', skills: 'Skills', mcp: 'MCP', knowledge: '知识库' }[section];
       footer.hidden = section !== 'agent';
+      dialog.dispatchEvent(new CustomEvent('settings:section-change', { detail: { section } }));
     }
 
     function setMode(mode) {

@@ -3538,7 +3538,7 @@
   }
 
   function activateAnalysisTab(name) {
-    if (!['overview', 'timeline', 'memory', 'operator'].includes(name)) return false;
+    if (!['overview', 'timeline', 'memory', 'operator', 'tuning-document'].includes(name)) return false;
     if (name === 'overview' && (compareMode || selected.task.name !== 'profile_dir')) return false;
     document.querySelectorAll('.msi-tab').forEach((tab) => {
       const active = tab.dataset.analysisTab === name;
@@ -3549,10 +3549,12 @@
     const timeline = document.getElementById('msiTimelinePanel');
     const memory = document.getElementById('msiMemoryPanel');
     const operator = document.getElementById('msiOperatorPanel');
+    const tuningDocument = document.getElementById('msiTuningDocumentPanel');
     if (overview) overview.hidden = name !== 'overview';
     if (timeline) timeline.hidden = name !== 'timeline';
     if (memory) memory.hidden = name !== 'memory';
     if (operator) operator.hidden = name !== 'operator';
+    if (tuningDocument) tuningDocument.hidden = name !== 'tuning-document';
     if (name === 'memory') ensureMemoryFrames();
     if (name === 'overview') ensureOverview().catch((error) => {
       const detail = document.getElementById('msiOvIssueDetail');

@@ -836,6 +836,7 @@
   // 回答区打字机:按 markdown 源码逐段重渲染，而不是逐个 DOM 节点插入——
   // 列表 / 表格这类块级结构只有整段重渲染才能得到正确的中间态。
   function typeMarkdownInto(el, text, msPerTick, charsPerTick, onRender, startAt = 0) {
+    el._markdownSource = text;
     const msgEl = $('trainChatMessages');
     const step = msPerTick || 28;
     const chunk = charsPerTick || 2;
@@ -1038,8 +1039,7 @@
         '</div>' +
       '</section>' +
       '<section class="pto-ide-frame__pane wzh-code-tree-pane" aria-label="完整代码工程树">' +
-        '<header class="wzh-code-pane-head"><span class="wzh-code-pane-title">资源管理器</span>' +
-          '<span class="wzh-code-pane-caption">示例工程</span></header>' +
+        '<header class="wzh-code-pane-head"><span class="wzh-code-pane-title">资源管理器</span></header>' +
         '<label class="wzh-code-search"><span aria-hidden="true">⌕</span>' +
           '<input type="search" placeholder="筛选文件…" aria-label="筛选工程文件"></label>' +
         '<div class="wzh-code-tree-label">OPENPANGU-FLASH <span>2 个已修改</span></div>' +
@@ -1322,8 +1322,8 @@
     const bar = document.createElement('div');
     bar.className = 'wzh-chat-answer-actions';
     [
-      { icon: 'retry.svg', label: '重新生成' },
       { icon: 'Copy.svg', label: '复制' },
+      { icon: 'addtopaper.svg', label: '添加到调优笔记' },
       { icon: 'Like.svg', label: '有帮助', toggle: 'vote' },
       { icon: 'Dislike.svg', label: '没帮助', toggle: 'vote' },
     ].forEach((a) => {
@@ -1339,6 +1339,23 @@
           bar.querySelectorAll('.wzh-chat-answer-action.is-active')
             .forEach((b) => b.classList.remove('is-active'));
           btn.classList.toggle('is-active', !on);
+        });
+      } else if (a.label === '添加到调优笔记') {
+        const icon = btn.innerHTML;
+        btn.addEventListener('click', () => {
+          const message = btn.closest('.wzh-chat-message.ai');
+          if (!window.MSI_TUNING_DOCUMENT?.addAnswer(message)) return;
+          clearTimeout(btn._copyTimer);
+          btn.classList.add('is-copied');
+          btn.innerHTML = COPY_DONE_ICON;
+          btn.title = '已添加到调优笔记';
+          btn.setAttribute('aria-label', '已添加到调优笔记');
+          btn._copyTimer = setTimeout(() => {
+            btn.classList.remove('is-copied');
+            btn.innerHTML = icon;
+            btn.title = a.label;
+            btn.setAttribute('aria-label', a.label);
+          }, 1000);
         });
       } else if (a.label === '复制') {
         btn.addEventListener('click', () => {
@@ -1692,6 +1709,7 @@
         answer.className = 'wzh-chat-answer';
         bodyEl.appendChild(answer);
       }
+      answer._markdownSource = sections.join('\n');
       for (let index = 0; index < sections.length; index++) {
         const md = sections[index];
         let target = answer;
@@ -2074,6 +2092,12 @@
   const PROFILING_SESSION_TITLE = 'profile_dir 单机多卡性能分析';
   const CODE_CHANGE_HISTORY_QUESTION = '请修改 #{model/pipeline.py} 的 PP 分层逻辑，减轻 stage 3 的计算过载；如果相关配置文件也需要调整，请一并修改代码。';
   const CODE_CHANGE_ANSWER_MARKDOWN = 'Profiling 显示 PP 末级计算约 9.26 s/step，明显重于其他 stage。我已调整示例模型的层分配：stage 3 的 Decoder 层数从 8 降到 7，stage 2 从 8 增到 9。`model/pipeline.py` 现在按配置计算每级的层范围，并校验末级边界。实际收益还需要重新采集 Profiling 验证。';
+  const CODE_CHANGE_THINK_STEPS = [
+    { kind: 'thinking', title: '核对性能瓶颈', doneTitle: '已定位 PP 末级过载',
+      text: 'stage 3 计算约 9.26 s/step，其他 stage 约 6.15 s。先调整层分配，减少末级等待。' },
+    { kind: 'usetool', title: '检查模型分层代码', doneTitle: '已检查配置与层范围',
+      text: '检查 model/config.py 和 model/pipeline.py：保持 32 层总数，并让每级按配置计算起止层。' },
+  ];
 
   function createCodeChangeAnswerCard() {
     const card = createAnswerVisualizationCard('code');
@@ -2100,6 +2124,7 @@
       const { el, bodyEl } = createAiMessageShell();
       const answer = document.createElement('div');
       answer.className = 'wzh-chat-answer';
+      answer._markdownSource = reply;
       answer.innerHTML = renderMarkdown(reply);
       answer.appendChild(buildAnswerActions());
       bodyEl.appendChild(answer);
@@ -2116,17 +2141,11 @@
     setChatBusy(true);
     const epoch = chatEpoch;
     const think = createThinkBlock(bodyEl, {});
-    const steps = [
-      { kind: 'thinking', title: '核对性能瓶颈', doneTitle: '已定位 PP 末级过载',
-        text: 'stage 3 计算约 9.26 s/step，其他 stage 约 6.15 s。先调整层分配，减少末级等待。' },
-      { kind: 'usetool', title: '检查模型分层代码', doneTitle: '已检查配置与层范围',
-        text: '检查 model/config.py 和 model/pipeline.py：保持 32 层总数，并让每级按配置计算起止层。' },
-    ];
     const markdown = CODE_CHANGE_ANSWER_MARKDOWN;
     scrollChatToBottom(msgEl);
 
     (async () => {
-      for (const step of steps) {
+      for (const step of CODE_CHANGE_THINK_STEPS) {
         think.startNode(step);
         await think.typeText(step.text, 12);
         await chatSleep(180);
@@ -2136,6 +2155,7 @@
       think.finish();
       const answer = document.createElement('div');
       answer.className = 'wzh-chat-answer';
+      answer._markdownSource = markdown;
       bodyEl.appendChild(answer);
       await typeMarkdownInto(answer, markdown, 18, 3);
       if (epoch !== chatEpoch) return;
@@ -2538,6 +2558,16 @@
       '改完重采一次我再帮你对一遍前后差异；想让我把某一条展开成能直接提交的 patch，说一声就行。';
   }
 
+  function buildProfilingAnswerSections() {
+    return [
+      buildProfilingOverviewMarkdown(),
+      buildProfilingDetailMarkdown(),
+      buildProfilingAppendixMarkdown(),
+      buildProfilingTailMarkdown(),
+    ];
+  }
+  window.MSI_GET_PROFILING_ANSWER = () => buildProfilingAnswerSections().join('\n');
+
   // 提问卡片固定用内置的 PROFILING_QUESTION,不回显用户实际敲的那句——这套回答是写死的,
   // 用真实提问做题面只会得到一组对不上的问答。
   function runProfilingDiagnosisScenario(opts) {
@@ -2560,12 +2590,7 @@
     chatStopped = false;
     setChatBusy(true);
     const epoch = chatEpoch;
-    const sections = [
-      buildProfilingOverviewMarkdown(),
-      buildProfilingDetailMarkdown(),
-      buildProfilingAppendixMarkdown(),
-      buildProfilingTailMarkdown(),
-    ];
+    const sections = buildProfilingAnswerSections();
     activeResumeRound = { resume: () => resumeDemoRound(bodyEl, sections, true) };
 
     const think = createThinkBlock(bodyEl, { clockScale: PROFILING_DEMO_CLOCK_SCALE });
@@ -2584,6 +2609,7 @@
       // 等它吐完就成了折磨,而不是"看着它在生成"。
       const answer = document.createElement('div');
       answer.className = 'wzh-chat-answer';
+      answer._markdownSource = sections.join('\n');
       bodyEl.appendChild(answer);
 
       for (const md of sections) {
@@ -2619,15 +2645,11 @@
       sessionTitle: PROFILING_SESSION_TITLE,
     });
 
-    const sections = [
-      buildProfilingOverviewMarkdown(),
-      buildProfilingDetailMarkdown(),
-      buildProfilingAppendixMarkdown(),
-      buildProfilingTailMarkdown(),
-    ];
+    const sections = buildProfilingAnswerSections();
     const { el: aiDiv, bodyEl } = createAiMessageShell();
     const answer = document.createElement('div');
     answer.className = 'wzh-chat-answer';
+    answer._markdownSource = sections.join('\n');
     sections.forEach((md) => {
       const seg = document.createElement('div');
       seg.innerHTML = renderMarkdown(md);
@@ -2660,8 +2682,21 @@
       sessionTitle,
     });
     const { el, bodyEl } = createAiMessageShell();
+    if (options.thinkSteps) {
+      const think = createThinkBlock(bodyEl, {});
+      options.thinkSteps.forEach((step) => {
+        think.startNode(step).setText(step.text);
+        think.finishNode();
+      });
+      think.finish();
+      // 历史演示没有保存耗时，保留思考内容但不展示即时拼装产生的 0s。
+      think.el.querySelectorAll('.wzh-chat-think-head-time, .wzh-chat-think-node-time')
+        .forEach((time) => time.remove());
+      if (activeThink === think) activeThink = null;
+    }
     const answer = document.createElement('div');
     answer.className = 'wzh-chat-answer';
+    answer._markdownSource = markdown;
     answer.innerHTML = renderMarkdown(markdown);
     if (options.codeChange) answer.appendChild(createCodeChangeAnswerCard());
     answer.appendChild(buildAnswerActions());
@@ -2684,6 +2719,7 @@
       return restoreCompletedDemoHistory(CODE_CHANGE_HISTORY_QUESTION,
         '流水线末级过载 · 模型代码调整', CODE_CHANGE_ANSWER_MARKDOWN, {
           codeChange: true,
+          thinkSteps: CODE_CHANGE_THINK_STEPS,
           context: {
             directory: PROFILING_DATA_DIR,
             codePath: $('trainChatCodePath')?.dataset.fullPath || '',

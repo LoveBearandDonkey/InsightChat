@@ -46,6 +46,7 @@
       sentry: '../../src/pic/icon/sentry.svg',
     };
     const slackIcon = '<svg viewBox="0 0 32 32" aria-hidden="true"><rect x="12" y="1" width="5" height="13" rx="2.5" fill="#36C5F0"/><rect x="2" y="11" width="13" height="5" rx="2.5" fill="#36C5F0"/><rect x="17" y="11" width="13" height="5" rx="2.5" fill="#2EB67D"/><rect x="17" y="1" width="5" height="13" rx="2.5" fill="#2EB67D"/><rect x="17" y="18" width="5" height="13" rx="2.5" fill="#ECB22E"/><rect x="17" y="16" width="13" height="5" rx="2.5" fill="#ECB22E"/><rect x="2" y="16" width="13" height="5" rx="2.5" fill="#E01E5A"/><rect x="10" y="18" width="5" height="13" rx="2.5" fill="#E01E5A"/></svg>';
+    const iconOutline = '<svg class="wzh-special-icon-outline" viewBox="0 0 42 42" aria-hidden="true"><path d="M21 1 C37 1 41 5 41 21 C41 37 37 41 21 41 C5 41 1 37 1 21 C1 5 5 1 21 1Z"/></svg>';
     const usageDays = Array.from({ length: 14 }, (_, index) => {
       const date = new Date();
       date.setHours(12, 0, 0, 0);
@@ -81,6 +82,7 @@
         image.alt = '';
         icon.appendChild(image);
       }
+      icon.insertAdjacentHTML('afterbegin', iconOutline);
       const copy = element('div', 'wzh-skills-copy');
       copy.append(element('strong', 'wzh-skills-name', server.name), element('span', 'wzh-skills-description', server.description));
       row.append(icon, copy);
@@ -95,10 +97,13 @@
       const details = element('button', '', '详情');
       details.type = 'button';
       details.dataset.mcpAction = 'details';
+      const directory = element('button', '', '打开目录');
+      directory.type = 'button';
+      directory.dataset.mcpAction = 'directory';
       const remove = element('button', '', '删除');
       remove.type = 'button';
       remove.dataset.mcpAction = 'delete';
-      menu.append(details, remove);
+      menu.append(details, directory, remove);
       menuWrap.append(more, menu);
       row.appendChild(menuWrap);
       const toggle = element('button', 'wzh-skills-switch');
@@ -254,6 +259,7 @@
         case 'toggle': server.enabled = !server.enabled; openMenuId = null; break;
         case 'menu': openMenuId = openMenuId === id ? null : id; break;
         case 'details': expandedId = expandedId === id ? null : id; openMenuId = null; break;
+        case 'directory': return;
         case 'delete':
           openMenuId = null;
           if (!window.confirm(`删除自定义 MCP“${server.name}”？`)) { render(); return; }

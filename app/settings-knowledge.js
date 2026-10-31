@@ -19,9 +19,9 @@
       { id: 'distributed', kind: 'custom', name: '分布式训练知识库', description: '汇总并行策略、通信性能与多机训练排障记录。', enabled: false },
       { id: 'hardware', kind: 'custom', name: '硬件资源知识库', description: '整理设备利用率、内存带宽和资源配置建议。', enabled: true },
       { id: 'profiling', kind: 'custom', name: '性能分析案例库', description: '沉淀典型性能问题的定位过程与优化结果。', enabled: true },
-      { id: 'ascend', kind: 'system', name: '华为昇腾知识库', description: '包含 2000+ 篇文档案例，覆盖昇腾开发、性能调优与故障排查。', enabled: true },
+      { id: 'ascend', kind: 'system', name: '昇腾性能知识库', description: '包含 2000+ 篇文档案例，覆盖昇腾开发、性能调优与故障排查。', enabled: true },
     ];
-    const bookIcon = '<svg class="wzh-skills-icon" viewBox="0 0 42 42" aria-hidden="true"><path class="wzh-skills-icon-shape" d="M21 1 C37 1 41 5 41 21 C41 37 37 41 21 41 C5 41 1 37 1 21 C1 5 5 1 21 1Z"/><path class="wzh-skills-icon-glyph" d="M21 13c-2.6-1.7-5.4-1.9-9-1.2v17c3.6-.7 6.4-.5 9 1.2 2.6-1.7 5.4-1.9 9-1.2v-17c-3.6-.7-6.4-.5-9 1.2Zm0 0v17M15 16.5c1.4-.1 2.4.1 3.4.5m-3.4 3.1c1.4-.1 2.4.1 3.4.5m5.2-3.6c1-.4 2-.6 3.4-.5m-3.4 4.1c1-.4 2-.6 3.4-.5"/></svg>';
+    const bookIcon = '<svg class="wzh-skills-icon" viewBox="0 0 42 42" aria-hidden="true"><path class="wzh-skills-icon-shape" d="M21 1 C37 1 41 5 41 21 C41 37 37 41 21 41 C5 41 1 37 1 21 C1 5 5 1 21 1Z"/><g class="wzh-skills-icon-glyph" transform="translate(9 9)"><path d="M12 5.5C9.7 4.1 6.8 3.8 3.5 4.5v14c3.3-.7 6.2-.4 8.5 1 2.3-1.4 5.2-1.7 8.5-1v-14c-3.3-.7-6.2-.4-8.5 1Z"/><path d="M12 5.5v14"/></g></svg>';
     const usageDays = Array.from({ length: 14 }, (_, index) => {
       const date = new Date();
       date.setHours(12, 0, 0, 0);
@@ -37,7 +37,6 @@
     let filter = 'all';
     let openMenuId = null;
     let expandedId = null;
-    let detailMode = 'details';
 
     function element(tag, className, text) {
       const node = document.createElement(tag);
@@ -52,6 +51,7 @@
       const row = element('div', 'wzh-skills-row');
       if (library.kind === 'system') {
         const icon = element('span', 'wzh-knowledge-ascend-icon');
+        icon.innerHTML = '<svg class="wzh-special-icon-outline" viewBox="0 0 42 42" aria-hidden="true"><path d="M21 1 C37 1 41 5 41 21 C41 37 37 41 21 41 C5 41 1 37 1 21 C1 5 5 1 21 1Z"/></svg>';
         const crop = element('span', 'wzh-knowledge-ascend-crop');
         const image = document.createElement('img');
         image.src = '../../src/pic/icon/ascend-official.svg';
@@ -96,9 +96,7 @@
       item.appendChild(row);
       const detail = element('div', 'wzh-skills-detail');
       detail.hidden = expandedId !== library.id;
-      detail.appendChild(element('p', '', detailMode === 'directory'
-        ? '目录：当前为界面示例，尚未关联本地文件夹。'
-        : `${library.description} 当前为界面示例，尚未索引实际文档。`));
+      detail.appendChild(element('p', '', `${library.description} 当前为界面示例，尚未索引实际文档。`));
       item.appendChild(detail);
       return item;
     }
@@ -242,14 +240,12 @@
       switch (button.dataset.knowledgeAction) {
         case 'toggle': library.enabled = !library.enabled; openMenuId = null; break;
         case 'menu': openMenuId = openMenuId === id ? null : id; break;
-        case 'details':
-        case 'directory': {
-          const wasExpanded = expandedId === id && detailMode === button.dataset.knowledgeAction;
-          detailMode = button.dataset.knowledgeAction;
-          expandedId = wasExpanded ? null : id;
+        case 'details': {
+          expandedId = expandedId === id ? null : id;
           openMenuId = null;
           break;
         }
+        case 'directory': return;
         case 'delete':
           openMenuId = null;
           if (!window.confirm(`删除自定义知识库“${library.name}”？`)) { render(); return; }

@@ -16,11 +16,10 @@
       { id: 'memory', kind: 'custom', name: '显存与吞吐优化', description: '关联峰值显存、批大小和吞吐表现，辅助调整训练配置。', enabled: false, usage: 0 },
       { id: 'overview', kind: 'system', name: '模型性能分析（系统内置）', description: '包含 50 个系统内置 Skills，覆盖算子、通信、显存等性能分析能力。', enabled: true, usage: 0, count: 50 },
     ];
-    const icon = '<svg class="wzh-skills-icon" viewBox="0 0 42 42" aria-hidden="true"><path class="wzh-skills-icon-shape" d="M21 1 C37 1 41 5 41 21 C41 37 37 41 21 41 C5 41 1 37 1 21 C1 5 5 1 21 1Z"/><image href="../../src/pic/icon/skill.svg" x="10" y="10" width="22" height="22"/></svg>';
+    const icon = '<span class="wzh-skills-icon wzh-skills-icon--skill" aria-hidden="true"><span class="wzh-skills-icon-mark"></span></span>';
     let filter = 'all';
     let openMenuId = null;
     let expandedId = null;
-    let detailMode = 'details';
     const usageDays = Array.from({ length: 14 }, (_, index) => {
       const date = new Date();
       date.setHours(12, 0, 0, 0);
@@ -86,9 +85,7 @@
       const detail = element('div', 'wzh-skills-detail');
       detail.hidden = expandedId !== skill.id;
       detail.appendChild(element('p', '', skill.description));
-      detail.appendChild(element('p', '', detailMode === 'directory'
-        ? (skill.kind === 'custom' ? '目录：示例自定义 Skill，尚未关联本地文件夹。' : '目录：系统内置 Skill。')
-        : `来源：${skill.kind === 'custom' ? '自定义' : '系统内置'} · 状态：${skill.enabled ? '已开启' : '未开启'} · 使用次数：${skill.usage}`));
+      detail.appendChild(element('p', '', `来源：${skill.kind === 'custom' ? '自定义' : '系统内置'} · 状态：${skill.enabled ? '已开启' : '未开启'} · 使用次数：${skill.usage}`));
       item.appendChild(detail);
       return item;
     }
@@ -239,14 +236,12 @@
       switch (button.dataset.skillsAction) {
         case 'toggle': skill.enabled = !skill.enabled; openMenuId = null; break;
         case 'menu': openMenuId = openMenuId === skillId ? null : skillId; break;
-        case 'details':
-        case 'directory': {
-          const wasExpanded = expandedId === skillId && detailMode === button.dataset.skillsAction;
-          detailMode = button.dataset.skillsAction;
-          expandedId = wasExpanded ? null : skillId;
+        case 'details': {
+          expandedId = expandedId === skillId ? null : skillId;
           openMenuId = null;
           break;
         }
+        case 'directory': return;
         case 'delete':
           openMenuId = null;
           if (!window.confirm(`删除自定义 Skill“${skill.name}”？`)) { render(); return; }
@@ -262,6 +257,21 @@
         openMenuId = null;
         render();
       }
+    });
+    section.addEventListener('skills:added', (event) => {
+      event.detail.forEach((entry) => {
+        const existing = skills.find(skill => skill.kind === 'custom' && skill.name === entry.name);
+        if (existing) {
+          existing.description = entry.description;
+          existing.enabled = true;
+        } else {
+          skills.push({ id: `uploaded-${Date.now()}-${Math.random().toString(36).slice(2)}`, kind: 'custom',
+            name: entry.name, description: entry.description, enabled: true, usage: 0 });
+        }
+      });
+      filter = 'all';
+      search.value = '';
+      render();
     });
     render();
   }

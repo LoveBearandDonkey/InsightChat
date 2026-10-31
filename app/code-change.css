@@ -38,8 +38,7 @@
   white-space: nowrap;
 }
 .wzh-code-pane-title { font-size: 13px; font-weight: 650; color: var(--foreground); }
-.wzh-code-pane-summary,
-.wzh-code-pane-caption { color: var(--foreground-muted); font-size: 11px; }
+.wzh-code-pane-summary { color: var(--foreground-muted); font-size: 11px; }
 .wzh-code-pane-summary b { margin-left: 6px; }
 .wzh-code-file-list { padding: 8px 8px 28px; }
 .wzh-code-file-strip { display: flex; flex-direction: column; gap: 5px; }

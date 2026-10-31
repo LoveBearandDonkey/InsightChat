@@ -140,6 +140,7 @@
               <button class="msi-tab" data-analysis-tab="memory" type="button" role="tab" aria-selected="false" aria-controls="msiMemoryPanel">内存</button>
               <button class="msi-tab msi-tab--normal-only" type="button" role="tab" aria-selected="false">通信</button>
               <button class="msi-tab" data-analysis-tab="operator" type="button" role="tab" aria-selected="false" aria-controls="msiOperatorPanel">算子</button>
+              <button class="msi-tab" data-analysis-tab="tuning-document" type="button" role="tab" aria-selected="false" aria-controls="msiTuningDocumentPanel">调优笔记</button>
             </nav>
 
             <!-- @include pages/overview.html -->
@@ -149,6 +150,74 @@
             <!-- @include pages/memory.html -->
 
             <!-- @include pages/operator.html -->
+
+            <section class="msi-analysis-stage msi-tuning-document" id="msiTuningDocumentPanel" role="tabpanel" aria-label="调优笔记" hidden>
+              <div class="msi-tuning-document-inner">
+                <div class="msi-tuning-document-heading">
+                  <h2 class="msi-tuning-document-title">
+                    <button class="msi-tuning-document-title-btn" id="msiTuningDocumentTitleBtn" type="button" title="重命名调优文档" aria-label="重命名调优文档">
+                      <span class="msi-tuning-document-title-text"><strong id="msiTuningDocumentTitleName">profile_dir</strong><span id="msiTuningDocumentTitleSuffix"> 调优文档</span></span>
+                      <img class="msi-tuning-document-title-pen" src="../../src/pic/icon/edit.svg" alt="">
+                    </button>
+                    <input class="msi-tuning-document-title-input" id="msiTuningDocumentTitleInput" type="text" maxlength="80" aria-label="调优文档标题" hidden>
+                  </h2>
+                  <div class="msi-tuning-document-actions-slot msi-tuning-document-actions-slot--home" id="msiTuningActionsHome">
+                    <div class="msi-tuning-document-actions" aria-label="文档操作">
+                      <button id="msiTuningDocumentReset" class="btn btn-compact" type="button" hidden>Demo复位</button>
+                      <button id="msiTuningDocumentExport" class="btn btn-compact" type="button">导出</button>
+                      <button id="msiTuningDocumentContribute" class="msi-tuning-document-contribute" type="button">贡献</button>
+                    </div>
+                  </div>
+                </div>
+                <span id="msiTuningDocumentStatus" class="msi-tuning-visually-hidden" role="status" aria-live="polite">自动保存于本机</span>
+                <div class="msi-tuning-toolbar" role="toolbar" aria-label="调优笔记工具栏">
+                    <div class="msi-tuning-mode-tabs" role="tablist" aria-label="文档视图">
+                      <button class="msi-tuning-mode-button is-active" data-tuning-mode="edit" type="button" role="tab" aria-selected="true" aria-controls="msiTuningDocumentEditor">编辑</button>
+                      <button class="msi-tuning-mode-button" data-tuning-mode="preview" type="button" role="tab" aria-selected="false" aria-controls="msiTuningDocumentPreview" tabindex="-1">预览</button>
+                    </div>
+                    <button type="button" title="加粗（即将支持）" aria-label="加粗（即将支持）" disabled><strong>B</strong></button>
+                    <button type="button" title="斜体（即将支持）" aria-label="斜体（即将支持）" disabled><em>I</em></button>
+                    <button type="button" title="下划线（即将支持）" aria-label="下划线（即将支持）" disabled><u>U</u></button>
+                    <span class="msi-tuning-toolbar-divider" aria-hidden="true"></span>
+                    <button type="button" title="项目符号（即将支持）" aria-label="项目符号（即将支持）" disabled>☷</button>
+                    <button type="button" title="编号列表（即将支持）" aria-label="编号列表（即将支持）" disabled>1.</button>
+                    <button class="msi-tuning-toolbar-icon-button" type="button" title="插入链接（即将支持）" aria-label="插入链接（即将支持）" disabled>
+                      <img src="../../src/pic/icon/link.svg" alt="">
+                    </button>
+                    <button class="msi-tuning-toolbar-icon-button msi-tuning-image-button" type="button" title="上传图片（插入示例）" aria-label="上传图片（插入示例）">
+                      <img src="../../src/pic/icon/image.svg" alt="">
+                    </button>
+                    <div class="msi-tuning-document-actions-slot msi-tuning-document-actions-slot--floating" id="msiTuningActionsFloating"></div>
+                </div>
+                <div class="msi-tuning-source-banner" id="msiTuningSourceBanner" role="note" hidden>
+                  <span class="msi-ov-runtime-insight-icon" aria-hidden="true"></span>
+                  <span class="msi-tuning-source-banner-progress" id="msiTuningSourceBannerProgress" role="status" hidden>总结中…</span>
+                  <span class="msi-tuning-source-banner-context">检查到您已锚定<img src="../../src/pic/icon/folder.svg" alt=""><strong id="msiTuningSourceName">profile_dir</strong><span>对话了 27 轮</span></span>
+                  <button id="msiTuningSummarize" type="button">总结并补充到文档</button>
+                  <button class="msi-tuning-source-banner-close" id="msiTuningSourceBannerClose" type="button" aria-label="关闭提示" title="关闭提示">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"></path></svg>
+                  </button>
+                </div>
+                <div class="msi-tuning-preview-shell" id="msiTuningPreviewShell">
+                  <div class="msi-tuning-toc-anchor" id="msiTuningTocAnchor">
+                    <button class="msi-tuning-toc-trigger msi-sidebar-menu" id="msiTuningTocTrigger" type="button" aria-label="显示文档目录" aria-controls="msiTuningDocumentTocNav" aria-haspopup="true" aria-expanded="false" title="文档目录">
+                      <svg class="msi-sidebar-menu-bars" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <nav class="msi-tuning-document-toc" id="msiTuningDocumentTocNav" aria-label="Markdown 文档目录" hidden>
+                      <div class="msi-tuning-document-toc-title">目录</div>
+                      <ol id="msiTuningDocumentToc"></ol>
+                    </nav>
+                  </div>
+                  <div class="msi-tuning-editor">
+                    <textarea id="msiTuningDocumentEditor" aria-label="调优文档内容" placeholder="从这里开始记录调优过程…&#10;&#10;例如：初始指标与环境、瓶颈证据、尝试的措施、复测数据、结论与下一步。" spellcheck="true"></textarea>
+                    <div class="msi-tuning-document-preview" id="msiTuningDocumentPreview" role="region" aria-label="调优文档 Markdown 预览" hidden></div>
+                  </div>
+                </div>
+              </div>
+              <button class="msi-tuning-back-to-top" id="msiTuningBackToTop" type="button" title="回到顶部" aria-label="回到顶部" hidden>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 14 6-6 6 6M12 8v11"></path></svg>
+              </button>
+            </section>
           </section>
         </section>
       <!-- 内容区 ↔ 智能对话面板 的分隔条:往左拖把对话面板拉宽、往右拖收窄,双击回到 480px。
@@ -507,6 +576,7 @@
           </section>
           <section class="wzh-settings-section wzh-settings-empty" data-settings-panel="general" hidden><p>当前没有通用设置项。</p></section>
           <section class="wzh-settings-section wzh-settings-skills" data-settings-panel="skills" aria-label="Skills 目录设置" hidden>
+            <div id="trainChatSkillsCatalog">
             <div class="wzh-skills-toolbar">
               <div class="wzh-skills-tabs" role="tablist" aria-label="筛选 Skills">
                 <button class="is-active" type="button" role="tab" aria-selected="true" data-skills-filter="all">所有</button>
@@ -520,6 +590,25 @@
               </div>
             </div>
             <div id="trainChatSkillsContent" aria-live="polite"></div>
+            </div>
+            <div class="wzh-skills-upload" id="trainChatSkillsUpload" hidden>
+              <div class="wzh-skills-upload-heading"><button class="wzh-skills-upload-back" id="trainChatSkillsUploadBack" type="button" aria-label="返回 Skills 列表"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 4-8 8 8 8M6 12h15"/></svg></button><span>添加技能</span></div>
+              <div class="wzh-skills-dropzone" id="trainChatSkillsDropzone" role="button" tabindex="0" aria-label="点击查看示例技能，或拖入本地 Skill 文件">
+                <img class="wzh-skills-upload-illustration" src="../../src/pic/icon/skill_upload.png" alt="">
+                <span class="wzh-skills-upload-plus" aria-hidden="true">＋</span>
+                <strong>拖入或点击选择本地Skill文件</strong>
+                <small>需包含 SKILL.md，可选多个Skill文件</small>
+              </div>
+              <div class="wzh-skills-upload-error" id="trainChatSkillsUploadError" role="alert" hidden></div>
+              <div class="wzh-skills-selected" id="trainChatSkillsSelected" hidden>
+                <h4>已选择 <span class="wzh-skills-group-count" id="trainChatSkillsSelectedCount">0</span></h4>
+                <div id="trainChatSkillsSelectedList"></div>
+              </div>
+              <div class="wzh-skills-directory">
+                <h4>客户端 Skill 管理目录</h4>
+                <div class="wzh-skills-directory-row"><span class="wzh-skills-folder" aria-hidden="true"></span><span id="trainChatSkillsDirectoryName">D:\Program\MindStudio Insight\skills</span><span class="wzh-skills-directory-actions"><button class="btn btn-compact" id="trainChatSkillsDirectoryOpen" type="button">打开</button><button class="wzh-skills-directory-danger" id="trainChatSkillsDirectoryChange" type="button">更改</button></span></div>
+              </div>
+            </div>
           </section>
           <section class="wzh-settings-section wzh-settings-mcp" data-settings-panel="mcp" aria-label="MCP 设置" hidden>
             <div class="wzh-skills-toolbar">
@@ -556,6 +645,10 @@
           <button class="wzh-settings-save" id="trainChatSettingsSave" type="button" disabled>保存</button>
           <button class="wzh-settings-cancel btn" id="trainChatSettingsCancel" type="button" disabled>取消</button>
         </footer>
+        <footer class="wzh-settings-foot wzh-skills-upload-foot" id="trainChatSkillsUploadFoot" hidden>
+          <button class="wzh-settings-save" id="trainChatSkillsUploadConfirm" type="button" disabled>导入</button>
+          <button class="wzh-settings-cancel btn" id="trainChatSkillsUploadCancel" type="button">取消</button>
+        </footer>
       </div>
     </div>
     <div class="wzh-settings-warning" id="trainChatSettingsWarning" role="alertdialog" aria-modal="true" aria-labelledby="trainChatSettingsWarningTitle" aria-describedby="trainChatSettingsWarningText" hidden>
@@ -573,7 +666,9 @@
   <script defer src="../theme.js"></script>
   <script defer src="../import-dialog.js"></script>
   <script defer src="../settings-dialog.js"></script>
+  <script defer src="../overlay-scrollbars.js"></script>
   <script defer src="../settings-skills.js"></script>
+  <script defer src="../settings-skills-upload.js"></script>
   <script defer src="../settings-mcp.js"></script>
   <script defer src="../settings-knowledge.js"></script>
   <script defer src="../timeline-colors.js"></script>
@@ -585,6 +680,7 @@
 
   <!-- ── 智能对话面板逻辑(原 js/training-chat-panel.js,已内联) ── -->
   <script defer src="../assistant.js"></script>
+  <script defer src="../tuning-document.js"></script>
 
   <!-- ── 窗口控制:三条分隔条的拖动逻辑 ── -->
   <script defer src="../resizers.js"></script>
