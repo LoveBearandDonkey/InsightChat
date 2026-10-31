@@ -5,7 +5,7 @@
 .wzh-skills-toolbar { position: sticky; top: -8px; z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; background: var(--surface-1); box-shadow: 0 18px 0 var(--surface-1); font-size: 14px; }
 .wzh-skills-tabs { display: flex; align-items: center; gap: 18px; min-width: 0; white-space: nowrap; }
 .wzh-skills-tabs button { position: relative; flex: 0 0 auto; min-height: 32px; padding: 0 2px; border: 0; background: transparent; color: var(--foreground-secondary); font: 400 14px/1.4 var(--font-sans); cursor: pointer; }
-.wzh-skills-tabs button.is-active { color: var(--brand-blue); }
+.wzh-skills-tabs button.is-active { color: var(--brand-blue); font-weight: 600; }
 .wzh-skills-tabs button.is-active::after { content: ''; position: absolute; right: 0; bottom: 0; left: 0; height: 2px; border-radius: 2px; background: var(--brand-blue); }
 .wzh-skills-tabs .wzh-skills-group-count { padding-bottom: 2px; vertical-align: middle; }
 .wzh-skills-tools { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -85,7 +85,7 @@
 .wzh-skills-stats-column { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 1px; min-width: 0; height: 100%; }
 .wzh-skills-stats-column:is(:hover, :focus-visible) { background: var(--state-hover); }
 .wzh-skills-stats-column:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: -2px; }
-.wzh-skills-stats-tooltip { position: absolute; z-index: 3; bottom: min(calc(var(--column-bar-height, 0px) + 9px), 146px); left: 50%; box-sizing: border-box; width: 172px; padding: 8px 10px; border: 1px solid var(--divider-strong); border-radius: 8px; background: var(--surface-1); color: var(--foreground); box-shadow: 0 8px 24px rgb(0 0 0 / 16%); opacity: 0; visibility: hidden; transform: translateX(-50%); pointer-events: none; text-align: left; }
+.wzh-skills-stats-tooltip { position: absolute; z-index: 3; bottom: calc(100% + 10px); left: 50%; box-sizing: border-box; width: 172px; padding: 8px 10px; border: 1px solid var(--divider-strong); border-radius: 8px; background: var(--surface-1); color: var(--foreground); box-shadow: 0 8px 24px rgb(0 0 0 / 16%); opacity: 0; visibility: hidden; transform: translateX(-50%); pointer-events: none; text-align: left; }
 .wzh-skills-stats-column:is(:hover, :focus-visible) .wzh-skills-stats-tooltip { opacity: 1; visibility: visible; }
 .wzh-skills-stats-column:nth-child(-n+3) .wzh-skills-stats-tooltip { left: 0; transform: none; }
 .wzh-skills-stats-column:nth-last-child(-n+3) .wzh-skills-stats-tooltip { right: 0; left: auto; transform: none; }

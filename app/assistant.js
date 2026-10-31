@@ -1392,11 +1392,23 @@
   }
 
   const INPUT_PLACEHOLDER = '输入 # 添加上下文，输入 / 使用指令';
+  const CODE_INPUT_PLACEHOLDER = '输入 # 添加上下文，输入 / 使用指令，输入 @ 引用项目目录文件';
+  function isCodeDirectoryBound() {
+    return !!$('trainChatLocalCodePath')?.value && !$('trainChatCodeChip')?.hidden;
+  }
+  function syncCodeInputPlaceholder() {
+    const input = $('trainChatInput');
+    if (!input) return;
+    const bound = isCodeDirectoryBound();
+    input.placeholder = bound ? CODE_INPUT_PLACEHOLDER : INPUT_PLACEHOLDER;
+    if (!bound) codeFilePicker?.close();
+    renderInputHighlight();
+  }
   const INPUT_MAX_H = 126; // 6 行 × (14px × 1.5)
-  let operatorChips = [];
+  let composerChips = [];
   let previousInputValue = '';
 
-  function syncOperatorChipPositions(value) {
+  function syncComposerChipPositions(value) {
     const old = previousInputValue;
     if (old === value) return;
     let start = 0;
@@ -1408,7 +1420,7 @@
       newEnd--;
     }
     const shift = newEnd - oldEnd;
-    operatorChips = operatorChips.flatMap((chip) => {
+    composerChips = composerChips.flatMap((chip) => {
       if (chip.end <= start) return [chip];
       if (chip.start >= oldEnd) return [{ ...chip, start: chip.start + shift, end: chip.end + shift }];
       return [];
@@ -1417,35 +1429,102 @@
   }
 
   window.WZH_ADD_CHAT_OPERATOR_CHIPS = (chips) => {
-    syncOperatorChipPositions($('trainChatInput')?.value || '');
-    operatorChips.push(...chips);
+    syncComposerChipPositions($('trainChatInput')?.value || '');
+    composerChips.push(...chips);
   };
 
-  // 输入框的两件事:高度跟着内容长,以及把 #上下文、/指令画成蓝色标签。
+  function registerComposerChip(input, start, token) {
+    syncComposerChipPositions(input.value);
+    composerChips.push({ start, end: start + token.length, token });
+  }
+
+  function inputChipPattern() {
+    // 列表算子名可能含空格或 #，优先按完整名称匹配，再处理普通的单词标签。
+    const names = window.WZH_CHAT_CHIP_NAMES;
+    const known = names?.size ? [...names].sort((a, b) => b.length - a.length)
+      .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') : '';
+    return new RegExp((known ? '# ?(?:' + known + ')(?=\\s|$)|' : '') +
+      '# ?[^\\s#]+|' + (isCodeDirectoryBound() ? '@[^\\s@#]+|' : '') + '\\/[^\\s\\/#@]+', 'g');
+  }
+
+  // 输入框的两件事:高度跟着内容长,以及把 #上下文、@项目文件、/指令画成蓝色标签。
   // 标签是画在高亮层上的——textarea 装不下富文本,所以让它的文字透明,只留光标和选区。
   function renderInputHighlight() {
     const input = $('trainChatInput');
     const hl = $('trainChatInputHl');
     if (!input || !hl) return;
-    syncOperatorChipPositions(input.value);
-    // 列表算子名可能含空格或 #，优先按完整名称匹配，再处理普通的单词标签。
-    const names = window.WZH_CHAT_CHIP_NAMES;
-    const known = names?.size ? [...names].sort((a, b) => b.length - a.length)
-      .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') : '';
-    const chipPattern = new RegExp((known ? '# ?(?:' + known + ')(?=\\s|$)|' : '') +
-      '# ?[^\\s#]+|\\/[^\\s\\/#]+', 'g');
+    syncComposerChipPositions(input.value);
     let html = '';
     let cursor = 0;
-    for (const match of input.value.matchAll(chipPattern)) {
+    for (const match of input.value.matchAll(inputChipPattern())) {
       html += escHtml(input.value.slice(cursor, match.index));
-      const chip = operatorChips.find((item) => item.start === match.index && item.token === match[0]);
+      const chip = composerChips.find((item) => item.start === match.index && item.token === match[0]);
       html += '<span class="wzh-chat-input-chip"' +
-        (chip ? ' data-operator-chip-start="' + chip.start + '"' : '') + '>' + escHtml(match[0]) + '</span>';
+        (chip?.title ? ' data-operator-chip-start="' + chip.start + '"' : '') + '>' + escHtml(match[0]) + '</span>';
       cursor = match.index + match[0].length;
     }
     html += escHtml(input.value.slice(cursor));
+    // textarea 已有输入时原生 placeholder 不显示；高亮层只在未绑定且末尾刚输入 @ 时补灰字。
+    if (!isCodeDirectoryBound() && input.value.endsWith('@')) {
+      html += '<span class="wzh-chat-input-hint"> 需先绑定项目目录</span>';
+    }
     hl.innerHTML = html.replace(/\n$/, '\n '); // 末尾换行补空格，撑住最后一行高度
     hl.scrollTop = input.scrollTop;
+  }
+
+  // 已选中的引用在 textarea 中仍是普通字符；按删除键时用记录的范围一次移除整枚标签。
+  // 候选框打开时不接管删除键，用户仍可逐字修改 #、@、/ 后的搜索词。
+  function deleteComposerChip(input, event) {
+    if (!['Backspace', 'Delete'].includes(event.key) || event.isComposing ||
+        event.ctrlKey || event.altKey || event.metaKey ||
+        ctxPicker?.isOpen() || codeFilePicker?.isOpen() || commandPicker?.isOpen()) return false;
+    syncComposerChipPositions(input.value);
+    const value = input.value;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    // 撤销删除或重新编辑排队消息后，蓝色标签可能已恢复但位置信息不在内存中；
+    // 完整、独立的可见标签也按同样规则处理。
+    const trackedChips = composerChips.filter((chip) => value.slice(chip.start, chip.end) === chip.token);
+    const renderedChips = [...value.matchAll(inputChipPattern())]
+      .filter((match) => (match.index === 0 || /\s/.test(value[match.index - 1])) &&
+        (match.index + match[0].length === value.length || /\s/.test(value[match.index + match[0].length])) &&
+        !trackedChips.some((chip) => chip.start === match.index && chip.end === match.index + match[0].length))
+      .map((match) => ({ start: match.index, end: match.index + match[0].length, token: match[0] }));
+    const chips = trackedChips.concat(renderedChips);
+    let removeStart = start;
+    let removeEnd = end;
+
+    if (start === end) {
+      const chip = chips.find((item) => {
+        if (event.key === 'Backspace') {
+          if (start > item.start && start <= item.end) return true;
+          let after = item.end;
+          while (after < start && value[after] === ' ') after++;
+          return after === start && start > item.end;
+        }
+        if (start >= item.start && start < item.end) return true;
+        let before = start;
+        while (before < item.start && value[before] === ' ') before++;
+        return before === item.start && start < item.start;
+      });
+      if (!chip) return false;
+      removeStart = Math.min(start, chip.start);
+      removeEnd = chip.end;
+      // 选中时自动补在标签后的空格一起删除，按一下 Backspace 就能撤掉整枚标签。
+      while (value[removeEnd] === ' ') removeEnd++;
+    } else {
+      const touched = chips.filter((chip) => chip.start < end && chip.end > start);
+      if (!touched.length) return false;
+      removeStart = Math.min(start, ...touched.map((chip) => chip.start));
+      removeEnd = Math.max(end, ...touched.map((chip) => chip.end));
+      if (touched.length === 1 && end <= touched[0].end) {
+        while (value[removeEnd] === ' ') removeEnd++;
+      }
+    }
+
+    // 只扩展选区，交给浏览器原生 Backspace/Delete 执行，保留输入事件和 Ctrl+Z 撤销。
+    input.setSelectionRange(removeStart, removeEnd);
+    return true;
   }
 
   // 标签两侧的留白只能由真实空格撑(高亮层要和 textarea 逐字对齐,标签本身不占额外宽度,
@@ -1479,17 +1558,18 @@
     return true;
   }
 
-  // / 指令沿用 # 标签的间距规则,避免标签和前面的正文黏在一起。
-  function autoSpaceBeforeCommand(input) {
+  // @ 项目文件和 / 指令沿用 # 标签的间距规则。
+  function autoSpaceBeforeTrigger(input, trigger) {
     const v = input.value;
     const pos = input.selectionStart;
-    if (pos < 2 || v[pos - 1] !== '/') return false;
+    if (pos < 2 || v[pos - 1] !== trigger) return false;
+    if (trigger === '/' && /@\S*$/.test(v.slice(0, pos - 1))) return false;
     let n = 0;
     while (pos - 2 - n >= 0 && v[pos - 2 - n] === ' ') n++;
     const head = pos - 1 - n;
     if (head === 0) return false;
     const before = v[head - 1];
-    if (before === '/' || before === '\n') return false;
+    if (before === trigger || before === '\n') return false;
     const need = CHIP_GAP.length - n;
     if (need <= 0) return false;
     input.value = v.slice(0, pos - 1) + ' '.repeat(need) + v.slice(pos - 1);
@@ -1651,7 +1731,7 @@
       if (inputEl && document.activeElement !== inputEl) focusChatInput();
     }
     const input = $('trainChatInput');
-    if (input) input.placeholder = INPUT_PLACEHOLDER; // 回答期间也照常可输入
+    syncCodeInputPlaceholder(); // 回答期间也照常可输入
     syncSendState();
     if (!busy) {
       resolveStreamingNote(); // 必须赶在 flushChatQueue 之前:排队的下一问就是新模型答的了
@@ -2793,11 +2873,40 @@
   // 那一份,左边是落盘出来的文件名,右边是它在采集目录里的路径。两处共用一份数据,
   // 左树里点得到的文件 # 一定引用得到,不会出现「树里有、# 里没有」的错位。
   const CTX_FILES = window.MSI_CTX_FILES || [];
+  const CTX_OPERATORS = [
+    ['aclnnEmbedding', 'Stream 2'],
+    ['aclnnMatmul_MatMulV3Common_MatMulV3', 'Device'],
+    ['aclnnFlashAttentionScore_FlashAttentionScore_FlashAttentionScore', 'Stream 2'],
+    ['aclnnCast_CastAiCore_Cast', 'Stream 2'],
+    ['aclnnNonzeroV2_NonzeroAiCore_NonZero', 'Stream 2'],
+    ['HcclBatchSendRecv', 'PyTorch 算子'],
+    ['hcom_batchSendRecv', 'PP Communication'],
+    ['hcom_batchSendRecv__128_4_1', 'PP Communication'],
+    ['hcom_allReduce__170_1_1', 'DP Communication'],
+    ['hcom_allGather__097_6_1', 'Embedding Communication'],
+  ].map(([name, lane]) => ({ name, path: 'profile_dir / 泳道图 / ' + lane, type: 'operator' }));
+  const CTX_ITEMS = CTX_FILES.concat(CTX_OPERATORS);
+
+  const CHAT_FOLDER_ICON = '<svg class="wzh-chat-picker-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 5.5A1.5 1.5 0 0 1 4 4h4l1.8 2H16a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 16 16H4a1.5 1.5 0 0 1-1.5-1.5z"/></svg>';
+  const CHAT_CODE_ICON = '<img class="wzh-chat-picker-icon wzh-chat-picker-icon--asset" src="../../src/pic/icon/code.svg" alt="">';
+  const CHAT_OPERATOR_ICON = '<img class="wzh-chat-picker-icon wzh-chat-picker-icon--asset" src="../../src/pic/icon/operator.svg" alt="">';
 
   // 输入框敲 # 后弹出的上下文选择框。键盘事件要抢在"回车发送"前面处理,所以不自己挂
   // keydown,而是暴露 onKeyDown 由 initInput 里那个 handler 先问一遍。
   let ctxPicker = null;
+  let codeFilePicker = null;
   let commandPicker = null;
+
+  // 项目目录的演示文件树：三类常见模型工程文件，供绑定目录后的 @ 引用示意。
+  const CODE_FILE_GROUPS = [
+    { folder: 'model', files: ['pipeline.py', 'transformer.py', 'decoder_layer.py', 'attention.py', 'moe.py', 'router.py', 'layers.py', '__init__.py'] },
+    { folder: 'scripts', files: ['train.sh', 'launch_pp.sh', 'launch_tp.sh', 'launch_dp.sh', 'profile.sh', 'eval.sh'] },
+    { folder: 'configs', files: ['model_910b.json', 'parallel_config.json', 'train_config.yaml', 'distributed.yaml', 'optimizer.yaml', 'deepspeed_zero.json'] },
+  ];
+  const CODE_FILE_ITEMS = CODE_FILE_GROUPS.flatMap(({ folder, files }) => [
+    { type: 'folder', name: folder, path: folder + '/' },
+    ...files.map((name) => ({ type: 'file', name, path: folder + '/' + name })),
+  ]);
 
   function initCtxPicker() {
     const input = $('trainChatInput');
@@ -2819,7 +2928,7 @@
       const hash = v.lastIndexOf('#', pos - 1);
       if (hash < 0) return null;
       // 从 Timeline 置入的算子标签已有确定来源，不交给落盘文件选择器再次匹配。
-      if (operatorChips.some((chip) => chip.start === hash && chip.token.startsWith('#'))) return null;
+      if (composerChips.some((chip) => chip.start === hash && chip.token.startsWith('#'))) return null;
       // "# 名字" 里 # 后面那个空格是标签自带的,不算这个 token 敲完;再多的空白才算
       const query = v.slice(hash + 1, pos).replace(/^ /, '');
       if (/[\s#]/.test(query)) return null;
@@ -2857,7 +2966,7 @@
 
     function close() {
       pop.classList.remove('is-open');
-      bar?.classList.remove('is-pop-open');
+      if (!codeFilePicker?.isOpen() && !commandPicker?.isOpen()) bar?.classList.remove('is-pop-open');
       pop.innerHTML = '';
       items = [];
       tokenStart = -1;
@@ -2875,18 +2984,21 @@
     function refresh() {
       const t = findToken();
       if (!t) return close();
+      codeFilePicker?.close();
+      commandPicker?.close();
       tokenStart = t.start;
       const q = t.query.toLowerCase();
       items = q
-        ? CTX_FILES.filter((f) => f.name.toLowerCase().includes(q) || f.path.toLowerCase().includes(q))
-        : CTX_FILES.slice();
-      pop.innerHTML = items.length
+        ? CTX_ITEMS.filter((f) => f.name.toLowerCase().includes(q) || f.path.toLowerCase().includes(q))
+        : CTX_ITEMS.slice();
+      pop.innerHTML = '<p class="wzh-chat-agent-pop-title">选择性能文件对象</p>' + (items.length
         ? items.map((f, i) =>
-            '<button class="wzh-chat-ctx-item' + (i === 0 ? ' is-active' : '') + '" type="button" role="option" data-i="' + i + '">' +
+            '<button class="wzh-chat-ctx-item wzh-chat-picker-item' + (i === 0 ? ' is-active' : '') + '" type="button" role="option" data-i="' + i + '">' +
+              (f.type === 'folder' ? CHAT_FOLDER_ICON : f.type === 'operator' ? CHAT_OPERATOR_ICON : CHAT_CODE_ICON) +
               nameCell(f.name, t.query) +
               '<span class="wzh-chat-ctx-path">' + mark(f.path, t.query) + '</span>' +
             '</button>').join('')
-        : '<div class="wzh-chat-ctx-empty">没有匹配的落盘数据</div>';
+        : '<div class="wzh-chat-ctx-empty">没有匹配的性能文件对象或算子</div>');
       active = 0;
       pop.classList.add('is-open');
       bar?.classList.add('is-pop-open'); // 抬到「回到底部」之上,见 .is-pop-open
@@ -2899,8 +3011,10 @@
       const f = items[i];
       if (!f || tokenStart < 0) return;
       const pos = input.selectionStart;
-      const insert = HASH_SP + f.name + CHIP_GAP;
+      const token = HASH_SP + f.name;
+      const insert = token + CHIP_GAP;
       input.value = input.value.slice(0, tokenStart) + insert + input.value.slice(pos);
+      registerComposerChip(input, tokenStart, token);
       const caret = tokenStart + insert.length;
       close();
       try { input.setSelectionRange(caret, caret); } catch (e) { /* 忽略 */ }
@@ -2943,6 +3057,123 @@
     return { refresh, close, onKeyDown, isOpen };
   }
 
+  // 绑定项目目录后输入 @：文件夹和代码文件都是同级选项，可按名称或相对路径搜索。
+  function initCodeFilePicker() {
+    const input = $('trainChatInput');
+    const pop = $('trainChatCodeFilePop');
+    if (!input || !pop) return null;
+    const bar = pop.closest('.wzh-chat-input-bar');
+    let items = [];
+    let active = 0;
+    let tokenStart = -1;
+    const isOpen = () => pop.classList.contains('is-open');
+
+    function findToken() {
+      if (!$('trainChatLocalCodePath')?.value || $('trainChatCodeChip')?.hidden) return null;
+      const pos = input.selectionStart;
+      if (pos !== input.selectionEnd) return null;
+      const value = input.value;
+      const at = value.lastIndexOf('@', pos - 1);
+      if (at < 0 || (at > 0 && !/\s/.test(value[at - 1]))) return null;
+      const query = value.slice(at + 1, pos);
+      if (/[\s@#]/.test(query)) return null;
+      return { start: at, query };
+    }
+
+    function mark(value, query) {
+      const hit = query ? value.toLowerCase().indexOf(query.toLowerCase()) : -1;
+      if (hit < 0) return escHtml(value);
+      return escHtml(value.slice(0, hit)) + '<mark>' + escHtml(value.slice(hit, hit + query.length)) + '</mark>' + escHtml(value.slice(hit + query.length));
+    }
+
+    function close() {
+      pop.classList.remove('is-open');
+      if (!ctxPicker?.isOpen() && !commandPicker?.isOpen()) bar?.classList.remove('is-pop-open');
+      pop.innerHTML = '';
+      items = [];
+      tokenStart = -1;
+    }
+
+    function setActive(index) {
+      if (!items.length) return;
+      active = (index + items.length) % items.length;
+      pop.querySelectorAll('.wzh-chat-code-file-item').forEach((node) => {
+        const selected = Number(node.dataset.i) === active;
+        node.classList.toggle('is-active', selected);
+        node.setAttribute('aria-selected', String(selected));
+      });
+      pop.querySelector('.wzh-chat-code-file-item[data-i="' + active + '"]')?.scrollIntoView({ block: 'nearest' });
+    }
+
+    function refresh() {
+      const token = findToken();
+      if (!token) return close();
+      ctxPicker?.close();
+      commandPicker?.close();
+      tokenStart = token.start;
+      const query = token.query.toLowerCase();
+      items = CODE_FILE_ITEMS.filter((item) =>
+        !query || item.name.toLowerCase().includes(query) || item.path.toLowerCase().includes(query));
+      pop.innerHTML = '<p class="wzh-chat-agent-pop-title">选择项目目录文件</p>' +
+        (items.length ? items.map((item, index) =>
+          '<button class="wzh-chat-ctx-item wzh-chat-picker-item wzh-chat-code-file-item" type="button" role="option" data-i="' + index + '" aria-selected="false">' +
+            (item.type === 'folder' ? CHAT_FOLDER_ICON : CHAT_CODE_ICON) +
+            '<span class="wzh-chat-ctx-name">' + mark(item.name, token.query) + '</span>' +
+            '<span class="wzh-chat-ctx-path">' + mark(item.path, token.query) + '</span></button>').join('')
+          : '<div class="wzh-chat-ctx-empty">没有匹配的项目文件</div>');
+      active = 0;
+      if (items.length) setActive(0);
+      pop.classList.add('is-open');
+      bar?.classList.add('is-pop-open');
+      pop.scrollTop = 0;
+    }
+
+    function commit(index) {
+      const item = items[index];
+      if (!item || tokenStart < 0) return;
+      const pos = input.selectionStart;
+      const token = '@' + item.path;
+      const insert = token + CHIP_GAP;
+      input.value = input.value.slice(0, tokenStart) + insert + input.value.slice(pos);
+      registerComposerChip(input, tokenStart, token);
+      const caret = tokenStart + insert.length;
+      close();
+      input.setSelectionRange(caret, caret);
+      autoResizeInput();
+      syncSendState();
+      input.focus();
+    }
+
+    function onKeyDown(event) {
+      if (!isOpen()) return false;
+      if (event.key === 'ArrowDown') { event.preventDefault(); setActive(active + 1); return true; }
+      if (event.key === 'ArrowUp') { event.preventDefault(); setActive(active - 1); return true; }
+      if (event.key === 'Enter' || event.key === 'Tab') {
+        event.preventDefault();
+        if (items.length) commit(active);
+        return true;
+      }
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); return true; }
+      return false;
+    }
+
+    pop.addEventListener('mousedown', (event) => event.preventDefault());
+    pop.addEventListener('click', (event) => {
+      const item = event.target.closest?.('.wzh-chat-code-file-item[data-i]');
+      if (item) commit(Number(item.dataset.i));
+    });
+    pop.addEventListener('mousemove', (event) => {
+      const file = event.target.closest?.('.wzh-chat-code-file-item[data-i]');
+      if (file) setActive(Number(file.dataset.i));
+    });
+    input.addEventListener('click', () => { if (isOpen()) refresh(); });
+    input.addEventListener('keyup', (event) => {
+      if (isOpen() && /^(ArrowLeft|ArrowRight|Home|End)$/.test(event.key)) refresh();
+    });
+    input.addEventListener('blur', close);
+    return { refresh, close, onKeyDown, isOpen };
+  }
+
   // 输入 / 后弹出的指令选择框。筛选、键盘导航与确认行为和 # 上下文选择框保持一致。
   const CHAT_COMMANDS = ['mindstudio-cpu-binding', 'customize-opencode', 'init', 'review'];
 
@@ -2962,9 +3193,9 @@
       if (pos !== input.selectionEnd) return null;
       const v = input.value;
       const slash = v.lastIndexOf('/', pos - 1);
-      if (slash < 0) return null;
+      if (slash < 0 || (slash > 0 && !/\s/.test(v[slash - 1]))) return null;
       const query = v.slice(slash + 1, pos);
-      if (/[\s/#]/.test(query)) return null;
+      if (/[\s/#@]/.test(query)) return null;
       return { start: slash, query };
     }
 
@@ -2977,7 +3208,7 @@
 
     function close() {
       pop.classList.remove('is-open');
-      if (!ctxPicker?.isOpen()) bar?.classList.remove('is-pop-open');
+      if (!ctxPicker?.isOpen() && !codeFilePicker?.isOpen()) bar?.classList.remove('is-pop-open');
       pop.innerHTML = '';
       items = [];
       tokenStart = -1;
@@ -2995,6 +3226,7 @@
       const token = findToken();
       if (!token) return close();
       ctxPicker?.close();
+      codeFilePicker?.close();
       tokenStart = token.start;
       const query = token.query.toLowerCase();
       items = query
@@ -3016,8 +3248,10 @@
       const command = items[i];
       if (!command || tokenStart < 0) return;
       const pos = input.selectionStart;
-      const insert = COMMAND_PREFIX + command + CHIP_GAP;
+      const token = COMMAND_PREFIX + command;
+      const insert = token + CHIP_GAP;
       input.value = input.value.slice(0, tokenStart) + insert + input.value.slice(pos);
+      registerComposerChip(input, tokenStart, token);
       const caret = tokenStart + insert.length;
       close();
       try { input.setSelectionRange(caret, caret); } catch (e) { /* 忽略 */ }
@@ -3238,6 +3472,7 @@
     });
     cleanBtn?.addEventListener('click', () => {
       ctxPicker?.close();
+      codeFilePicker?.close();
       commandPicker?.close();
       pendingGuideScenario = '';
       queuedEditContext = null;
@@ -3256,6 +3491,7 @@
       pendingGuideScenario = '';
       queuedEditContext = null;
       ctxPicker?.close();
+      codeFilePicker?.close();
       commandPicker?.close();
       input.value = '';
       input.style.height = '';
@@ -3272,17 +3508,21 @@
     });
     input.addEventListener('keydown', (e) => {
       if (ctxPicker && ctxPicker.onKeyDown(e)) return; // 选择框开着时,上下键/回车/Esc 归它
+      if (codeFilePicker && codeFilePicker.onKeyDown(e)) return;
       if (commandPicker && commandPicker.onKeyDown(e)) return;
+      if (deleteComposerChip(input, e)) return;
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
     });
     input.addEventListener('input', () => {
       hideOperatorTooltip();
       chatInputTyped = true; // 见 syncInputFlow:框里一动字,描边流光就停
       autoSpaceBeforeHash(input);
-      autoSpaceBeforeCommand(input);
+      if ($('trainChatLocalCodePath')?.value) autoSpaceBeforeTrigger(input, '@');
+      autoSpaceBeforeTrigger(input, '/');
       autoResizeInput();
       syncSendState();
       ctxPicker?.refresh();
+      codeFilePicker?.refresh();
       commandPicker?.refresh();
     });
     // 超过 6 行后 textarea 内部滚动,高亮层要跟着滚,否则两层立刻错位
@@ -3302,7 +3542,7 @@
           break;
         }
       }
-      const chip = hit && operatorChips.find((item) =>
+      const chip = hit && composerChips.find((item) =>
         item.start === Number(hit.dataset.operatorChipStart));
       if (!chip?.title) { hideOperatorTooltip(); return; }
       operatorTooltip.textContent = chip.title;
@@ -3314,6 +3554,7 @@
     });
     input.addEventListener('mouseleave', hideOperatorTooltip);
     ctxPicker = initCtxPicker();
+    codeFilePicker = initCodeFilePicker();
     commandPicker = initCommandPicker();
     autoResizeInput();
     syncSendState(); // 初始空输入 => 发送按钮置灰
@@ -3844,6 +4085,7 @@
     codeChip?.addEventListener('mouseleave', scheduleHideCodePopover);
     codeChip?.addEventListener('focusin', showCodePopover);
     codeChip?.addEventListener('focusout', scheduleHideCodePopover);
+    $('trainChatInput')?.addEventListener('focus', hideCodePopover);
     codePopover.addEventListener('mouseenter', () => clearTimeout(hideCodePopoverTimer));
     codePopover.addEventListener('mouseleave', scheduleHideCodePopover);
     codePopover.addEventListener('focusin', () => clearTimeout(hideCodePopoverTimer));
@@ -3866,6 +4108,7 @@
       }
       codeContext?.classList.toggle('is-bound', !!boundPath);
       if (localCodePath) localCodePath.value = boundPath;
+      syncCodeInputPlaceholder();
     };
     restoreChatContext = (taskName = window.MSI_ANCHOR_NAME || CHAT_TASK_NAME) => {
       currentTaskName = taskName;

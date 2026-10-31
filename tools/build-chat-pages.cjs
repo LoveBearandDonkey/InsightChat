@@ -25,7 +25,7 @@ function renderPage(view) {
     __CODE_DIR_ADD_ICON__: overview
       ? '<span class="wzh-chat-local-code-add-icon" aria-hidden="true"></span>'
       : '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg>',
-    __CODE_DIR_ICON__: overview ? 'localfile.svg' : 'code-file.svg',
+    __CODE_DIR_ICON__: overview ? 'localfile.svg' : 'code.svg',
   };
   for (const [marker, value] of Object.entries(variants)) html = html.replaceAll(marker, value);
   html = html.replace('  <!-- @overview-script -->', view === 'overview'

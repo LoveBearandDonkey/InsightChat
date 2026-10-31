@@ -110,9 +110,10 @@
     folder.files.forEach((file) => acc.push({
       name: folder.ref + '/' + file,
       path: filePath(folder, file),
+      type: 'file',
     }));
     return acc;
-  }, [{ name: selectedTask.name, path: selectedTask.dir + '（整个采集目录，8 卡）' }]);
+  }, [{ name: selectedTask.name, path: selectedTask.dir + '（整个采集目录，8 卡）', type: 'folder' }]);
 
   // 内容页挂在一级任务目录；二级 rank 仅展示采集构成，不再各自维护页面。
   let selected = { task: selectedTask };

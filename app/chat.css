@@ -5297,7 +5297,8 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       color: var(--foreground);
       white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;
     }
-    /* # 上下文与 / 指令标签:高亮层要和 textarea 逐字对齐,所以标签"净宽"必须等于文字本身的宽度——
+    .wzh-chat-input-hint { color: var(--foreground-placeholder); }
+    /* # 上下文、@ 项目文件与 / 指令标签:高亮层要和 textarea 逐字对齐,所以标签"净宽"必须等于文字本身的宽度——
        横向 4px 内边距用同样大小的负 margin 抵消,底色向两侧各溢出 4px 但一点布局宽度都不占,
        光标不会越往后错得越多。溢出压住的那段、以及标签外面剩下的留白,全部来自真实的空格
        字符(见 CHIP_GAP / autoSpaceBeforeHash / 引导卡填充):14px 字号下一个空格约 3.9px,
@@ -5354,11 +5355,18 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     .wzh-chat-ctx-name-ext { flex: 0 0 auto; white-space: nowrap; }
     .wzh-chat-ctx-path {
       min-width: 0; text-align: right;
-      color: var(--foreground-muted); font-size: 12px;
+      color: var(--foreground-placeholder); font-size: 12px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .wzh-chat-ctx-item mark { background: none; color: var(--mi-brand-blue); font-weight: 600; }
     .wzh-chat-ctx-empty { padding: 10px 12px; font-size: 12px; color: var(--foreground-muted); }
+    .wzh-chat-picker-icon { width: 16px; height: 16px; flex: none; color: var(--foreground-muted); }
+    .wzh-chat-picker-icon--asset { display: block; object-fit: contain; opacity: .65; }
+    :root[data-theme='dark'] .wzh-chat-picker-icon--asset { filter: invert(1); }
+    .wzh-chat-picker-item {
+      grid-template-columns: 16px minmax(0, 2fr) minmax(0, 3fr);
+    }
+    .wzh-chat-code-file-pop mark { background: none; color: var(--mi-brand-blue); font-weight: 600; }
     /* / 指令只有一列,其余悬浮、选中和匹配高亮样式完全复用 # 上下文选择框 */
     .wzh-chat-command-item { grid-template-columns: 1fr; }
 
@@ -5568,7 +5576,6 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     .wzh-chat-code-chip {
       position: relative; min-width: 0; max-width: 100%;
       display: inline-flex; align-items: center; gap: 4px;
-      padding-right: 22px;
     }
     .wzh-chat-code-icon {
       width: 12px; height: 12px; flex-shrink: 0;
@@ -5632,8 +5639,6 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
       -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent calc(100% - 18px));
       mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent calc(100% - 18px));
     }
-    .wzh-chat-code-chip:hover > span,
-    .wzh-chat-code-chip:focus-within > span { -webkit-mask-image: none; mask-image: none; }
     .wzh-chat-anchor-close:hover { background: var(--state-hover); }
     .wzh-chat-anchor-close img { width: 16px; height: 16px; display: block; }
 
@@ -6805,13 +6810,13 @@ html[data-entry-view="overview"] .msi-compare-icon {
   padding: 0 1px;
   border: 0; background: transparent;
   color: var(--foreground-muted);
-  font-size: 13.5px;
+  font-size: 13.5px; font-weight: 400;
   cursor: pointer;
 }
 .msi-tab:hover { color: var(--foreground-secondary); }
 .msi-tab[hidden] { display: none; }
 .msi-tab:disabled { color: var(--foreground-muted); opacity: .46; cursor: not-allowed; }
-.msi-tab.is-active { color: var(--msi-accent); font-weight: 500; }
+.msi-tab.is-active { color: var(--msi-accent); font-weight: 600; }
 .msi-tab.is-active::after {
   content: "";
   position: absolute; left: 0; right: 0; bottom: 0;
@@ -6966,7 +6971,7 @@ html[data-entry-view="overview"] .msi-compare-icon {
   cursor: pointer;
 }
 .msi-foot-tab:hover { color: var(--foreground-secondary); }
-.msi-foot-tab.is-active { color: var(--msi-accent); font-weight: 500; }
+.msi-foot-tab.is-active { color: var(--msi-accent); font-weight: 600; }
 .msi-foot-tab.is-active::after {
   content: "";
   position: absolute; left: 0; right: 0; bottom: 0;
@@ -7004,7 +7009,6 @@ html[data-entry-view="overview"] .msi-compare-icon {
 .msi-content-foot.is-collapsed .msi-foot-expand-icon { display: block; }
 .msi-content-foot.is-collapsed .msi-foot-tab.is-active {
   color: var(--foreground-muted);
-  font-weight: 400;
 }
 .msi-content-foot.is-collapsed .msi-foot-tab.is-active::after { display: none; }
 /* 内容区同样两栏:左「选中详情」只占 ~28%,横向空间尽量留给右边的页签内容(调用链)。

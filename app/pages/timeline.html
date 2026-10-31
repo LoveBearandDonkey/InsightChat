@@ -678,7 +678,7 @@
                 <div class="wzh-chat-context-item wzh-chat-code-context" id="trainChatCodeContext">
                   <button class="wzh-chat-local-code-add" id="trainChatCodeAddBtn" type="button" title="绑定当前工程的代码目录"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg>代码目录</button>
                   <div class="wzh-chat-code-chip" id="trainChatCodeChip" hidden>
-                    <img class="wzh-chat-code-icon" src="../../src/pic/icon/code-file.svg" alt="">
+                    <img class="wzh-chat-code-icon" src="../../src/pic/icon/code.svg" alt="">
                     <span class="wzh-chat-code-path" id="trainChatCodePath" data-full-path="D:\Projects\training\openPangu-3.0"></span>
                     <button class="wzh-chat-anchor-close" id="trainChatCodeCloseBtn" type="button" title="移除代码目录" aria-label="移除代码目录">
                       <img src="../../src/pic/icon/close.svg" alt="">
@@ -689,15 +689,17 @@
               <input id="trainChatLocalCodePath" type="hidden" value="">
             </div>
             <!-- 高亮层浮在 textarea 之上(见 .wzh-chat-input-hl):textarea 自己的文字设为透明,
-                 真正看到的字由高亮层画,# 开头的上下文和算子会显示成蓝色标签。两层字体度量必须完全一致。 -->
+                 真正看到的字由高亮层画,# 上下文、@ 项目文件和 / 指令会显示成蓝色标签。两层字体度量必须完全一致。 -->
             <div class="wzh-chat-input-wrap">
               <!-- autocomplete=off:刷新时别让浏览器把上一次的草稿恢复回来。textarea 的字是透明的
                    (真正看到的字由高亮层画),恢复进来的内容看不见,却会把输入框撑高 -->
               <textarea class="wzh-chat-input" id="trainChatInput" placeholder="输入 # 添加上下文，输入 / 使用指令" rows="2" autocomplete="off"></textarea>
               <div class="wzh-chat-input-hl" id="trainChatInputHl" aria-hidden="true"></div>
             </div>
-            <!-- 输入 # 弹出的上下文选择框,内容由 initCtxPicker 按 CTX_FILES 渲染 -->
-            <div class="wzh-chat-ctx-pop" id="trainChatCtxPop" role="listbox" aria-label="选择性能落盘数据"></div>
+            <!-- 输入 # 弹出的性能文件与算子选择框 -->
+            <div class="wzh-chat-ctx-pop" id="trainChatCtxPop" role="listbox" aria-label="选择性能文件对象"></div>
+            <!-- 绑定项目目录后输入 @ 弹出的代码文件选择框 -->
+            <div class="wzh-chat-ctx-pop wzh-chat-code-file-pop" id="trainChatCodeFilePop" role="listbox" aria-label="选择项目目录文件"></div>
             <!-- 输入 / 弹出的指令选择框,交互与 # 上下文选择框一致 -->
             <div class="wzh-chat-ctx-pop" id="trainChatCommandPop" role="listbox" aria-label="选择指令"></div>
             <div class="wzh-chat-composer-toolbar">
@@ -831,7 +833,7 @@
                 <img src="../../src/pic/icon/opencode.png" alt="">
                 <span>OpenCode</span>
               </button>
-              <button class="wzh-settings-agent-card" data-settings-agent="claude" type="button" aria-pressed="false" disabled>
+              <button class="wzh-settings-agent-card" data-settings-agent="claude" type="button" aria-pressed="false">
                 <img src="../../src/pic/icon/claude-32.svg" alt="">
                 <span class="wzh-settings-agent-label">Claude Code <span class="wzh-settings-agent-unconfigured">未配置</span></span>
               </button>
@@ -839,7 +841,7 @@
                 <img src="../../src/pic/icon/codex.svg" alt="">
                 <span>Codex</span>
               </button>
-              <button class="wzh-settings-agent-card" data-settings-agent="trae" type="button" aria-pressed="false" disabled>
+              <button class="wzh-settings-agent-card" data-settings-agent="trae" type="button" aria-pressed="false">
                 <img src="../../src/pic/icon/Trae.png" alt="">
                 <span class="wzh-settings-agent-label">Trae <span class="wzh-settings-agent-unconfigured">未配置</span></span>
               </button>
@@ -849,15 +851,16 @@
               </button>
             </div>
             <p class="wzh-settings-notice"><span aria-hidden="true">i</span>工具提供内置的系统Agent，配置模型服务后即可使用，也支持切换已安装的第三方Agent，通过ACP协议接入后使用。</p>
+            <h4 class="wzh-settings-agent-config-title" id="trainChatSettingsAgentConfigTitle">MS Insight Native</h4>
             <div class="wzh-settings-config-tabs" role="tablist" aria-label="配置方式">
               <button class="is-active" id="trainChatSettingsFormTab" type="button" role="tab" aria-selected="true" aria-controls="trainChatSettingsFormPanel" data-settings-mode="form">表单式配置</button>
               <button id="trainChatSettingsScriptTab" type="button" role="tab" aria-selected="false" aria-controls="trainChatSettingsScriptPanel" data-settings-mode="script">脚本式配置</button>
             </div>
             <div class="wzh-settings-config-panel" id="trainChatSettingsFormPanel" role="tabpanel" aria-labelledby="trainChatSettingsFormTab">
               <label class="wzh-settings-field" for="trainChatSettingsAgentName"><span>Agent 名称</span><input id="trainChatSettingsAgentName" type="text" value="MS Insight Native" autocomplete="off" readonly></label>
-              <label class="wzh-settings-field" for="trainChatSettingsApiKey"><span>API 密钥</span><span class="wzh-settings-password"><input id="trainChatSettingsApiKey" type="password" autocomplete="off" placeholder="输入 API 密钥"><button id="trainChatSettingsShowKey" type="button" aria-label="显示 API 密钥" aria-pressed="false">◉</button></span></label>
+              <label class="wzh-settings-field" for="trainChatSettingsApiKey"><span>API 密钥</span><span class="wzh-settings-password"><input id="trainChatSettingsApiKey" type="password" autocomplete="off" placeholder="输入 API 密钥"><button id="trainChatSettingsShowKey" type="button" aria-label="显示 API 密钥" aria-pressed="false"><span class="wzh-settings-secret-icon" aria-hidden="true"></span></button></span></label>
               <label class="wzh-settings-field" for="trainChatSettingsEndpoint"><span>服务地址</span><input id="trainChatSettingsEndpoint" type="url" inputmode="url" autocomplete="off" placeholder="https://api.example.com/v1"></label>
-              <label class="wzh-settings-field" for="trainChatSettingsFormat"><span>API 格式</span><select id="trainChatSettingsFormat"><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="custom">自定义</option></select></label>
+              <label class="wzh-settings-field" for="trainChatSettingsFormat"><span>API 格式</span><span class="wzh-settings-select"><select id="trainChatSettingsFormat"><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="custom">自定义</option></select></span></label>
               <label class="wzh-settings-field" for="trainChatSettingsModel"><span class="wzh-settings-field-heading">默认模型 <button id="trainChatSettingsFetchModels" type="button" disabled title="当前未连接模型服务">从服务获取模型列表</button></span><input id="trainChatSettingsModel" type="text" autocomplete="off" placeholder="输入模型名称"></label>
               <p class="wzh-settings-field-help">填写模型名称，设置会在本页关闭前保留。</p>
             </div>

@@ -153,7 +153,6 @@
         column.setAttribute('aria-label', `${day.label}：Hugging Face ${day.huggingface} 次，GitHub ${day.github} 次`);
         const huggingfaceHeight = Math.round(day.huggingface / scale * 208);
         const githubHeight = Math.max(2, Math.round(day.github / scale * 208));
-        column.style.setProperty('--column-bar-height', `${huggingfaceHeight + (day.github ? githubHeight : 0) + (day.huggingface && day.github ? 1 : 0)}px`);
         if (day.huggingface || day.github) {
           if (day.github) {
             const github = element('span', 'wzh-skills-stats-bar wzh-skills-stats-bar--custom');

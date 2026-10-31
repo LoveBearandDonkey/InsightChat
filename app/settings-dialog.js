@@ -79,6 +79,32 @@
       trae: 'Trae',
       custom: '自定义 Agent',
     };
+    const initialAgents = {
+      insight: {
+        name: agentNames.insight,
+        key: 'sk-demo-insight-001',
+        endpoint: 'https://insight.example.com/v1',
+        format: 'openai',
+        model: 'insight-chat',
+        script: ['# 示例启动脚本（不会执行）', 'AGENT_ENDPOINT=https://insight.example.com/v1 AGENT_MODEL=insight-chat ./start-agent.sh'].join('\n'),
+      },
+      opencode: {
+        name: agentNames.opencode,
+        key: 'sk-demo-opencode-001',
+        endpoint: 'https://opencode.example.com/v1',
+        format: 'openai',
+        model: 'opencode-chat',
+        script: ['# 示例启动脚本（不会执行）', 'AGENT_ENDPOINT=https://opencode.example.com/v1 AGENT_MODEL=opencode-chat ./start-agent.sh'].join('\n'),
+      },
+      codex: {
+        name: agentNames.codex,
+        key: 'sk-demo-codex-001',
+        endpoint: 'https://codex.example.com/v1',
+        format: 'openai',
+        model: 'codex-chat',
+        script: ['# 示例启动脚本（不会执行）', 'AGENT_ENDPOINT=https://codex.example.com/v1 AGENT_MODEL=codex-chat ./start-agent.sh'].join('\n'),
+      },
+    };
     const fields = {
       name: document.getElementById('trainChatSettingsAgentName'),
       key: document.getElementById('trainChatSettingsApiKey'),
@@ -88,11 +114,12 @@
       script: document.getElementById('trainChatSettingsScript'),
     };
     const heading = document.getElementById('trainChatSettingsHeading');
+    const agentConfigTitle = document.getElementById('trainChatSettingsAgentConfigTitle');
     const navItems = [...dialog.querySelectorAll('[data-settings-section]')];
     const panels = [...dialog.querySelectorAll('[data-settings-panel]')];
     const cards = [...dialog.querySelectorAll('[data-settings-agent]')];
     const tabs = [...dialog.querySelectorAll('[data-settings-mode]')];
-    let saved = { agentId: 'insight', agents: {} };
+    let saved = { agentId: 'insight', agents: initialAgents };
     let draft = null;
     let warningReturnFocus = null;
 
@@ -136,6 +163,7 @@
       const dirty = isDirty();
       saveButton.disabled = !dirty;
       cancelButton.disabled = !dirty;
+      syncAgentBadges();
     }
 
     function saveDraft() {
@@ -165,6 +193,16 @@
       else action();
     }
 
+    function syncAgentBadges() {
+      if (!draft) return;
+      cards.forEach((card) => {
+        const badge = card.querySelector('.wzh-settings-agent-unconfigured');
+        if (!badge) return;
+        const config = draft.agents[card.dataset.settingsAgent] || {};
+        badge.hidden = Boolean(config.script?.trim() || (config.endpoint?.trim() && config.model?.trim()));
+      });
+    }
+
     function renderAgent() {
       const id = draft.agentId;
       const config = draft.agents[id] || {};
@@ -173,7 +211,9 @@
         card.classList.toggle('is-selected', selected);
         card.setAttribute('aria-pressed', String(selected));
       });
+      syncAgentBadges();
       fields.name.value = config.name || agentNames[id];
+      agentConfigTitle.textContent = fields.name.value;
       fields.name.readOnly = id !== 'custom';
       fields.key.value = config.key || '';
       fields.endpoint.value = config.endpoint || '';
@@ -277,26 +317,23 @@
       requestAction(() => setSection(item.dataset.settingsSection));
     }));
     cards.forEach((card) => card.addEventListener('click', () => {
-      if (card.disabled || draft.agentId === card.dataset.settingsAgent) return;
-      requestAction(() => {
-        draft.agentId = card.dataset.settingsAgent;
-        renderAgent();
-        updateDirty();
-      });
+      if (draft.agentId === card.dataset.settingsAgent) return;
+      collectAgent();
+      draft.agentId = card.dataset.settingsAgent;
+      renderAgent();
+      updateDirty();
     }));
     tabs.forEach((tab) => tab.addEventListener('click', () => {
       if (tab.classList.contains('is-active')) return;
-      requestAction(() => setMode(tab.dataset.settingsMode));
+      setMode(tab.dataset.settingsMode);
     }));
     dialog.querySelector('[role="tablist"]').addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
       event.preventDefault();
       const index = tabs.findIndex((tab) => tab.getAttribute('aria-selected') === 'true');
       const next = tabs[(index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
-      requestAction(() => {
-        setMode(next.dataset.settingsMode);
-        next.focus();
-      });
+      setMode(next.dataset.settingsMode);
+      next.focus();
     });
     document.getElementById('trainChatSettingsShowKey').addEventListener('click', (event) => {
       const button = event.currentTarget;
@@ -308,6 +345,9 @@
     Object.values(fields).forEach((field) => {
       field.addEventListener('input', updateDirty);
       field.addEventListener('change', updateDirty);
+    });
+    fields.name.addEventListener('input', () => {
+      agentConfigTitle.textContent = fields.name.value.trim() || agentNames[draft.agentId];
     });
   }
 

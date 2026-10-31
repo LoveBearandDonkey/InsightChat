@@ -134,7 +134,6 @@
         column.setAttribute('aria-label', `${day.label}：系统内置 ${day.system} 次，自定义 ${day.custom} 次`);
         const systemHeight = Math.round(day.system / scale * 208);
         const customHeight = Math.max(2, Math.round(day.custom / scale * 208));
-        column.style.setProperty('--column-bar-height', `${systemHeight + (day.custom ? customHeight : 0) + (day.system && day.custom ? 1 : 0)}px`);
         if (day.system || day.custom) {
           if (day.custom) {
             const customBar = element('span', 'wzh-skills-stats-bar wzh-skills-stats-bar--custom');
