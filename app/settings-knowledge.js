@@ -65,7 +65,15 @@
         row.appendChild(icon.firstChild);
       }
       const copy = element('div', 'wzh-skills-copy');
-      copy.append(element('strong', 'wzh-skills-name', library.name), element('span', 'wzh-skills-description', library.description));
+      const name = element('strong', 'wzh-skills-name', library.name);
+      if (library.kind === 'system') {
+        const mark = element('img', 'wzh-official-mark');
+        mark.src = '../../src/pic/icon/官方认证.svg';
+        mark.alt = '官方认证';
+        mark.title = '官方认证';
+        name.appendChild(mark);
+      }
+      copy.append(name, element('span', 'wzh-skills-description', library.description));
       row.appendChild(copy);
       const menuWrap = element('div', 'wzh-skills-menu-wrap');
       const more = element('button', 'wzh-skills-more', '⋯');

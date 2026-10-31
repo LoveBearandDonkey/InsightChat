@@ -14,7 +14,7 @@
       { id: 'operator', kind: 'custom', name: '算子热点诊断', description: '定位模型运行中的高耗时算子、调度等待和计算热点。', enabled: true, usage: 0 },
       { id: 'communication', kind: 'custom', name: '通信瓶颈分析', description: '分析跨卡通信耗时、带宽利用率及计算通信重叠情况。', enabled: true, usage: 0 },
       { id: 'memory', kind: 'custom', name: '显存与吞吐优化', description: '关联峰值显存、批大小和吞吐表现，辅助调整训练配置。', enabled: false, usage: 0 },
-      { id: 'overview', kind: 'system', name: '模型性能分析（系统内置）', description: '包含 50 个系统内置 Skills，覆盖算子、通信、显存等性能分析能力。', enabled: true, usage: 0, count: 50 },
+      { id: 'overview', kind: 'system', name: '模型性能分析', description: '包含 50 个系统内置 Skills，覆盖算子、通信、显存等性能分析能力。', enabled: true, usage: 0, count: 50 },
     ];
     const icon = '<span class="wzh-skills-icon wzh-skills-icon--skill" aria-hidden="true"><span class="wzh-skills-icon-mark"></span></span>';
     let filter = 'all';
@@ -50,7 +50,15 @@
       iconWrap.innerHTML = icon;
       row.appendChild(iconWrap.firstChild);
       const copy = element('div', 'wzh-skills-copy');
-      copy.append(element('strong', 'wzh-skills-name', skill.name), element('span', 'wzh-skills-description', skill.description));
+      const name = element('strong', 'wzh-skills-name', skill.name);
+      if (skill.kind === 'system') {
+        const mark = element('img', 'wzh-official-mark');
+        mark.src = '../../src/pic/icon/官方认证.svg';
+        mark.alt = '官方认证';
+        mark.title = '官方认证';
+        name.appendChild(mark);
+      }
+      copy.append(name, element('span', 'wzh-skills-description', skill.description));
       row.appendChild(copy);
 
       const menuWrap = element('div', 'wzh-skills-menu-wrap');

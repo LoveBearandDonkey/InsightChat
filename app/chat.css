@@ -7709,7 +7709,7 @@ html[data-entry-view="overview"] .msi-compare-icon {
 }
 #msiTuningDocumentEditor.is-generating {
   border-radius: 9px;
-  animation: msi-tuning-generating-glow 2s ease-in-out infinite;
+  animation: msi-tuning-generating-glow 1s ease-in-out infinite;
 }
 @keyframes msi-tuning-generating-glow {
   0%, 100% { box-shadow: inset 0 0 36px color-mix(in srgb, var(--msi-accent) 16%, transparent); }

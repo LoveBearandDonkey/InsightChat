@@ -84,7 +84,6 @@
 .wzh-settings-agent-label { display: inline-flex; align-items: center; gap: 4px; }
 .wzh-settings-agent-unconfigured { padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, var(--foreground-secondary) 12%, var(--surface-2)); color: var(--foreground-secondary); font: 400 10px/1 var(--font-sans); }
 .wzh-settings-agent-card img { width: 28px; height: 28px; object-fit: contain; }
-.wzh-settings-agent-badge { flex: 0 0 auto; padding: 2px 5px; border-radius: 4px; background: linear-gradient(135deg, color-mix(in srgb, var(--brand-blue) 92%, white), color-mix(in srgb, var(--brand-blue) 90%, black)); color: #fff; font: 400 10px/1.2 var(--font-sans); }
 .wzh-settings-agent-plus { height: 22px; color: var(--foreground-placeholder); font: 300 28px/22px var(--font-sans); }
 .wzh-settings-notice { display: flex; align-items: flex-start; gap: 7px; margin: 10px 0 12px; padding: 8px 10px; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--brand-blue) var(--brand-tint), var(--surface-1)); color: var(--foreground); font: 400 12px/1.4 var(--font-sans); }
 .wzh-settings-notice > span { flex: 0 0 16px; width: 16px; height: 16px; display: grid; place-items: center; border-radius: 50%; background: var(--brand-blue); color: white; font: 700 12px/1 var(--font-sans); }

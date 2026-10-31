@@ -53,6 +53,7 @@
 .wzh-knowledge-ascend-crop img { display: block; width: 100px; height: 38px; max-width: none; }
 .wzh-skills-copy { min-width: 0; flex: 1 1 auto; }
 .wzh-skills-name { display: block; overflow: hidden; color: var(--foreground); font: 600 13px/1.4 var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }
+img.wzh-official-mark { display: inline-block; width: 16px; height: 16px; flex: 0 0 16px; margin-left: 4px; vertical-align: -3px; object-fit: contain; }
 .wzh-skills-description { display: block; margin-top: 3px; overflow: hidden; color: var(--foreground-placeholder); font: 400 12px/1.4 var(--font-sans); text-overflow: ellipsis; white-space: nowrap; }
 .wzh-skills-menu-wrap { position: relative; flex: 0 0 auto; }
 .wzh-skills-more { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--foreground-secondary); font: 600 22px/1 var(--font-sans); cursor: pointer; opacity: 0; pointer-events: none; }
