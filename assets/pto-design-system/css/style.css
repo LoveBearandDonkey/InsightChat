@@ -254,7 +254,6 @@ body {
   background: var(--button-secondary-bg-hover);
   border-color: var(--border-default);
   box-shadow: var(--button-secondary-shadow);
-  transform: translateY(-1px);
 }
 .btn:active {
   background: var(--button-secondary-bg-press);
