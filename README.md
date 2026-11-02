@@ -1,6 +1,5 @@
 ## 在线体验
 
-[点击在线访问 InsightChat](https://lovebearanddonkey.github.io/InsightChat/app/pages/chat.html)
 
 # InsightChat
 
@@ -106,11 +105,7 @@ InsightChat/
 - Remotion 4
 - Tailwind CSS 4
 
-## GitHub Pages
 
-在线原型通过 GitHub Pages 发布。发布源应设置为 `main` 分支的 `/(root)` 目录，对应地址：
-
-<https://lovebearanddonkey.github.io/InsightChat/app/pages/chat.html>
 
 ## 许可
 

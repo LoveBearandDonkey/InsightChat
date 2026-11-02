@@ -5096,23 +5096,20 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     .wzh-chat-guide-card:focus-visible { outline: none; }
     .wzh-chat-guide-card:active { background: var(--card-neutral-press); }
     .wzh-chat-guide-icon { width: 34px; height: 34px; flex-shrink: 0; display: block; }
-    .wzh-chat-guide-text { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+    .wzh-chat-guide-text { display: flex; flex: 1 1 0; flex-direction: column; gap: 7px; min-width: 0; }
     .wzh-chat-guide-title { font-size: 15px; font-weight: var(--font-weight-semibold, 600); color: var(--foreground); }
-    /* 卡片固定两行:标题一行,标签 + 描述同处第二行,窄了让描述省略而不是换到第三行 */
-    .wzh-chat-guide-title,
-    .wzh-chat-guide-desc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .wzh-chat-guide-sub { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; min-width: 0; }
-    /* 标签和描述给同一个 line-height,两边文字盒等高,align-items:center 下才真正对齐——
-       消息区继承下来的 1.65 会让两者行盒高度不一致,描述看起来偏下。 */
+    .wzh-chat-guide-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .wzh-chat-guide-sub { display: -webkit-box; min-width: 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; font-size: 12px; line-height: 18px; }
+    /* 标签参与描述的行内排版，换行后文字回到行首。 */
     .wzh-chat-guide-tag {
-      display: inline-flex; align-items: center; gap: 2px; flex: 0 0 auto;
-      padding: 1px 6px 1px 3px; border-radius: 6px;
+      display: inline-flex; align-items: center; gap: 2px; margin-right: 4px;
+      padding: 1px 6px 1px 3px; border-radius: 6px; vertical-align: middle;
       background: color-mix(in srgb, var(--mi-brand-blue) var(--brand-tint), transparent);
       border: 1px solid color-mix(in srgb, var(--mi-brand-blue) var(--brand-tint-border), transparent);
       font-size: 12px; line-height: 18px; color: var(--foreground); white-space: nowrap;
     }
     .wzh-chat-guide-tag img { width: 14px; height: 14px; display: block; flex: 0 0 auto; }
-    .wzh-chat-guide-desc { font-size: 12px; line-height: 18px; color: var(--foreground-secondary); min-width: 0; }
+    .wzh-chat-guide-desc { display: inline; font-size: 12px; line-height: 18px; color: var(--foreground-secondary); overflow-wrap: anywhere; }
     /* 首屏欢迎语打字机效果的光标(见 typeWelcomeText):打字期间及打完后短暂停留都保持闪烁,
        随后被移除,不常驻。
        欢迎语是居中的,光标只要占哪怕 3px 布局宽度,移除的那一刻整行文字就会向右弹半个光标宽——

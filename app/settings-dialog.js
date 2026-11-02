@@ -1,4 +1,4 @@
-// 助手设置是界面原型：设置仅在当前页面内存中暂存，不连接模型服务。
+// Agent 设置暂存在当前页面；通用设置由独立脚本保存并驱动本地演示。
 (function () {
   'use strict';
 
@@ -114,6 +114,7 @@
       script: document.getElementById('trainChatSettingsScript'),
     };
     const heading = document.getElementById('trainChatSettingsHeading');
+    const generalNote = document.getElementById('trainChatSettingsGeneralNote');
     const agentConfigTitle = document.getElementById('trainChatSettingsAgentConfigTitle');
     const navItems = [...dialog.querySelectorAll('[data-settings-section]')];
     const panels = [...dialog.querySelectorAll('[data-settings-panel]')];
@@ -235,6 +236,8 @@
       });
       panels.forEach((panel) => { panel.hidden = panel.dataset.settingsPanel !== section; });
       heading.textContent = { general: '通用', agent: 'Agent', skills: 'Skills', mcp: 'MCP', knowledge: '知识库' }[section];
+      generalNote.hidden = section !== 'general';
+      dialog.classList.toggle('is-general', section === 'general');
       footer.hidden = section !== 'agent';
       dialog.dispatchEvent(new CustomEvent('settings:section-change', { detail: { section } }));
     }
@@ -269,12 +272,8 @@
       trigger.setAttribute('aria-expanded', 'false');
       trigger.focus({ preventScroll: true });
     });
-    overlay.addEventListener('click', (event) => {
-      if (event.target === overlay) requestAction(() => dialog.close());
-    });
     dialog.addEventListener('cancel', (event) => {
       event.preventDefault();
-      if (warning.hidden) requestAction(() => dialog.close());
     });
     document.addEventListener('keydown', (event) => {
       if (!dialog.open) return;
@@ -283,7 +282,7 @@
         event.stopImmediatePropagation();
         if (!warning.hidden) {
           hideWarning(true);
-        } else requestAction(() => dialog.close());
+        }
         return;
       }
       if (event.key !== 'Tab') return;

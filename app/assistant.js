@@ -2869,6 +2869,7 @@
     if (!toggle || !panel) return;
 
     function setOpen(open) {
+      if (open && !panel.classList.contains('is-open')) window.MSI_GENERAL_SETTINGS?.applyOnAssistantStart();
       if (!open) closeChatVisualization({ restoreFocus: false });
       panel.classList.toggle('is-open', open);
       panel.setAttribute('aria-hidden', String(!open));
@@ -2902,7 +2903,7 @@
       if (!panel.classList.contains('is-visualizing')) setOpen(false);
     });
 
-    setOpen(true); // 默认展开(挤入式,直接把内容区挤窄)
+    setOpen(window.MSI_GENERAL_SETTINGS?.getState().launch !== 'click');
   }
 
   // 输入 # 可以引用的性能落盘数据:直接取左树(window.MSI_CTX_FILES,见上面的 msi-workbench 脚本)
@@ -3650,8 +3651,11 @@
       btn.title = floating ? '退出悬浮窗' : '悬浮窗口';
       btn.setAttribute('aria-label', btn.title);
     }
-    apply(false); // 默认挤入式
+    apply(window.MSI_GENERAL_SETTINGS?.getState().window === 'floating');
     btn.addEventListener('click', () => apply(!panel.classList.contains('is-floating')));
+    document.addEventListener('msi:general-settings-apply', (event) => {
+      apply(event.detail?.window === 'floating');
+    });
   }
 
   function initHistoryMenu() {
@@ -4149,12 +4153,21 @@
     restoreChatContext = (taskName = window.MSI_ANCHOR_NAME || CHAT_TASK_NAME) => {
       currentTaskName = taskName;
       if (nameEl) nameEl.textContent = taskName;
-      if (anchorChip) anchorChip.hidden = false;
+      if (anchorChip) anchorChip.hidden = window.MSI_GENERAL_SETTINGS?.getState().locate === false;
       if (codeContext) codeContext.hidden = false;
       syncCodeBinding();
       syncContextChips();
     };
     window.addEventListener('msi:task-selected', (event) => restoreChatContext(event.detail?.taskName));
+    document.addEventListener('msi:general-settings-apply', (event) => {
+      if (anchorChip) anchorChip.hidden = !event.detail?.locate;
+      syncContextChips();
+    });
+    document.addEventListener('msi:general-settings-live', (event) => {
+      if (event.detail?.key !== 'locate') return;
+      if (anchorChip) anchorChip.hidden = !event.detail.value;
+      syncContextChips();
+    });
     codeAddBtn?.addEventListener('click', () => {
       codeBindings.set(currentTaskName, defaultCodePath);
       syncCodeBinding();

@@ -41,6 +41,7 @@
     "build:chat": "node tools/build-chat-pages.cjs",
     "build:memory-viz": "node tools/build-memory-viz.cjs",
     "build:standalone": "node tools/build-standalone.js",
+    "build:timeline-chat": "node tools/build-timeline-chat-standalone.js",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc"
   },

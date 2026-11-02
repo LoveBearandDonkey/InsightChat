@@ -109,9 +109,10 @@
       syncMainToggleLabel();
     }
 
+    let wasOpen = false;
     function syncFloating() {
       const floating = panel.classList.contains('is-floating');
-      if (!panel.classList.contains('is-open')) activateWindow('main');
+      const open = panel.classList.contains('is-open');
       if (floating && panel.parentNode !== desktop) {
         if (panel.classList.contains('is-visualizing')) {
           panel.style.setProperty('--wzh-viz-top', '48px');
@@ -120,7 +121,7 @@
           panel.style.setProperty('--wzh-viz-right', '100px');
         }
         desktop.append(panel);
-        activateWindow('chat');
+        if (open) activateWindow('chat');
       }
       if (!floating && panel.parentNode === desktop) {
         if (panel.classList.contains('is-visualizing')) {
@@ -132,6 +133,9 @@
         anchor.after(panel);
         activateWindow('main');
       }
+      if (!open) activateWindow('main');
+      else if (floating && !wasOpen) activateWindow('chat');
+      wasOpen = open;
       state.floating = floating;
       if (floating) renderFloat();
       syncMainToggleLabel();
@@ -248,7 +252,6 @@
     panel.addEventListener('pointerdown', () => activateWindow('chat'));
     panel.addEventListener('focusin', () => activateWindow('chat'));
     document.addEventListener('msi:focus-chat-window', () => activateWindow('chat'));
-    if (state.floating) floatButton.click();
     syncFloating();
     window.addEventListener('resize', () => {
       if (!panel.classList.contains('is-floating')) return;

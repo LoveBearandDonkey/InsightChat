@@ -140,7 +140,7 @@
               <button class="msi-tab" data-analysis-tab="memory" type="button" role="tab" aria-selected="false" aria-controls="msiMemoryPanel">内存</button>
               <button class="msi-tab msi-tab--normal-only" type="button" role="tab" aria-selected="false">通信</button>
               <button class="msi-tab" data-analysis-tab="operator" type="button" role="tab" aria-selected="false" aria-controls="msiOperatorPanel">算子</button>
-              <button class="msi-tab" data-analysis-tab="tuning-document" type="button" role="tab" aria-selected="false" aria-controls="msiTuningDocumentPanel">调优笔记</button>
+              <button class="msi-tab" data-analysis-tab="tuning-document" type="button" role="tab" aria-selected="false" aria-controls="msiTuningDocumentPanel">文档</button>
             </nav>
 
             <!-- @include pages/overview.html -->
@@ -151,7 +151,7 @@
 
             <!-- @include pages/operator.html -->
 
-            <section class="msi-analysis-stage msi-tuning-document" id="msiTuningDocumentPanel" role="tabpanel" aria-label="调优笔记" hidden>
+            <section class="msi-analysis-stage msi-tuning-document" id="msiTuningDocumentPanel" role="tabpanel" aria-label="文档" hidden>
               <div class="msi-tuning-document-inner">
                 <div class="msi-tuning-document-heading">
                   <h2 class="msi-tuning-document-title">
@@ -170,7 +170,7 @@
                   </div>
                 </div>
                 <span id="msiTuningDocumentStatus" class="msi-tuning-visually-hidden" role="status" aria-live="polite">自动保存于本机</span>
-                <div class="msi-tuning-toolbar" role="toolbar" aria-label="调优笔记工具栏">
+                <div class="msi-tuning-toolbar" role="toolbar" aria-label="文档工具栏">
                     <div class="msi-tuning-mode-tabs" role="tablist" aria-label="文档视图">
                       <button class="msi-tuning-mode-button is-active" data-tuning-mode="edit" type="button" role="tab" aria-selected="true" aria-controls="msiTuningDocumentEditor">编辑</button>
                       <button class="msi-tuning-mode-button" data-tuning-mode="preview" type="button" role="tab" aria-selected="false" aria-controls="msiTuningDocumentPreview" tabindex="-1">预览</button>
@@ -523,7 +523,10 @@
       </aside>
       <div class="wzh-settings-main">
         <header class="wzh-settings-head">
-          <h3 id="trainChatSettingsHeading">Agent</h3>
+          <div class="wzh-settings-head-title">
+            <h3 id="trainChatSettingsHeading">Agent</h3>
+            <p class="wzh-settings-head-note" id="trainChatSettingsGeneralNote" hidden>与启动相关的配置变动，将在下一次打开软件或助手时生效</p>
+          </div>
           <button class="wzh-settings-close wzh-chat-head-btn" id="trainChatSettingsClose" type="button" aria-label="关闭助手设置" title="关闭"><img src="../../src/pic/icon/close.svg" alt=""></button>
         </header>
         <div class="wzh-settings-scroll">
@@ -574,7 +577,42 @@
             </div>
             <details class="wzh-settings-session"><summary><svg class="msi-tree-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>会话配置</summary><p>当前没有额外的会话配置项。</p></details>
           </section>
-          <section class="wzh-settings-section wzh-settings-empty" data-settings-panel="general" hidden><p>当前没有通用设置项。</p></section>
+          <section class="wzh-settings-section wzh-settings-general" data-settings-panel="general" aria-label="通用设置" hidden>
+            <div class="wzh-general-group" aria-label="基础设置">
+              <div class="wzh-general-row">
+                <span class="wzh-general-row-label"><span class="wzh-general-icon wzh-general-icon--launch" aria-hidden="true"></span>启动方式</span>
+                <div class="wzh-general-segment" role="group" aria-label="启动方式" data-general-choice="launch">
+                  <button type="button" class="is-active" data-value="default" aria-pressed="true">默认启动</button>
+                  <button type="button" data-value="click" aria-pressed="false">点击启动</button>
+                </div>
+              </div>
+              <div class="wzh-general-row">
+                <span class="wzh-general-row-label"><span class="wzh-general-icon wzh-general-icon--floating" aria-hidden="true"></span>默认助手形态</span>
+                <div class="wzh-general-segment" role="group" aria-label="默认助手形态" data-general-choice="window">
+                  <button type="button" class="is-active" data-value="split" aria-pressed="true">分屏窗</button>
+                  <button type="button" data-value="floating" aria-pressed="false">悬浮窗</button>
+                </div>
+              </div>
+              <div class="wzh-general-row">
+                <span class="wzh-general-row-label"><span class="wzh-general-icon wzh-general-icon--locate" aria-hidden="true"></span>自动锚定选中性能文件</span>
+                <button type="button" class="wzh-general-switch" data-general-switch="locate" role="switch" aria-checked="true" aria-label="自动锚定选中性能文件"><span></span></button>
+              </div>
+              <div class="wzh-general-row">
+                <span class="wzh-general-row-label"><span class="wzh-general-icon wzh-general-icon--update" aria-hidden="true"></span>自动检查更新</span>
+                <button type="button" class="wzh-general-switch" data-general-switch="update" role="switch" aria-checked="true" aria-label="自动检查更新"><span></span></button>
+              </div>
+            </div>
+            <div class="wzh-general-prompt-group">
+              <div class="wzh-general-prompt-heading">
+                <span class="wzh-general-row-label"><span class="wzh-general-icon wzh-general-icon--prompt" aria-hidden="true"></span>欢迎页快捷 Prompt</span>
+                <div class="wzh-general-segment" role="group" aria-label="快捷 Prompt 来源" data-general-choice="promptMode">
+                  <button type="button" class="is-active" data-value="system" aria-pressed="true">系统默认</button>
+                  <button type="button" data-value="custom" aria-pressed="false">自定义</button>
+                </div>
+              </div>
+              <div class="wzh-general-prompt-list" id="trainChatGeneralPrompts" aria-label="自定义快捷 Prompt" hidden></div>
+            </div>
+          </section>
           <section class="wzh-settings-section wzh-settings-skills" data-settings-panel="skills" aria-label="Skills 目录设置" hidden>
             <div id="trainChatSkillsCatalog">
             <div class="wzh-skills-toolbar">
@@ -666,6 +704,7 @@
   <script defer src="../theme.js"></script>
   <script defer src="../import-dialog.js"></script>
   <script defer src="../settings-dialog.js"></script>
+  <script defer src="../settings-general.js"></script>
   <script defer src="../overlay-scrollbars.js"></script>
   <script defer src="../settings-skills.js"></script>
   <script defer src="../settings-skills-upload.js"></script>
