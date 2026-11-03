@@ -545,6 +545,13 @@
       button.dataset.selectionAction = action;
       button.setAttribute('role', 'menuitem');
       button.textContent = label;
+      if (action === 'ask') {
+        const icon = document.createElement('img');
+        icon.className = 'msi-ctxmenu-icon';
+        icon.src = '../../src/pic/icon/msinsightbotAvatar.png';
+        icon.alt = '';
+        button.prepend(icon);
+      }
       menu.appendChild(button);
     }
     document.body.appendChild(menu);

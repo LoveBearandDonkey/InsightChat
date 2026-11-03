@@ -7809,6 +7809,7 @@ html[data-entry-view="overview"] .msi-compare-icon {
   background: var(--surface-1); box-shadow: 0 8px 28px rgb(0 0 0 / 17%);
 }
 .wzh-chat-selection-menu button {
+  display: flex; align-items: center; gap: 8px;
   border: 0; border-radius: 5px; padding: 7px 11px; background: transparent; text-align: left;
   color: var(--foreground); font: 14px var(--font-sans); white-space: nowrap; cursor: pointer;
 }

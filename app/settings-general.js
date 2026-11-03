@@ -1,4 +1,4 @@
-// 通用设置保存在本机浏览器，快捷 Prompt 最多三组。
+// 通用设置保存在本机浏览器；快捷 Prompt 最多三组，每次加载页面恢复预设。
 (function () {
   'use strict';
 
@@ -45,11 +45,9 @@
       window: ['split', 'floating'].includes(stored?.window) ? stored.window : defaults.window,
       locate: typeof stored?.locate === 'boolean' ? stored.locate : defaults.locate,
       update: typeof stored?.update === 'boolean' ? stored.update : defaults.update,
-      promptMode: ['system', 'custom'].includes(stored?.promptMode) ? stored.promptMode : defaults.promptMode,
-      prompts: Array.isArray(stored?.prompts) ? stored.prompts.slice(0, 3).map((entry) => ({
-        title: typeof entry?.title === 'string' ? entry.title : '',
-        body: typeof entry?.body === 'string' ? entry.body : '',
-      })) : defaults.prompts.map((entry) => ({ ...entry })),
+      // Prompt 来源和编辑仅在当前页面生效，刷新后欢迎页使用系统卡片。
+      promptMode: defaults.promptMode,
+      prompts: defaults.prompts.map((entry) => ({ ...entry })),
     };
     const cloneState = (value) => ({ ...value, prompts: value.prompts.map((entry) => ({ ...entry })) });
     let active = cloneState(state);
@@ -92,7 +90,10 @@
     }
 
     function publish(key) {
-      try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch (_) { /* 临时会话仍可演示。 */ }
+      const preferences = { ...state };
+      delete preferences.promptMode;
+      delete preferences.prompts;
+      try { localStorage.setItem(storageKey, JSON.stringify(preferences)); } catch (_) { /* 临时会话仍可演示。 */ }
       if (key === 'locate') {
         active.locate = state.locate;
         document.dispatchEvent(new CustomEvent('msi:general-settings-live', { detail: { key, value: active.locate } }));

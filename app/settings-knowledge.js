@@ -160,7 +160,7 @@
           element('strong', 'wzh-skills-stats-tooltip-total', `${day.system + day.custom} 次`),
         );
         tooltip.appendChild(tooltipHead);
-        [['system', '系统内置', day.system], ['custom', '自定义', day.custom]].forEach(([kind, label, value]) => {
+        [['custom', '自定义', day.custom], ['system', '系统内置', day.system]].forEach(([kind, label, value]) => {
           const row = element('div', 'wzh-skills-stats-tooltip-row');
           row.append(element('i', `wzh-skills-stats-legend-dot wzh-skills-stats-legend-dot--${kind}`), element('span', '', label), element('strong', '', `${value} 次`));
           tooltip.appendChild(row);

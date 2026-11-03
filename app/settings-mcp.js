@@ -178,7 +178,7 @@
           element('strong', 'wzh-skills-stats-tooltip-total', `${day.huggingface + day.github} 次`),
         );
         tooltip.appendChild(tooltipHead);
-        [['system', 'Hugging Face', day.huggingface], ['custom', 'GitHub', day.github]].forEach(([kind, label, value]) => {
+        [['custom', 'GitHub', day.github], ['system', 'Hugging Face', day.huggingface]].forEach(([kind, label, value]) => {
           const row = element('div', 'wzh-skills-stats-tooltip-row');
           row.append(element('i', `wzh-skills-stats-legend-dot wzh-skills-stats-legend-dot--${kind}`), element('span', '', label), element('strong', '', `${value} 次`));
           tooltip.appendChild(row);
