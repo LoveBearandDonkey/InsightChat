@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const {buildMemoryViz} = require('./build-memory-viz.cjs');
+const {buildVisualIcon} = require('./build-visual-icon.cjs');
 
 const root = path.resolve(__dirname, '..');
 const app = path.join(root, 'app');
@@ -17,6 +18,9 @@ function renderPage(view) {
     fs.readFileSync(path.join(pages, file), 'utf8').trimEnd());
   // 概览页已有两处专属外观；生成时保留它们，其余结构仍共用 shell 和视图片段。
   const overview = view === 'overview';
+  html = html.replace('        <!-- @visual-upgrade-entry -->\n', overview
+    ? '        <a class="msi-visual-upgrade-entry" href="visual-upgrade.html" title="查看视觉 2.0 升级演示"><img class="msi-visual-upgrade-icon" src="../../src/pic/icon/visual-3s.gif" width="18" height="18" alt="" aria-hidden="true"><span>视觉 2.0</span></a>\n'
+    : '');
   const variants = {
     __COMPARE_ICON__: overview
       ? '<span class="msi-compare-icon" aria-hidden="true"></span>'
@@ -30,6 +34,7 @@ function renderPage(view) {
   for (const [marker, value] of Object.entries(variants)) html = html.replaceAll(marker, value);
   html = html.replace('  <!-- @overview-script -->', view === 'overview'
     ? '  <script defer src="../overview.js"></script>' : '');
+  if (overview) html = html.replace('</body>', '  <script defer src="../visual-upgrade.js"></script>\n</body>');
   if (html.includes('<!-- @include') || html.includes('<!-- @overview-script') ||
       /__[A-Z_]+__/.test(html)) {
     throw new Error('Unresolved chat page template marker');
@@ -37,13 +42,25 @@ function renderPage(view) {
   return html;
 }
 
+function renderVisualUpgrade() {
+  // Independent layer markup; the live product remains in chat.html throughout.
+  const stage = fs.readFileSync(path.join(app, 'visual-upgrade-stage.html'), 'utf8').trimEnd();
+  return '<!DOCTYPE html>\n<!-- Generated from app/visual-upgrade-stage.html by npm run build:chat. -->\n' +
+    '<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+    '<title>视觉升级 · MindStudio Insight</title><style>body{display:none}</style></head><body>\n' +
+    '<div class="vu-stage" aria-label="视觉升级拆解演示">\n' + stage + '\n</div>\n' +
+    '<script src="../visual-upgrade-layer.js"></script>\n</body></html>\n';
+}
+
 function buildAll() {
+  buildVisualIcon();
   buildMemoryViz();
   for (const [file, view] of Object.entries(entries)) {
     fs.writeFileSync(path.join(pages, file), renderPage(view));
   }
-  console.log('Built ' + Object.keys(entries).join(', '));
+  fs.writeFileSync(path.join(pages, 'visual-upgrade.html'), renderVisualUpgrade());
+  console.log('Built ' + Object.keys(entries).concat('visual-upgrade.html').join(', '));
 }
 
 if (require.main === module) buildAll();
-module.exports = { renderPage, buildAll };
+module.exports = { renderPage, renderVisualUpgrade, buildAll };

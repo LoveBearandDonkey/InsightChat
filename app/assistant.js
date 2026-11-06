@@ -2903,6 +2903,7 @@
       if (!panel.classList.contains('is-visualizing')) setOpen(false);
     });
 
+    document.addEventListener('msi:assistant-welcome', playWelcomeTypewriter);
     setOpen(window.MSI_GENERAL_SETTINGS?.getState().launch !== 'click');
   }
 

@@ -837,6 +837,11 @@
       collapseGain = content.getBoundingClientRect().width - expandedWidth;
       if (!automatic || sidebar.contains(document.activeElement)) menu.focus({ preventScroll: true });
     };
+    document.addEventListener('msi:sidebar-expand', () => {
+      restore(false);
+      // Pin the prepared layout until the user changes its available width.
+      manualExpandedWidth = content.getBoundingClientRect().width;
+    });
     fold.addEventListener('click', () => {
       if (isCollapsed()) {
         restore();

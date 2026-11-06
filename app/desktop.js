@@ -98,6 +98,15 @@
   function openWindow() { hidden = false; render(); }
   function hideWindow() { hidden = true; render(); }
 
+  // An overlay can prepare the live product window before handing control to it.
+  document.addEventListener('msi:window-geometry', (event) => {
+    const geometry = event.detail;
+    if (!geometry || !['x', 'y', 'w', 'h'].every(key => Number.isFinite(geometry[key]))) return;
+    Object.assign(state, geometry, { customized: true, maximized: false });
+    hidden = false;
+    render();
+  });
+
   document.getElementById('msiWindowMinimize')?.addEventListener('click', hideWindow);
   document.getElementById('msiWindowClose')?.addEventListener('click', hideWindow);
   maxButton?.addEventListener('click', () => setMaximized(!state.maximized));

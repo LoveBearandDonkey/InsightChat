@@ -1,0 +1,196 @@
+/* Loaded on demand by the chat.html presentation host. */
+.visual-upgrade-page { margin: 0; overflow: hidden; }
+.vu-stage {
+  --vu-scale-x: 1;
+  --vu-scale-y: 1;
+  position: absolute;
+  z-index: 10;
+  left: 0;
+  top: 0;
+  width: 1775px;
+  height: 970px;
+  transform: scale(var(--vu-scale-x), var(--vu-scale-y));
+  transform-origin: top left;
+  isolation: isolate;
+  pointer-events: none;
+}
+.is-upgrade-playing .pto-ide-frame__topbar,
+.is-upgrade-playing .msi-sidebar,
+.is-upgrade-playing .chat-shell-pane,
+.is-upgrade-playing .msi-content-head,
+.is-upgrade-playing .msi-tabs,
+.is-upgrade-playing #msiTimelinePanel > .msi-toolbar,
+.is-upgrade-playing #msiTimelineSwims,
+.is-upgrade-playing #msiMouseTools,
+.is-upgrade-playing #trainChatPanel,
+.is-upgrade-playing #msiSelectionPanel,
+.is-upgrade-playing #msiFootResizer,
+.is-upgrade-playing #chatShellResizer { opacity: 0; }
+.is-upgrade-playing .msi-window-resize { display: none; }
+.is-upgrade-playing .pto-ide-frame__topbar { cursor: default; }
+.is-upgrade-playing #trainChatPanel,
+.is-upgrade-playing .chat-shell-pane { transition: none; }
+/* Material fills and the outline share the live frame's animated contour. */
+.is-upgrade-playing .pto-ide-frame::before,
+.is-upgrade-playing .pto-ide-frame::after { border-radius: inherit; }
+.is-upgrade-playing .pto-ide-frame::before { opacity: var(--vu-native-aura-opacity, 1); }
+.vu-prefill {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.vu-prefill-glow { position: absolute; opacity: 0; transform-origin: center; will-change: transform, opacity; }
+.vu-prefill-source,
+.vu-color-orbit {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: 50%;
+  width: clamp(72px, 9vw, 128px);
+  aspect-ratio: 1;
+  will-change: transform, opacity;
+}
+.vu-prefill-source { opacity: 0; }
+.vu-prefill-avatar { position: absolute; inset: 0; width: 100%; height: 100%; will-change: opacity; }
+.vu-prefill-avatar-blur { filter: blur(7px); opacity: 0; }
+.vu-color-orbit { z-index: 2; }
+.vu-color-orb {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34%;
+  height: 34%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--vu-orb-color) 40%, white), var(--vu-orb-color) 58%, color-mix(in srgb, var(--vu-orb-color) 80%, black));
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.vu-old-backplate {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  border-radius: 8px;
+  background: #EBEFF6;
+  pointer-events: none;
+}
+.vu-legacy-layers { position: absolute; z-index: 5; inset: 0; pointer-events: none; }
+.vu-part-shadows { position: absolute; z-index: 4; inset: 0; pointer-events: none; }
+.vu-part-shadow,
+.vu-card-shadow {
+  position: absolute;
+  border-radius: 8px;
+  opacity: 0;
+  transform-origin: center;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.vu-shadow-texture { position: absolute; inset: 0; border-radius: inherit; opacity: 0; will-change: opacity; }
+.vu-part-shadow > .vu-shadow-texture { background: #10274b; }
+.vu-legacy-part {
+  position: absolute;
+  display: block;
+  max-width: none;
+  object-fit: fill;
+  transform-origin: center;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+.vu-legacy-part[data-part='1'] { border-radius: 8px 8px 0 0; }
+.vu-legacy-part[data-part='2'] { border-bottom-left-radius: 8px; }
+.vu-legacy-part[data-part='5'] { border-bottom-right-radius: 8px; }
+.vu-glass-highlight {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  border: 1px solid rgb(255 255 255 / 65%);
+  background: transparent;
+  box-shadow:
+    inset 0 2px 0 rgb(255 255 255 / 95%),
+    inset 2px 0 0 rgb(255 255 255 / 65%),
+    inset -1px -2px 0 rgb(29 52 89 / 16%),
+    0 0 0 1px rgb(255 255 255 / 30%);
+  pointer-events: none;
+}
+.vu-corner-highlight {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 2px;
+  background:
+    radial-gradient(ellipse 180px 140px at top left, var(--vu-brand-color) 0%, var(--vu-brand-color) 22%, transparent 100%),
+    radial-gradient(ellipse 180px 140px at top right, var(--vu-brand-color) 0%, var(--vu-brand-color) 22%, transparent 100%),
+    radial-gradient(ellipse 180px 140px at bottom left, var(--vu-brand-color) 0%, var(--vu-brand-color) 22%, transparent 100%),
+    radial-gradient(ellipse 180px 140px at bottom right, var(--vu-brand-color) 0%, var(--vu-brand-color) 22%, transparent 100%);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  pointer-events: none;
+}
+.vu-glass-sheen { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
+.vu-glass-sheen::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 10%;
+  width: 64%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #fff 40%, #fff 60%, transparent);
+  box-shadow: 0 0 12px rgb(255 255 255 / 90%);
+}
+.vu-glass-sheen::after {
+  content: '';
+  position: absolute;
+  top: 7%;
+  left: -1px;
+  width: 2px;
+  height: 56%;
+  background: linear-gradient(transparent, rgb(255 255 255 / 90%), transparent);
+}
+.vu-controls {
+  position: fixed;
+  z-index: 20;
+  top: 10px;
+  right: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  pointer-events: none;
+  color: #fff;
+  font: 12px/1.4 'Segoe UI', 'Microsoft YaHei', sans-serif;
+}
+.vu-close,
+.vu-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 7px;
+  background: #000;
+  backdrop-filter: blur(16px);
+  color: #fff;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.vu-close:hover, .vu-play:hover { background: #202020; }
+.vu-close:focus-visible, .vu-play:focus-visible { outline: 2px solid #007bff; outline-offset: 3px; }
+.vu-close svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.5; }
+.vu-playback {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.vu-no-script { position: absolute; z-index: 10; top: 50%; left: 35%; padding: 24px; background: white; }
+@media (max-width: 720px) {
+  .vu-controls { right: 12px; }
+}

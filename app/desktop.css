@@ -70,6 +70,16 @@ body.is-desktop-dragging .msi-desktop > .pto-ide-frame { pointer-events: none; }
 .msi-desktop .pto-ide-frame__topbar button,
 .msi-desktop .pto-ide-frame__topbar a { cursor: pointer; }
 .msi-desktop .pto-ide-frame__topbar-right { position: relative; z-index: 4; }
+.msi-visual-upgrade-entry {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: 6px;
+  background: var(--state-hover); color: var(--foreground);
+  font-size: 12px; text-decoration: none; white-space: nowrap;
+}
+.msi-visual-upgrade-entry:hover { color: var(--brand-blue); }
+.msi-visual-upgrade-icon { width: 18px; height: 18px; flex: none; object-fit: contain; }
+.msi-visual-upgrade-entry[aria-busy='true'] { visibility: hidden; pointer-events: none; }
+.msi-visual-upgrade-entry:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 2px; }
 .msi-desktop .msi-window-control { width: 34px; height: 30px; border-radius: 3px; color: var(--foreground); }
 .msi-desktop #trainChatToggle { margin-left: 4px; }
 .msi-desktop #msiWindowMinimize { margin-left: 8px; }
