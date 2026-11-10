@@ -23,9 +23,14 @@
 .agent-client .agent-topic-title-editor>.wzh-chat-session-btn{max-width:100%;margin:0;padding:5px 8px;vertical-align:middle}
 .agent-client .agent-topic-title-editor>.wzh-chat-session-btn[hidden]{display:none}
 .agent-client .agent-topic-title-editor>.wzh-chat-session-input{width:100%;margin:0;padding:5px 8px;border-color:var(--brand-blue)}
-.agent-client #agentSidebarToggle{background:transparent}
-.agent-client #agentSidebarToggle:hover{background:var(--state-hover)}
-.agent-client .agent-topic-actions>#agentSidebarToggle{flex:0 0 28px;width:28px;height:28px;padding:0;justify-content:center}
+.agent-client #agentSidebarToggle{display:inline-flex;align-items:center;justify-content:center;flex:0 0 26px;width:26px;height:26px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--foreground);cursor:pointer}
+.agent-client #agentSidebarToggle>svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.agent-client #agentSidebarToggle .msi-sidebar-direction{opacity:0;transition:opacity 150ms ease}
+.agent-client #agentSidebarToggle:is(:hover,:focus-visible) .msi-sidebar-direction{opacity:1}
+.agent-client .agent-title-left>#agentSidebarToggle{flex-basis:28px;width:28px;height:28px}
+.agent-client .agent-title-left>#agentSidebarToggle>svg{width:18px;height:18px;stroke-width:1.8}
+.agent-client #agentSidebarToggle:is(:hover,:focus-visible){background:var(--state-hover)}
+.agent-client .agent-topic-actions>#agentSidebarToggle{flex:0 0 26px;width:26px;height:26px;padding:0;justify-content:center}
 .agent-client[data-theme='dark'] .wzh-chat-session-pen{filter:invert(1)}
 .agent-client .agent-chat-heading>small{font-size:var(--agent-font-caption);color:var(--foreground-secondary);white-space:nowrap}
 .agent-client .agent-conversation .wzh-chat-messages{font-size:var(--agent-font-body);scrollbar-width:thin;scrollbar-color:var(--divider-strong) transparent}

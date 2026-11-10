@@ -30,7 +30,7 @@
 .agent-client>.agent-modal-layer:has(>.agent-settings-dialog[open]){background:rgb(0 0 0 / 36%);backdrop-filter:none;-webkit-backdrop-filter:none}
 .agent-client .msagent-mcp-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:5px;font:var(--agent-font-caption)/1.5 var(--font-sans);color:var(--brand-green);background:var(--agent-success-bg);white-space:nowrap}
 .agent-client .msagent-mcp-badge.is-paused{color:var(--foreground-secondary);background:var(--surface-2)}
-.agent-client .msagent-mcp-section>.wzh-skills-toolbar{padding-bottom:18px;margin-bottom:0;box-shadow:none}
+.agent-client .msagent-mcp-section>.wzh-skills-toolbar{padding-bottom:0;margin-bottom:18px;box-shadow:none}
 .agent-client .msagent-mcp-tabs{display:flex;gap:28px;margin:0;padding:0;border:0;border-radius:0;background:transparent;min-height:32px}
 .agent-client .msagent-mcp-tabs>button{flex:0 0 auto;height:32px;min-height:32px;padding-inline:0;border-radius:0;background:transparent;font-size:var(--agent-font-body)}
 .agent-client .msagent-mcp-tabs>button.is-active{color:var(--brand-blue);background:transparent}
@@ -45,7 +45,7 @@
 .agent-client .msagent-mcp-tools-heading{display:flex;align-items:center;gap:12px;margin:0 0 12px;color:var(--foreground-secondary);font-size:var(--agent-font-caption)}
 .agent-client .msagent-mcp-tools-list .wzh-skills-row{padding-inline:16px}
 .agent-client .msagent-mcp-tool-icon{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border-radius:9px;background:color-mix(in srgb,var(--brand-purple) var(--brand-tint-strong),transparent);color:var(--brand-purple)}
-.agent-client .msagent-mcp-tool-icon>.codicon{font-size:20px}
+.agent-client .msagent-mcp-tool-icon>.agent-svg-icon{width:20px;height:20px}
 .agent-client .msagent-tool-group{margin:0;padding:0 16px 12px 68px}
 .agent-client .msagent-tool-group>summary{display:flex;align-items:center;gap:6px;width:fit-content;list-style:none;cursor:pointer;color:var(--foreground-secondary);font-size:var(--agent-font-caption);line-height:1.8}
 .agent-client .msagent-tool-group>summary::-webkit-details-marker{display:none}

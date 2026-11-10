@@ -11,7 +11,7 @@
     <main class="agent-conversation wzh-chat-panel is-open" aria-label="msAgent 对话">
       <header class="wzh-chat-head">
         <div class="wzh-chat-head-brand agent-chat-heading">
-          <button id="agentSidebarToggle" class="wzh-chat-head-btn" type="button" title="收起主题列表" aria-label="收起主题列表" aria-expanded="true"><span class="codicon codicon-layout-sidebar-left" aria-hidden="true"></span></button>
+          <button id="agentSidebarToggle" class="wzh-chat-head-btn" type="button" title="收起主题列表" aria-label="收起主题列表" aria-expanded="true" aria-controls="agentTopics"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M15 4v16"></path><path class="msi-sidebar-direction" d="M10.75 8.75 7.25 12 10.75 15.25"></path></svg></button>
           <div class="agent-topic-title-editor"><button id="agentTopicTitleButton" class="wzh-chat-session-btn" type="button" title="重命名会话主题"><span id="agentTopicTitle" class="wzh-chat-session-text">训练配置生效检查</span>${img('edit.svg','wzh-chat-session-pen')}</button><input id="agentTopicTitleInput" class="wzh-chat-session-input" type="text" maxlength="40" aria-label="会话主题" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" hidden></div>
           <small id="agentTaskLabel"></small>
         </div>
