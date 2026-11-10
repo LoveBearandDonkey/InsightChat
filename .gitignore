@@ -8,4 +8,7 @@ out
 /tmp/
 
 # 目录联接：指向 D:Projectspto-design-system-wzh（PTO 设计系统），不入库
-vendor
+/vendor/
+
+# Private MindStudio planning belongs in the separate mindstudio-2027 repository.
+/planning/

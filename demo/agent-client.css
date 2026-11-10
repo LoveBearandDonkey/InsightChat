@@ -1,0 +1,192 @@
+/* Standalone client; all rules are scoped so the VS Code shell stays native.
+   Glass tokens are copied verbatim from InsightChat into vendor/insight-surface.css. */
+.agent-client{--agent-text:var(--foreground);--agent-muted:var(--foreground-secondary);--agent-border:var(--divider-strong);--agent-accent:var(--brand-blue);--agent-preview-track:2fr;position:absolute;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:var(--ide-frame-bg);backdrop-filter:var(--ide-frame-backdrop-filter);-webkit-backdrop-filter:var(--ide-frame-backdrop-filter);color:var(--agent-text);border:1px solid var(--divider-strong);border-radius:16px;box-shadow:var(--agent-window-shadow);font:var(--agent-font-body)/1.6 'Segoe UI','Microsoft YaHei',sans-serif;color-scheme:var(--agent-color-scheme);container:agent-window/inline-size;--agent-sidebar-width:240px}
+.agent-client::before{content:'';position:absolute;inset:0;background:var(--ide-aura-bg);pointer-events:none;z-index:0}.agent-client>*{position:relative;z-index:1}.agent-client.is-active{z-index:9}.msi-desktop[data-active-window=main]>.agent-client{z-index:5;box-shadow:var(--agent-window-shadow-inactive)}.msi-desktop[data-active-window=agent]>.ide{z-index:2}.msi-desktop[data-active-window=agent] .msi-taskbar{display:flex}.msi-desktop[data-active-window=main]>.agent-client>.agent-titlebar{opacity:.76}.agent-client.is-maximized{border-radius:0;border:0;box-shadow:none}.agent-client.is-viz-expanding{transition:left 320ms cubic-bezier(.2,0,0,1),width 320ms cubic-bezier(.2,0,0,1),height 320ms cubic-bezier(.2,0,0,1)}.agent-client.is-pointer-active{transition:none}.agent-client button:hover{background:var(--state-hover)}.agent-client button:focus-visible{outline:2px solid var(--brand-blue);outline-offset:-2px}.agent-client .codicon{font-size:16px}.agent-client input,.agent-client textarea{color:var(--agent-text);background:color-mix(in srgb, var(--surface-1) 61%, transparent);border-color:var(--agent-border);border-radius:6px;font-family:inherit}.agent-client input:focus,.agent-client textarea:focus{border-color:var(--divider-strong)}
+
+.agent-titlebar{height:52px;min-height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 10px 0 14px;gap:14px;user-select:none;cursor:grab;touch-action:none}.agent-titlebar:active{cursor:grabbing}.agent-title-left,.agent-title-right{display:flex;align-items:center;gap:12px;min-width:0}.agent-title-left{padding-left:8px}.agent-title-right{gap:4px;flex-shrink:0}.agent-mode-switch{display:flex;align-items:center;border:1px solid var(--divider-strong);border-radius:20px;background:var(--state-hover);padding:3px;gap:2px;box-shadow:inset 0 1px 1px color-mix(in srgb,var(--foreground) 4%,transparent);flex-shrink:0}.agent-mode-switch>button{display:flex;align-items:center;justify-content:center;gap:5px;min-width:32px;height:25px;border-radius:16px;font-size:var(--agent-font-caption);color:var(--foreground-secondary)}.agent-mode-switch>button>.codicon{font-size:var(--agent-font-body)}.agent-mode-switch>button[aria-selected=true]{background:var(--surface-1);color:var(--foreground);box-shadow:0 1px 4px color-mix(in srgb,var(--foreground) 10%,transparent)}.agent-title-divider{width:1px;height:16px;background:var(--surface-2);margin:0 2px;flex-shrink:0}.agent-brand{display:flex;align-items:center;flex-shrink:0}.agent-mcp-status{display:flex;align-items:center;gap:6px;padding:3px 9px;height:26px;border:1px solid var(--divider-strong);border-radius:16px;background:var(--agent-success-bg);color:var(--brand-green);font-size:var(--agent-font-caption);margin-right:8px}.agent-mcp-status>i{width:5px;height:5px;border-radius:50%;background:var(--brand-green)}.agent-mcp-status>small{font:var(--agent-font-caption) Consolas,monospace;min-width:13px;line-height:15px;text-align:center;border-radius:4px;background:var(--agent-success-bg)}.agent-mcp-status>.codicon{font-size:var(--agent-font-caption);opacity:.7}.agent-mcp-status.is-disconnected{color:var(--foreground-secondary);border-color:var(--divider-strong);background:var(--surface-2)}.agent-mcp-status.is-disconnected>i{background:var(--surface-2)}.agent-title-button{display:grid;place-items:center;width:26px;height:26px;border-radius:5px;color:var(--foreground-secondary)}.agent-window-button{width:31px;height:29px;display:grid;place-items:center;border-radius:5px;color:var(--foreground-secondary)}.agent-window-button>.codicon{font-size:var(--agent-font-body)}.agent-window-close:hover{background:var(--danger)!important;color:var(--agent-on-accent)}
+
+.agent-gui{flex:1;min-height:0;display:grid;grid-template-columns:var(--agent-sidebar-width) minmax(380px,1fr) 0px minmax(0,0px);gap:0;padding:0 8px 8px 0;transition:grid-template-columns 320ms cubic-bezier(.2,0,0,1)}.agent-client.has-preview .agent-gui{grid-template-columns:var(--agent-sidebar-width) minmax(380px,1fr) 8px minmax(0,var(--agent-preview-track))}.agent-client.is-sidebar-collapsed .agent-gui{grid-template-columns:0px minmax(380px,1fr) 0px minmax(0,0px)}.agent-client.is-sidebar-collapsed.has-preview .agent-gui{grid-template-columns:0px minmax(380px,1fr) 8px minmax(0,var(--agent-preview-track))}.agent-topics{display:flex;flex-direction:column;overflow:hidden;min-width:0;padding:12px 11px 5px 13px;color:var(--foreground)}.agent-topic-actions{display:flex;align-items:center;gap:4px;margin:0 0 12px}.agent-topic-actions>button{height:31px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--foreground)}.agent-topic-actions>button:first-child{gap:7px;flex:1;justify-content:flex-start;padding:0 8px;background:transparent;border:0;font-size:var(--agent-font-caption)}.agent-topic-actions>button:first-child>span:last-child{font-size:var(--agent-font-caption);margin-left:auto;color:var(--foreground-secondary)}.agent-topic-actions .codicon{font-size:15px}.agent-topic-search{width:100%;padding:5px 8px;font-size:var(--agent-font-caption);margin:0 0 10px;background:color-mix(in srgb, var(--surface-1) 60%, transparent)!important}.agent-topic-group{display:flex;align-items:center;justify-content:space-between;color:var(--foreground);font-size:var(--agent-font-caption);padding:0 9px;margin-bottom:8px}.agent-topic-group>span{font-size:var(--agent-font-caption);color:var(--foreground-secondary)}.agent-topics>nav{flex:1;overflow:auto}.agent-topics>nav>button{display:flex;align-items:center;width:100%;height:36px;gap:8px;padding:0 9px;margin:2px 0;border-radius:7px;text-align:left;color:var(--foreground);font-size:var(--agent-font-caption);white-space:nowrap}.agent-topics>nav>button>.codicon{font-size:var(--agent-font-body);color:var(--foreground-secondary)}.agent-topics>nav>button>span:not(.codicon){overflow:hidden;text-overflow:ellipsis}.agent-topics>nav>button.selected{background:var(--surface-2);color:var(--foreground)}.agent-topics>nav>button.selected>.codicon{color:var(--foreground-secondary)}.agent-topic-done,.agent-topic-running{width:4px;height:4px;background:var(--brand-green);border-radius:50%;margin-left:auto;flex-shrink:0}.agent-topic-running{background:var(--brand-blue);animation:agent-breathe 1s ease infinite}.agent-topic-bottom{border-top:1px solid var(--divider-weak);padding:10px 4px 2px}.agent-topic-bottom>button{display:flex;align-items:center;justify-content:flex-start;gap:8px;width:100%;border-radius:5px;height:30px;font-size:var(--agent-font-caption);text-align:left;color:var(--foreground);padding:0 5px}.agent-topic-bottom>button>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.agent-topic-bottom>button>.codicon{font-size:var(--agent-font-body)}#agentWorkspace>.codicon:last-child{margin-left:auto;font-size:var(--agent-font-caption)}.agent-no-topics{font-size:var(--agent-font-caption);color:var(--foreground);padding:10px}
+
+/* Panel fills and blur are the exact InsightChat pane parameters. */
+.agent-preview{background:var(--ide-frame-pane-fill);border:1px solid var(--ide-frame-pane-border);border-radius:11px;backdrop-filter:var(--ide-frame-pane-backdrop-filter);-webkit-backdrop-filter:var(--ide-frame-pane-backdrop-filter);box-shadow:var(--ide-frame-pane-shadow);overflow:hidden;min-width:0;min-height:0}.agent-handoff-note{font-size:var(--agent-font-caption)!important;padding:8px 10px;border-left:2px solid var(--divider-strong);background:var(--surface-2);color:var(--foreground-secondary)!important}
+
+/* InsightChat-style float → expanded preview: 320 ms geometry and grid transition. */
+.agent-preview{display:flex;flex-direction:column}.agent-preview>header{min-height:43px;height:43px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 9px;border-bottom:0}.agent-preview>header>div{display:flex;align-items:center;gap:3px;min-width:0;overflow:auto;scrollbar-width:none}.agent-preview>header>div>button{display:flex;align-items:center;gap:5px;padding:4px 8px;white-space:nowrap;font-size:var(--agent-font-caption);border-radius:6px;color:var(--foreground-secondary)}.agent-preview>header>div>button[aria-selected=true]{background:var(--agent-danger-bg);color:var(--brand-blue)}.agent-preview>header>div>button .codicon{font-size:var(--agent-font-caption)}.agent-preview>header>button{width:24px;height:24px;display:grid;place-items:center;border-radius:5px;color:var(--foreground-secondary);flex-shrink:0}.agent-preview>header>button>.codicon{font-size:var(--agent-font-body)}.agent-preview-content{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;background:color-mix(in srgb, var(--surface-1) 38%, transparent)}.agent-preview-content>iframe{border:0;flex:1;min-height:0;width:100%;background:var(--surface-2)}.agent-preview-resize{cursor:col-resize;position:relative;z-index:4;min-width:0}.agent-preview-resize:before{content:'';position:absolute;width:2px;left:3px;top:14px;bottom:14px;background:transparent;border-radius:2px;transition:background 120ms}.agent-preview-resize:hover:before,.agent-preview-resize:focus-visible:before{background:var(--agent-accent-tint)}.agent-source-toolbar{display:flex;align-items:center;justify-content:space-between;gap:7px;padding:10px 13px;background:var(--agent-danger-bg);border-bottom:1px solid var(--divider-strong);font-size:var(--agent-font-caption);color:var(--foreground-secondary);min-height:36px;flex-shrink:0}.agent-source-toolbar>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.agent-source-toolbar>button{font-size:var(--agent-font-caption);color:var(--brand-blue);border:1px solid var(--divider-strong);border-radius:4px;padding:3px 7px;white-space:nowrap}.agent-source-code{font:var(--agent-font-caption)/21px Consolas,'Courier New',monospace;margin:0;padding:12px 0 24px;color:var(--brand-blue);overflow:auto;min-height:0;flex-shrink:0;background:color-mix(in srgb, var(--surface-1) 31%, transparent)}.agent-source-code>span{display:block;white-space:pre;min-height:21px;padding-right:20px}.agent-source-code>span>i{display:inline-block;font:inherit;min-width:38px;text-align:right;padding-right:13px;color:var(--foreground-secondary);user-select:none}.agent-source-code>.agent-code-highlight{background:var(--agent-warning-bg);border-left:2px solid var(--divider-strong)}.agent-source-code>.agent-diff-removed{background:var(--agent-warning-bg);color:var(--danger)}.agent-source-code>.agent-diff-added{background:var(--agent-success-bg);color:var(--brand-green)}.agent-diff-caption{font-size:var(--agent-font-caption);color:var(--foreground-secondary);padding:6px 13px;background:var(--surface-2);border-bottom:1px solid var(--divider-strong)}.agent-preview-empty{display:grid;place-content:center;min-height:250px;font-size:var(--agent-font-caption);color:var(--foreground-secondary)}.agent-report{padding:26px 23px;color:var(--foreground-secondary);font-size:var(--agent-font-caption);line-height:1.9}.agent-report>small{font-size:var(--agent-font-caption);letter-spacing:1.6px;color:var(--foreground-secondary)}.agent-report>h2{font-size:23px;letter-spacing:-.7px;font-weight:400;color:var(--brand-blue);margin:8px 0}.agent-report>p{color:var(--foreground-secondary);font:var(--agent-font-caption) Consolas,monospace}.agent-report dl{margin:24px 0}.agent-report dt{font-size:var(--agent-font-caption);color:var(--foreground-secondary);margin-top:15px}.agent-report dd{margin:3px 0 0;padding-bottom:10px;border-bottom:1px solid var(--divider-strong);color:var(--foreground-secondary)}.agent-report>button{background:var(--brand-blue);color:var(--agent-on-accent);border-radius:5px;padding:6px 12px;font-size:var(--agent-font-caption)}
+
+.agent-tui{flex:1;min-height:0;margin:0 8px 8px;background:var(--surface-1);border:1px solid var(--divider-strong);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;font:var(--agent-font-caption)/1.9 'Cascadia Code',Consolas,'Microsoft YaHei',monospace;color:var(--foreground-secondary)}.agent-tui-log{flex:1;overflow:auto;padding:20px 28px;min-height:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--agent-font-caption)}.agent-tui-request{color:var(--foreground-secondary);margin:20px 0 15px;padding:9px 12px;background:var(--agent-accent-tint);border-left:2px solid var(--divider-strong)}.agent-tui-response{color:var(--foreground-secondary);line-height:1.95;margin:15px 0 23px;padding-left:15px}.agent-tui>form{display:flex;align-items:center;gap:12px;margin:0 22px 10px;padding:12px 13px;border:1px solid var(--divider-strong);border-radius:6px;background:var(--surface-1)}.agent-tui>form>label{color:var(--brand-blue)}.agent-tui>form>input{flex:1;min-width:0;background:transparent;border:0;color:var(--foreground-secondary);padding:0;border-radius:0;font:var(--agent-font-caption)/1.8 Consolas,'Microsoft YaHei',monospace}.agent-tui>form>input::placeholder{color:var(--foreground)}.agent-tui>form>button{font-size:var(--agent-font-caption);color:var(--foreground-secondary);border:1px solid var(--divider-strong);border-radius:4px;padding:2px 7px}.agent-tui>footer{padding:0 25px 14px;display:flex;justify-content:space-between;gap:12px;color:var(--foreground);font-size:var(--agent-font-caption)}.agent-tui>footer b{font-weight:400;color:var(--brand-blue)}
+
+/* Configuration dialog: direction tabs distinguish consumer and provider roles. */.agent-trial-dialog:not([open]){display:none}.agent-trial-dialog{padding:24px;width:490px;border-radius:12px;background:var(--surface-1);color:var(--foreground-secondary);color-scheme:var(--agent-color-scheme);border:1px solid var(--divider-strong);box-shadow:var(--agent-window-shadow)}.agent-trial-dialog>header{display:flex;align-items:center;justify-content:space-between}.agent-trial-dialog h2{font-size:20px;font-weight:500;margin:4px 0 10px;color:var(--foreground)}.agent-trial-dialog small{font-size:var(--agent-font-caption);letter-spacing:1.5px;color:var(--foreground-secondary)}.agent-trial-dialog>header>button{width:24px;height:24px;display:grid;place-items:center;color:var(--foreground-secondary)}.agent-trial-dialog p{font-size:var(--agent-font-caption);color:var(--foreground-secondary);line-height:1.9}.agent-trial-dialog label{display:block;font-size:var(--agent-font-caption);color:var(--foreground-secondary);margin:17px 0 6px}.agent-trial-dialog select{width:100%;padding:7px 9px;background:var(--surface-2);border:1px solid var(--divider-strong);color:var(--foreground-secondary);border-radius:5px;font-size:var(--agent-font-caption)}.agent-trial-fields{display:grid;grid-template-columns:1fr 1fr;gap:16px}.agent-trial-scope{font-size:var(--agent-font-caption)!important;background:var(--surface-2);padding:9px;border-radius:5px;margin-top:20px!important}.agent-trial-dialog>footer{display:flex;justify-content:flex-end;margin-top:20px}.agent-trial-dialog>footer>button{background:var(--brand-blue);color:var(--agent-on-accent);border-radius:5px;padding:7px 14px;font-size:var(--agent-font-caption)}.agent-notice{position:absolute;bottom:19px;left:50%;transform:translateX(-50%);max-width:80%;background:var(--agent-warning-bg);border:1px solid var(--divider-strong);border-radius:8px;padding:9px 15px;color:var(--foreground-secondary);font-size:var(--agent-font-caption);box-shadow:0 4px 14px color-mix(in srgb,var(--foreground) 10%,transparent);z-index:20;text-align:center}
+
+.agent-resize{position:absolute!important;z-index:12!important;touch-action:none}.agent-client.is-maximized>.agent-resize{display:none}.agent-resize--n{top:0;left:12px;right:12px;height:6px;cursor:n-resize}.agent-resize--s{bottom:0;left:12px;right:12px;height:6px;cursor:s-resize}.agent-resize--e{right:0;top:12px;bottom:12px;width:6px;cursor:e-resize}.agent-resize--w{left:0;top:12px;bottom:12px;width:6px;cursor:w-resize}.agent-resize--ne{top:0;right:0;width:14px;height:14px;cursor:ne-resize}.agent-resize--se{bottom:0;right:0;width:14px;height:14px;cursor:se-resize}.agent-resize--sw{bottom:0;left:0;width:14px;height:14px;cursor:sw-resize}.agent-resize--nw{top:0;left:0;width:14px;height:14px;cursor:nw-resize}body.is-agent-dragging,body.is-agent-dragging *{user-select:none!important}body.is-agent-dragging iframe{pointer-events:none!important}@keyframes agent-breathe{50%{opacity:.3}}
+@container agent-window (max-width:1050px){.agent-title-left{gap:8px}.agent-titlebar{padding-left:12px;gap:7px}.agent-mcp-status{margin-right:4px}}
+@container agent-window (max-width:760px){.agent-titlebar{padding-right:6px}.agent-window-button{width:27px}.agent-mcp-status{padding:3px 7px;font-size:var(--agent-font-caption);gap:4px}.agent-mcp-status>small{display:none}.agent-title-right>.agent-title-divider{display:none}.agent-title-right{gap:1px}.agent-topics{padding-left:8px;padding-right:8px;color:var(--foreground)}.agent-topic-group>span{display:none}.agent-topic-actions>button:first-child>span:last-child{display:none}.agent-topics>nav>button{font-size:var(--agent-font-caption);padding:0 6px;gap:6px;color:var(--foreground)}.agent-topic-bottom>button{font-size:var(--agent-font-caption);color:var(--foreground)}.agent-tui-log{padding:17px 20px}.agent-tui>footer>span:last-child{display:none}}
+@media(prefers-reduced-motion:reduce){.agent-client,.agent-gui{transition:none!important}.agent-topic-running{animation:none}}
+.agent-client{--font-mono:Consolas,monospace;--agent-sidebar-width:240px}
+
+/* Semantic theme roles: shared by all three source themes. */
+.agent-brand{font-size:var(--agent-font-body);font-weight:700;white-space:nowrap}
+.agent-brand-lockup{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.agent-brand-logo{display:block;width:20px;height:20px;flex-shrink:0;object-fit:contain;border-radius:4px}
+.agent-client.is-window-dragging{will-change:transform}
+.agent-svg-icon{display:inline-block;width:18px;height:18px;flex-shrink:0;background-color:currentColor;-webkit-mask-image:var(--agent-icon-url);mask-image:var(--agent-icon-url);-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
+.agent-svg-icon-cursor-click{--agent-icon-url:url('../src/pic/icon/cursor-click.svg')}
+.agent-svg-icon-terminal{--agent-icon-url:url('../src/pic/icon/terminal.svg')}
+.agent-svg-icon-cursor{--agent-icon-url:url('../src/pic/icon/cursor.svg')}
+.agent-svg-icon-codex{--agent-icon-url:url('../src/pic/icon/codex.svg')}
+.agent-client{color:var(--foreground);border-color:var(--divider-strong);box-shadow:var(--agent-window-shadow);color-scheme:var(--agent-color-scheme);--agent-sidebar-width:240px}
+.msi-desktop[data-active-window=main]>.agent-client{box-shadow:var(--agent-window-shadow-inactive)}
+.agent-client .agent-brand{color:var(--foreground)}
+.agent-client .agent-tui-response{color:var(--foreground-secondary)}
+.agent-client .agent-theme-toggle{display:grid;place-items:center;width:26px;height:26px;padding:0;margin-right:5px;border-radius:6px;color:var(--foreground-secondary)}
+.agent-theme-toggle>.codicon{font-size:var(--agent-font-body)}
+.agent-client .agent-theme-toggle:hover{background:var(--state-hover);color:var(--brand-blue)}
+.agent-client .agent-mcp-status{background:var(--agent-success-bg);border-color:color-mix(in srgb,var(--brand-green) 24%,transparent);color:var(--brand-green)}
+.agent-client .agent-mcp-status>i,.agent-client .agent-topic-done{background:var(--brand-green)}
+.agent-client .agent-mcp-status.is-disconnected{background:var(--surface-2);color:var(--foreground-placeholder);border-color:var(--divider-strong)}
+.agent-client .agent-mcp-status.is-disconnected>i{background:var(--foreground-placeholder)}
+.agent-client .agent-topics>nav>button.selected{background:color-mix(in srgb,var(--brand-accent) var(--brand-tint),transparent);color:var(--brand-accent)}
+.agent-client .agent-topics>nav>button.selected>.codicon{color:var(--brand-accent)}
+.agent-client .agent-tui{background:var(--surface-1);color:var(--foreground);border-color:var(--divider-strong)}
+.agent-client .agent-tui-request,.agent-client .agent-tui>form>input{color:var(--foreground)}
+.agent-client .agent-tui>form{background:var(--surface-2);border-color:var(--border-line)}
+.agent-client .agent-tui>form>input::placeholder{color:var(--foreground-placeholder)}
+.agent-client .agent-tui-request{background:var(--agent-question-bg);border-left-color:var(--brand-blue)}
+.agent-client .agent-preview-content{background:transparent}
+.agent-client .agent-preview-content>iframe{background:var(--surface-1)}
+.agent-client .agent-source-code{background:var(--surface-1);color:var(--foreground)}
+.agent-client .agent-source-code>.agent-diff-removed{background:var(--agent-danger-bg);color:var(--danger)}
+.agent-client .agent-source-code>.agent-diff-added{background:var(--agent-success-bg);color:var(--brand-green)}
+.agent-client .agent-source-code>.agent-code-highlight{background:var(--agent-warning-bg);border-left-color:var(--warning)}
+.agent-client .agent-notice{background:var(--agent-warning-bg);border-color:var(--divider-strong);color:var(--foreground)}
+.agent-trial-dialog{background:var(--ide-frame-bg);backdrop-filter:var(--ide-frame-backdrop-filter);-webkit-backdrop-filter:var(--ide-frame-backdrop-filter);color:var(--foreground);border-color:var(--divider-strong);color-scheme:var(--agent-color-scheme)}
+.agent-trial-dialog h2{color:var(--foreground)}
+.agent-trial-dialog>footer>button{background:var(--brand-blue);color:var(--agent-on-accent)}
+.agent-trial-dialog>footer>button:hover{background:color-mix(in srgb,var(--brand-blue) 84%,#000)}
+/* One MCP server exposes tools grouped into two-column capability cards. */
+@container agent-window (max-width:760px){.agent-theme-toggle>span:not(.codicon){display:none}.agent-client .agent-theme-toggle{padding:0 5px;margin:0}}
+.agent-client .agent-theme-icon{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.4;flex-shrink:0}
+
+/* Application-modal layers are clipped to the client, never to the browser viewport.
+   Dialogs use their open attribute, not the browser's global modal top layer. */
+.agent-client>.agent-modal-layer{
+  position:absolute!important;
+  inset:0;
+  z-index:30;
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr);
+  place-items:center;
+  padding:18px;
+  overflow:hidden;
+  border-radius:inherit;
+  background:var(--agent-overlay-bg);
+  backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:blur(3px);
+}
+.agent-modal-layer .agent-trial-dialog{
+  position:relative;
+  inset:auto;
+  margin:0;
+  width:490px;
+  min-width:0;
+  max-width:100%;
+  max-height:100%;
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+.agent-client>.agent-notice{z-index:40}
+
+/* Terminal welcome: selectable block glyphs with an ANSI-style blue palette. */
+.agent-tui-context{display:none;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--foreground-secondary);font-size:var(--agent-font-caption)}
+.agent-client.is-tui .agent-tui-context{display:block}
+.agent-tui-launch{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;margin:0 0 24px;font:var(--agent-font-caption)/1.8 'Cascadia Code',Consolas,monospace;color:var(--foreground-secondary)}
+.agent-tui-launch>span:first-child{overflow-wrap:anywhere}.agent-tui-shell-prompt{color:var(--brand-green)}.agent-tui-launch>code{font:inherit;color:var(--foreground)}
+/* Reserve bottom rows for input and hints; only output scrolls. */
+.agent-client .agent-tui{flex:1 1 0;min-height:0}
+.agent-client .agent-tui-log{flex:1 1 0;min-width:0;overscroll-behavior:contain}
+.agent-client .agent-tui>form{flex:0 0 auto;margin:0 22px 8px}
+.agent-client .agent-tui>footer{flex:0 0 auto;font-size:var(--agent-font-caption);color:var(--foreground-secondary)}
+.agent-client .agent-tui-log{white-space:normal;padding:24px 30px;scrollbar-width:thin;scrollbar-color:var(--divider-strong) transparent}
+.agent-tui-welcome{--tui-blue-start:color-mix(in srgb,var(--brand-blue) 65%,var(--foreground));--tui-blue-end:color-mix(in srgb,var(--brand-blue) 65%,var(--surface-1));--tui-blue-ink:var(--brand-blue);--tui-rule:var(--divider-strong);position:relative;margin:8px 0 18px;border:1px solid var(--tui-rule);border-radius:7px;color:var(--foreground-secondary);font:var(--agent-font-caption)/1.8 'Cascadia Code',Consolas,'Microsoft YaHei',monospace}
+.agent-tui-banner-title{position:absolute;top:-12px;left:20px;right:20px;display:flex;align-items:center;justify-content:space-between;gap:10px;line-height:22px;color:var(--tui-blue-ink)}
+.agent-tui-banner-title>span,.agent-tui-banner-title>small{padding:0 9px;background:var(--surface-1);white-space:nowrap}
+.agent-tui-banner-title>span{font-size:var(--agent-font-caption)}.agent-tui-banner-title b{font-weight:600}.agent-tui-banner-title>small{font-size:var(--agent-font-caption);color:var(--foreground-secondary)}
+.agent-tui-banner-body{padding:28px 24px 0}
+.agent-tui-wordmark{position:relative;max-width:100%;overflow-x:auto;margin:2px 0 26px;scrollbar-width:thin;scrollbar-color:var(--divider-strong) transparent}
+.agent-tui-wordmark pre{margin:0;padding:2px 3px 4px 0;font:clamp(12px,1.4cqw,14px)/1.2 'Cascadia Code',Consolas,monospace;letter-spacing:0;white-space:pre;background:linear-gradient(105deg,var(--tui-blue-start),var(--brand-blue) 55%,var(--tui-blue-end));background-clip:text;-webkit-background-clip:text;color:transparent;filter:drop-shadow(1px 2px 0 color-mix(in srgb,var(--tui-blue-start) 40%,transparent))}
+.agent-tui-tagline{margin:0 0 22px;font-size:var(--agent-font-caption);line-height:1.9;color:var(--foreground)}
+.agent-tui-tagline strong{color:var(--tui-blue-ink);font-weight:600}.agent-tui-tagline>span{color:var(--foreground-secondary);font-size:var(--agent-font-caption)}
+.agent-tui-config{display:grid;grid-template-columns:minmax(180px,.9fr) minmax(0,1.25fr);gap:26px;padding-bottom:21px}
+.agent-tui-runtime{margin:0}.agent-tui-runtime>div{display:grid;grid-template-columns:70px minmax(0,1fr);gap:8px;margin-bottom:6px}.agent-tui-runtime dt{color:var(--tui-blue-ink);font-weight:600}.agent-tui-runtime dt>span,.agent-tui-skills h3>span{font-weight:400;color:var(--foreground-secondary)}
+.agent-tui-runtime dd{margin:0;overflow-wrap:anywhere;color:var(--foreground-secondary)}
+.agent-tui-welcome small{font-weight:400}.agent-tui-runtime dd>small,.agent-tui-skills h3>small{font-size:var(--agent-font-caption);color:var(--foreground-secondary);margin-left:6px}
+.agent-tui-welcome ul{list-style:none;margin:0;padding:0}.agent-tui-welcome li{position:relative;padding-left:12px;overflow-wrap:anywhere;line-height:1.9}.agent-tui-welcome li:before{content:'─';position:absolute;left:0;color:var(--tui-rule)}
+.agent-tui-runtime li{padding-left:0}.agent-tui-runtime li:before{content:none}.agent-tui-runtime li.is-disabled{color:var(--foreground-placeholder)}
+.agent-tui-skills{min-width:0}.agent-tui-skills h3{font-size:var(--agent-font-caption);font-weight:600;color:var(--tui-blue-ink);margin:0 0 6px}.agent-tui-skills li{font-size:var(--agent-font-caption)}
+.agent-tui-welcome-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px dashed var(--tui-rule);padding:11px 0;font-size:var(--agent-font-caption);color:var(--foreground-secondary)}
+.agent-tui-welcome-bottom button{color:var(--tui-blue-ink);font:inherit;white-space:nowrap;padding:2px 0 2px 8px}
+.agent-tui-start{display:flex;align-items:baseline;gap:10px;color:var(--foreground-secondary);font-size:var(--agent-font-caption);margin:0 1px 12px}.agent-tui-start>button{color:var(--foreground-secondary);text-align:left;font:var(--agent-font-caption)/1.8 'Cascadia Code',Consolas,'Microsoft YaHei',monospace;padding:0;overflow-wrap:anywhere}.agent-tui-start>span{flex-shrink:0}
+.agent-tui-quick-commands{display:flex;gap:22px;margin:0 1px 15px}.agent-tui-quick-commands>button{font:var(--agent-font-caption)/1.8 Consolas,monospace;color:var(--brand-blue);padding:0}.agent-tui-quick-commands>button>span{font:var(--agent-font-caption) 'Microsoft YaHei',sans-serif;color:var(--foreground-secondary);margin-left:3px}
+.agent-client .agent-tui-request,.agent-client .agent-tui-response{white-space:pre-wrap}
+.agent-tui-welcome button:focus-visible,.agent-tui-start button:focus-visible,.agent-tui-quick-commands button:focus-visible{outline:2px solid var(--brand-blue);outline-offset:4px;border-radius:2px}
+@media(hover:hover){.agent-tui-welcome-bottom button:hover,.agent-tui-start button:hover,.agent-tui-quick-commands>button:hover{color:var(--brand-blue);text-decoration:underline;text-underline-offset:4px}}
+.agent-tui-welcome.is-entering .agent-tui-wordmark pre{background-size:220% 100%;animation:agent-tui-sweep 1.15s ease-out both}
+.agent-tui-welcome.is-entering .agent-tui-tagline,.agent-tui-welcome.is-entering .agent-tui-config{animation:agent-tui-reveal .55s .12s ease-out both}
+@keyframes agent-tui-sweep{0%{opacity:.25;background-position:100% 0;clip-path:inset(0 100% 0 0)}45%{opacity:1;clip-path:inset(0)}100%{opacity:1;background-position:0 0;clip-path:inset(0)}}
+@keyframes agent-tui-reveal{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+@container agent-window (max-width:680px){.agent-client .agent-tui-log{padding:20px}.agent-tui-banner-body{padding:25px 18px 0}.agent-tui-config{grid-template-columns:minmax(0,1fr);gap:14px}.agent-tui-runtime>div{grid-template-columns:68px minmax(0,1fr)}.agent-tui-wordmark{margin-bottom:21px}.agent-tui-tagline{margin-bottom:18px}.agent-tui-skills li{font-size:var(--agent-font-caption)}.agent-tui-welcome-bottom{font-size:var(--agent-font-caption)}}
+@container agent-window (max-width:440px){.agent-client .agent-tui-log{padding:18px 12px}.agent-tui-banner-body{padding:24px 12px 0}.agent-tui-banner-title{left:8px;right:8px}.agent-tui-banner-title>span{font-size:var(--agent-font-caption)}.agent-tui-banner-title>small{font-size:var(--agent-font-caption)}.agent-tui-wordmark pre{font-size:var(--agent-font-caption)}.agent-tui-welcome-bottom>span{max-width:60%}.agent-tui-quick-commands{gap:16px}}
+@media(prefers-reduced-motion:reduce){.agent-tui-welcome.is-entering .agent-tui-wordmark pre,.agent-tui-welcome.is-entering .agent-tui-tagline,.agent-tui-welcome.is-entering .agent-tui-config{animation:none}}
+
+/* Body text is 14px; labels, metadata and hints use the 12px minimum. */
+.agent-client,.agent-trial-dialog{font-size:var(--agent-font-body)}
+.agent-client small,.agent-trial-dialog small{font-size:var(--agent-font-caption)}
+.agent-client .agent-topics>nav>button,
+.agent-client .agent-topic-actions>button:first-child,
+.agent-client .agent-topic-bottom>button,
+.agent-client .agent-topic-search,
+.agent-client .agent-source-code,
+.agent-client .agent-report,
+.agent-client .agent-tui,
+.agent-client .agent-tui-log,
+.agent-client .agent-tui>form>input,
+.agent-client .agent-tui-tagline,
+.agent-client .agent-tui-start>button,
+.agent-trial-dialog p,
+.agent-trial-dialog select{font-size:var(--agent-font-body)}
+.agent-tui-wordmark pre{width:max-content;margin-inline:auto}
+.agent-tui-banner-title{line-height:24px}
+.agent-tui-banner-title>small{flex-shrink:0}
+.agent-tui-runtime>div{grid-template-columns:80px minmax(0,1fr)}
+.agent-tui-config{grid-template-columns:minmax(0,.9fr) minmax(0,1.25fr);gap:20px}
+.agent-client .agent-tui-response{color:var(--foreground)}
+.agent-client .agent-title-button,.agent-client .agent-window-button,
+.agent-client .agent-theme-toggle,.agent-client .agent-mode-switch>button{color:var(--foreground)}
+.agent-client .agent-title-divider{background:var(--divider-strong)}
+.agent-client .agent-source-toolbar,.agent-client .agent-preview>header>div>button[aria-selected=true]{background:var(--agent-accent-tint)}
+.agent-client .agent-preview>header>div>button[aria-selected=true]{color:var(--brand-blue)}
+.agent-client .agent-tui>footer{flex-wrap:wrap;row-gap:4px}
+.agent-client .agent-topic-actions>button:first-child>span:last-child{margin-left:6px}
+
+.agent-client .agent-source-toolbar>button{
+  background:var(--button-secondary-bg);border:1px solid var(--button-secondary-border);
+  color:var(--button-secondary-fg);border-radius:var(--button-radius);box-shadow:none;
+}
+
+.agent-client .agent-source-toolbar>button:hover,
+.agent-client .agent-source-toolbar>button:focus-visible{
+  background:var(--button-secondary-bg);border-color:var(--brand-blue);color:var(--brand-blue);box-shadow:none;
+}
+
+.agent-client .agent-source-toolbar>button:active{background:var(--button-secondary-bg-press)}
+@container agent-window (max-width:800px){
+  .agent-tui-config{grid-template-columns:minmax(0,1fr);gap:14px}
+  .agent-client .agent-title-right{gap:2px}
+}
+@container agent-window (max-width:620px){
+  .agent-client .agent-topic-actions>button:first-child>span:last-child{display:none}
+  .agent-client .agent-tui>form{margin-inline:12px}
+}
+@container agent-window (max-width:760px){
+  .agent-client>.agent-modal-layer{padding:12px}
+}

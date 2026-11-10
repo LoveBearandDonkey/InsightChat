@@ -1,0 +1,220 @@
+/* Exact theme tokens extracted from user-provided InsightChat app/chat.css.
+   Names and values follow InsightChat/theme table. Client-only scope. */
+.agent-client, .agent-mcp-dialog, .agent-trial-dialog, :root[data-agent-theme] {
+  --agent-font-body: 14px;
+  --agent-font-caption: 12px;
+  /* Capacity breakdown uses the theme table's memory palette (08/03/04/01/05). */
+  --agent-chart-base: var(--foreground-secondary);
+  --agent-text: var(--foreground);
+  --agent-muted: var(--foreground-secondary);
+  --agent-border: var(--divider-strong);
+  --agent-accent: var(--brand-blue);
+  --agent-on-accent: #fff;
+  --agent-overlay-bg: rgb(0 0 0 / 38%);
+  --button-secondary-bg: color-mix(in srgb, var(--surface-2) 92%, white 3%);
+  --button-secondary-border: var(--divider-strong);
+  --button-secondary-fg: var(--foreground);
+  --button-secondary-bg-press: var(--button-secondary-bg);
+  --button-secondary-shadow: none;
+  --button-radius: 12px;
+  --button-disabled-opacity: .42;
+  --ide-frame-title-font: 600 var(--agent-font-body) / 1.2 var(--font-sans);
+  --ide-frame-meta-font: 500 var(--agent-font-caption) / 1.35 var(--font-mono);
+  --agent-card-bg: var(--surface-1);
+  --agent-accent-tint: color-mix(in srgb, var(--brand-blue) var(--brand-tint), transparent);
+  --agent-accent-border: color-mix(in srgb, var(--brand-blue) var(--brand-tint-border), transparent);
+  --agent-success-bg: color-mix(in srgb, var(--brand-green) 12%, var(--surface-1));
+  --agent-danger-bg: color-mix(in srgb, var(--danger) 10%, var(--surface-1));
+  --agent-warning-bg: color-mix(in srgb, var(--warning) 10%, var(--surface-1));
+  --agent-question-bg: color-mix(in srgb, var(--brand-blue) var(--brand-tint), var(--agent-question-base));
+  --agent-input-gradient: linear-gradient(90deg, var(--brand-blue), var(--brand-purple));
+  --agent-window-shadow: inset 0 1px 0 rgb(255 255 255 / 12%), 0 12px 30px rgb(0 0 0 / 30%), 0 34px 80px rgb(0 0 0 / 25%);
+  --agent-window-shadow-inactive: inset 0 1px 0 rgb(255 255 255 / 12%), 0 8px 22px rgb(0 0 0 / 19%), 0 24px 56px rgb(0 0 0 / 15%);
+}
+.agent-client[data-theme='dark'], .agent-mcp-dialog[data-theme='dark'], .agent-trial-dialog[data-theme='dark'], :root[data-agent-theme='chase'] {
+  --agent-color-scheme: dark;
+  --agent-input-gradient: linear-gradient(90deg, color-mix(in srgb, var(--brand-blue) 60%, var(--surface-1)), color-mix(in srgb, var(--brand-purple) 60%, var(--surface-1)));
+}
+.agent-client[data-theme='light'], .agent-mcp-dialog[data-theme='light'], .agent-trial-dialog[data-theme='light'], :root[data-agent-theme='calc'], :root[data-agent-theme='infinite'] {
+  --agent-color-scheme: light;
+  --button-secondary-bg: color-mix(in srgb, var(--surface-1) 92%, var(--surface-2));
+  --agent-window-shadow: inset 0 1px 0 rgb(255 255 255 / 65%), 0 10px 28px rgb(16 39 75 / 18%), 0 28px 72px rgb(16 39 75 / 15%);
+  --agent-window-shadow-inactive: inset 0 1px 0 rgb(255 255 255 / 65%), 0 7px 18px rgb(16 39 75 / 11%), 0 20px 48px rgb(16 39 75 / 10%);
+}
+.agent-client[data-theme-id="chase"],
+.agent-mcp-dialog[data-theme-id="chase"],
+.agent-trial-dialog[data-theme-id="chase"],
+:root[data-agent-theme="chase"] {
+  --ark-neutral-0: #0b0b0b;
+  --ark-neutral-1: #101010;
+  --ark-neutral-2: #141414;
+  --ark-neutral-3: #1a1a1a;
+  --ark-neutral-4: #343434;
+  --ark-blue-500: #4369efff;
+  --ark-blue-600: #5a92e6;
+  --ark-green-500: #04d793ff;
+  --ark-orange-500: #ffaa3bff;
+  --ark-red-500: #ff4b7bff;
+  --brand-blue: #317AF7;
+  --brand-blue-disabled: #264DAB;
+  --brand-green: #5BA854;
+  --brand-accent: #317AF7;
+  --brand-purple: #6A29AB;
+  --agent-chart-weight: #5D89F3;
+  --agent-chart-gradient: #9086F9;
+  --agent-chart-optimizer: #F48B57;
+  --agent-chart-activation: #F67399;
+  --agent-chart-reserve: #3AB7CD;
+  --brand-tint: 20%;
+  --brand-tint-border: 40%;
+  --brand-tint-strong: 26%;
+  --card-neutral-bg: rgba(255, 255, 255, .03);
+  --card-neutral-border: rgba(255, 255, 255, .05);
+  --card-neutral-press: rgba(255, 255, 255, .05);
+  --background: var(--ark-neutral-1);
+  --background-elevated: var(--ark-neutral-2);
+  --surface-1: #161616;
+  --surface-2: #1c1c1c;
+  --surface-3: #262626;
+  --surface-4: #313131;
+  --foreground: #E6E6E6;
+  --foreground-secondary: #B3B3B3;
+  --foreground-muted: #B3B3B3;
+  --foreground-disabled: #808080;
+  --foreground-placeholder: #808080;
+  --divider-weak: rgba(255, 255, 255, .10);
+  --divider-strong: rgba(255, 255, 255, .10);
+  --border-line: rgba(255, 255, 255, .10);
+  --warning: var(--ark-orange-500);
+  --danger: var(--ark-red-500);
+  --focus-ring: color-mix(in srgb, var(--brand-blue) 8%, transparent);
+  --state-hover: rgba(255, 255, 255, 0.06);
+  --state-press: rgba(255, 255, 255, 0.10);
+  --state-muted: rgba(255, 255, 255, 0.06);
+  --state-selected: rgba(67, 105, 239, 0.14);
+  --state-focus: rgba(67, 105, 239, 0.20);
+  --surface-disabled: rgba(255, 255, 255, 0.04);
+  --surface-backdrop-filter: none;
+  --surface-backdrop-filter-soft: none;
+  --surface-backdrop-filter-strong: none;
+  color-scheme: dark;
+  --agent-question-base: var(--surface-2);
+}
+.agent-client[data-theme-id="infinite"],
+.agent-mcp-dialog[data-theme-id="infinite"],
+.agent-trial-dialog[data-theme-id="infinite"],
+:root[data-agent-theme="infinite"] {
+  --ark-neutral-0: #FFFFFF;
+  --ark-neutral-1: #F5F5F5;
+  --ark-neutral-2: #FFFFFF;
+  --ark-neutral-3: #F2F2F2;
+  --ark-neutral-4: #E6E6E6;
+  --ark-blue-500: #4369efff;
+  --ark-blue-600: #5a92e6;
+  --ark-green-500: #04d793ff;
+  --ark-orange-500: #ffaa3bff;
+  --ark-red-500: #ff4b7bff;
+  --brand-blue: #0A59F7;
+  --brand-blue-disabled: #9DBDFC;
+  --brand-green: #09AA71;
+  --brand-accent: #0A59F7;
+  --brand-purple: #8A21BC;
+  --agent-chart-weight: #2070F3;
+  --agent-chart-gradient: #715AFB;
+  --agent-chart-optimizer: #F4840C;
+  --agent-chart-activation: #F470AB;
+  --agent-chart-reserve: #55CCD9;
+  --brand-tint: 8%;
+  --brand-tint-border: 20%;
+  --brand-tint-strong: 12%;
+  --card-neutral-bg: rgba(0, 0, 0, .03);
+  --card-neutral-border: rgba(0, 0, 0, .04);
+  --card-neutral-press: rgba(0, 0, 0, .05);
+  --background: var(--ark-neutral-1);
+  --background-elevated: var(--ark-neutral-2);
+  --surface-1: #FFFFFF;
+  --surface-2: #F2F2F2;
+  --surface-3: #E6E6E6;
+  --surface-4: #CCCCCC;
+  --foreground: #191919;
+  --foreground-secondary: #777777;
+  --foreground-muted: #777777;
+  --foreground-disabled: #AEAEAE;
+  --foreground-placeholder: #AEAEAE;
+  --divider-weak: #F3F3F3;
+  --divider-strong: #DFDFDF;
+  --border-line: #C9C9C9;
+  --warning: var(--ark-orange-500);
+  --danger: var(--ark-red-500);
+  --focus-ring: color-mix(in srgb, var(--brand-blue) 8%, transparent);
+  --state-hover: rgba(0, 0, 0, 0.05);
+  --state-press: rgba(0, 0, 0, 0.09);
+  --state-muted: rgba(0, 0, 0, 0.05);
+  --state-selected: rgba(67, 105, 239, 0.10);
+  --state-focus: rgba(67, 105, 239, 0.16);
+  --surface-disabled: rgba(0, 0, 0, 0.04);
+  --surface-backdrop-filter: none;
+  --surface-backdrop-filter-soft: none;
+  --surface-backdrop-filter-strong: none;
+  color-scheme: light;
+  --agent-question-base: var(--surface-1);
+}
+.agent-client[data-theme-id="calc"],
+.agent-mcp-dialog[data-theme-id="calc"],
+.agent-trial-dialog[data-theme-id="calc"],
+:root[data-agent-theme="calc"] {
+  --ark-neutral-0: #FFFFFF;
+  --ark-neutral-1: #F5F5F5;
+  --ark-neutral-2: #FFFFFF;
+  --ark-neutral-3: #F2F2F2;
+  --ark-neutral-4: #E6E6E6;
+  --ark-blue-500: #4369efff;
+  --ark-blue-600: #5a92e6;
+  --ark-green-500: #04d793ff;
+  --ark-orange-500: #ffaa3bff;
+  --ark-red-500: #ff4b7bff;
+  --brand-blue: #0077FF;
+  --brand-blue-disabled: #B8D9FF;
+  --brand-green: #2DB47C;
+  --brand-accent: #0077FF;
+  --brand-purple: #6D47F5;
+  --agent-chart-weight: #2070F3;
+  --agent-chart-gradient: #715AFB;
+  --agent-chart-optimizer: #F4840C;
+  --agent-chart-activation: #F470AB;
+  --agent-chart-reserve: #55CCD9;
+  --brand-tint: 8%;
+  --brand-tint-border: 20%;
+  --brand-tint-strong: 12%;
+  --card-neutral-bg: rgba(0, 0, 0, .03);
+  --card-neutral-border: rgba(0, 0, 0, .04);
+  --card-neutral-press: rgba(0, 0, 0, .05);
+  --background: var(--ark-neutral-1);
+  --background-elevated: var(--ark-neutral-2);
+  --surface-1: #FFFFFF;
+  --surface-2: #F2F2F2;
+  --surface-3: #E6E6E6;
+  --surface-4: #CCCCCC;
+  --foreground: #000000;
+  --foreground-secondary: #4E5865;
+  --foreground-muted: #4E5865;
+  --foreground-disabled: #8D98AA;
+  --foreground-placeholder: #8D98AA;
+  --divider-weak: #EBEFF6;
+  --divider-strong: #DFE5EF;
+  --border-line: #B3BFD3;
+  --warning: var(--ark-orange-500);
+  --danger: var(--ark-red-500);
+  --focus-ring: color-mix(in srgb, var(--brand-blue) 8%, transparent);
+  --state-hover: rgba(0, 0, 0, 0.05);
+  --state-press: rgba(0, 0, 0, 0.09);
+  --state-muted: rgba(0, 0, 0, 0.05);
+  --state-selected: color-mix(in srgb, var(--brand-blue) 10%, transparent);
+  --state-focus: color-mix(in srgb, var(--brand-blue) 16%, transparent);
+  --surface-disabled: rgba(0, 0, 0, 0.04);
+  --surface-backdrop-filter: none;
+  --surface-backdrop-filter-soft: none;
+  --surface-backdrop-filter-strong: none;
+  color-scheme: light;
+  --agent-question-base: var(--surface-1);
+}

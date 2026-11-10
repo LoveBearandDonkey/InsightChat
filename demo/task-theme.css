@@ -1,0 +1,47 @@
+/* Client preview only; the IDE keeps its own theme and typography. */
+:root[data-agent-theme]{font:var(--agent-font-body)/1.7 'Segoe UI','Microsoft YaHei',sans-serif;color:var(--foreground);background:var(--surface-2);color-scheme:var(--agent-color-scheme)}
+:root[data-agent-theme] .s1-view{color:var(--foreground);font-size:var(--agent-font-body)}
+:root[data-agent-theme] .s1-view :is(h1,h2,h3){color:var(--foreground)}
+:root[data-agent-theme] :is(button,input,select,textarea){font:inherit}
+:root[data-agent-theme] :is(small,.s1-chip,.s1-locks>span:first-child,.s1-muted,.s1-table,.s1-details,.s1-view code,.s1-bar-row,.s1-axis,.s1-legend,.s1-candidate-top>span,.s1-candidate>strong small,.s1-candidate p,.s1-handoff-grid ul,.s1-view-footer,.s1-inline-note){font-size:var(--agent-font-caption)}
+:root[data-agent-theme] :is(.s1-page-header small,.s1-muted,.s1-locks>span:first-child,.s1-verdict small,.s1-cause-grid small,.s1-candidate>strong small,.s1-axis,.s1-legend,.s1-inline-note,.s1-view-footer){color:var(--foreground-secondary)}
+:root[data-agent-theme] :is(.s1-chip,.s1-domain,.s1-details,.s1-empty-capacity,.s1-cause-grid article,.s1-next-options article,.s1-handoff-grid article){background:var(--surface-1);border-color:var(--divider-strong);color:var(--foreground)}
+:root[data-agent-theme] .s1-chip{background:var(--agent-accent-tint);border-color:var(--agent-accent-border)}
+:root[data-agent-theme] .s1-chip.good{color:var(--brand-green);background:var(--agent-success-bg);border-color:var(--brand-green)}
+:root[data-agent-theme] .s1-chip.danger{color:var(--danger);background:var(--agent-danger-bg);border-color:var(--danger)}
+:root[data-agent-theme] :is(.s1-locks,.s1-view-footer,.s1-table th,.s1-table td){border-color:var(--divider-weak)}
+:root[data-agent-theme] .s1-table th{color:var(--foreground-secondary);background:var(--surface-2)}
+:root[data-agent-theme] .s1-table td{color:var(--foreground)}
+:root[data-agent-theme] .s1-table td b{color:var(--foreground);font-weight:600}
+:root[data-agent-theme] :is(.s1-source,.s1-view code){color:var(--brand-blue)}
+:root[data-agent-theme] .s1-source{background:transparent}
+:root[data-agent-theme] :is(.s1-equation,.s1-verdict){color:var(--foreground);background:var(--agent-accent-tint);border-color:var(--brand-blue)}
+:root[data-agent-theme] .s1-verdict.danger{background:var(--agent-danger-bg);border-color:var(--danger)}
+:root[data-agent-theme] .s1-verdict.good{background:var(--agent-success-bg);border-color:var(--brand-green)}
+:root[data-agent-theme] :is(.s1-big,.s1-red){color:var(--danger)}
+:root[data-agent-theme] .s1-slots>span{color:var(--brand-blue);background:var(--agent-accent-tint);border-color:var(--agent-accent-border)}
+:root[data-agent-theme] .s1-slots>span.missing{color:var(--danger);background:var(--agent-danger-bg);border-color:var(--danger)}
+:root[data-agent-theme] .s1-details summary{color:var(--foreground)}
+:root[data-agent-theme] .s1-bar-track{background:var(--state-muted)}
+:root[data-agent-theme] .s1-bar-track .s1-limit{background:var(--foreground)}
+:root[data-agent-theme] .s1-cause-grid strong{color:var(--foreground)}
+:root[data-agent-theme] .s1-candidate{color:var(--foreground);background:var(--surface-1);border-color:var(--divider-strong)}
+:root[data-agent-theme] .s1-candidate.selected{background:var(--agent-accent-tint);border-color:var(--brand-blue);box-shadow:inset 0 0 0 1px var(--agent-accent-border)}
+:root[data-agent-theme] .s1-candidate:hover{border-color:var(--brand-blue)}
+:root[data-agent-theme] .s1-candidate-top{color:var(--brand-blue);font-size:var(--agent-font-body)}
+:root[data-agent-theme] .s1-candidate>strong{color:var(--brand-green)}
+:root[data-agent-theme] .s1-mini-bar{background:var(--state-muted)}
+:root[data-agent-theme] .s1-mini-bar i{background:var(--brand-green)}
+:root[data-agent-theme] .s1-handoff-grid ul{color:var(--foreground)}
+:root[data-agent-theme] .s1-view-footer{line-height:1.8}
+:root[data-agent-theme] button:focus-visible{outline:2px solid var(--brand-blue);outline-offset:2px}
+:root[data-agent-theme] .primary-btn{color:var(--agent-on-accent);background:var(--brand-blue);border-color:var(--brand-blue);font-size:var(--agent-font-body)}
+:root[data-agent-theme] .primary-btn:hover{background:color-mix(in srgb,var(--brand-blue) 84%,#000)}
+:root[data-agent-theme] .secondary-btn{color:var(--button-secondary-fg);background:var(--button-secondary-bg);border-color:var(--button-secondary-border);border-radius:var(--button-radius);box-shadow:none;font-size:var(--agent-font-body)}
+:root[data-agent-theme] .secondary-btn:is(:hover,:focus-visible){color:var(--brand-blue);border-color:var(--brand-blue);background:var(--button-secondary-bg);box-shadow:none}
+:root[data-agent-theme] .secondary-btn:active{background:var(--button-secondary-bg-press)}
+:root[data-agent-theme] button:disabled{opacity:var(--button-disabled-opacity)}
+:root[data-agent-theme] .s1-task-actions{align-items:flex-start}
+:root[data-agent-theme] .s1-standalone{color:var(--foreground)}
+:root[data-agent-theme] .s1-standalone p{color:var(--foreground-secondary)}
+:root[data-agent-theme] .s1-standalone a{color:var(--brand-blue)}

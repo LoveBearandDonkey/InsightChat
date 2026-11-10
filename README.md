@@ -1,5 +1,8 @@
 ## 在线体验
 
+MindStudio Agent demo 位于 [`demo/index.html`](demo/index.html)。GitHub Pages 按仓库根目录发布后，入口为 `https://lovebearanddonkey.github.io/InsightChat/demo/`。
+
+本地预览运行 `npm run preview:demo`，打开 `http://127.0.0.1:2027/demo/`。该演示为独立静态页面，不需要构建 Remotion。
 
 # InsightChat
 
@@ -8,6 +11,7 @@ InsightChat 是一个面向性能分析场景的智能对话与数据洞察体�
 ## 项目内容
 
 - **交互原型**：`chat.html` 提供完整的智能对话工作台演示，包含会话、上下文、模式与模型选择、引导卡片等界面和交互。
+- **MindStudio Agent demo**：`demo/` 提供 IDE、独立 GUI/TUI、六段示例对话和截图预览；图标共用 `src/pic/icon/`，数据与素材随 demo 保存。
 - **数据可视化**：包含性能报告模块、Rank 横向对比等可视化页面与设计探索。
 - **产品演示视频**：使用 React、TypeScript 和 Remotion 制作，可按完整视频或单个镜头预览、调试和渲染。
 - **设计资料**：仓库内保留产品规划、竞品分析、主题规范及报告可视化模块清单，便于继续迭代。
@@ -68,6 +72,7 @@ npm run upgrade
 
 ```text
 InsightChat/
+├── demo/                      # MindStudio Agent 静态演示，GitHub Pages 入口 demo/index.html
 ├── app/                       # 原型源码：公共外壳、视图、样式和功能脚本
 │   ├── shell.html             # 三个页面共用的 HTML 外壳
 │   ├── pages/                 # 三个生成入口和概览、时间线、内存视图片段
@@ -110,3 +115,9 @@ InsightChat/
 ## 许可
 
 本项目当前未声明开源许可证。
+
+## GitHub Pages
+
+此 demo 使用相对资源路径，支持部署在 `/InsightChat/demo/`。若采用分支发布，在仓库 **Settings → Pages** 中选择 **Deploy from a branch → main → /(root)**；根目录 `.nojekyll` 用于直接发布静态文件。[GitHub 官方配置说明](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
+
+`demo/vendor/` 是需要提交的 Monaco、字体和 UI 资源；`.gitignore` 仅忽略仓库根目录的 `/vendor/` 联接。私有的 `planning/` 留在独立的 mindstudio-2027 仓库，本仓忽略 `/planning/`。

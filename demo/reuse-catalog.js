@@ -1,0 +1,213 @@
+/* Original demo screenshot catalog; see assets/reuse/manifest.json. */
+window.MS_REUSE_VIEWS = Object.freeze({
+  "training-context": {
+    "id": "training-context",
+    "title": "Training Run Twin · Light",
+    "launchNumber": 10,
+    "demo": "train/training-run-twin.html?theme=light",
+    "sourceImage": "assets/preview-training-run-twin-light-16x9.png",
+    "image": "assets/reuse/training-context.png",
+    "sha256": "305d2cbb3ddd241729b4bf2997e3f8f8aa54e5ae305861dd23a6b5c81835ff2e",
+    "review": {
+      "decision": "核心复用",
+      "value": "训练对象、模型图、硬件与运行指标联动",
+      "direction": "S1 配置关系的上下文；P05；S4",
+      "gap": "截图保留原 Qwen 示例；缩卡约束另接真实规则，不能读作本故事的实测"
+    }
+  },
+  "training-timeline": {
+    "id": "training-timeline",
+    "title": "DeepSeek V4 训练执行时序",
+    "launchNumber": 13,
+    "demo": "pangu-moe-trainviz/分布式泳道/training-structure-time-v3.html",
+    "sourceImage": "assets/preview-deepseek-v4-training-execution-16x9.png",
+    "image": "assets/reuse/training-timeline.png",
+    "sha256": "6f428d30d8c9626d7dbf6797bcd727bc9aeffbc8f21f52f0c1eb77a372f3d2e8",
+    "review": {
+      "decision": "核心复用",
+      "value": "16 Rank 调度、模型算子、通信与优化器时间线",
+      "direction": "S1 并行解释；S4 气泡/等待；P02/P05",
+      "gap": "模型结构与模拟依据需版本化，新增重计算事件应保留语义映射"
+    }
+  },
+  "precision": {
+    "id": "precision",
+    "title": "整网→算子精度调试",
+    "launchNumber": 23,
+    "demo": "precision-debugger/index-v2.html",
+    "sourceImage": "assets/preview-precision-debugger-v2-16x9.png",
+    "image": "assets/reuse/precision.png",
+    "sha256": "8cc837ad0fe37c93e6446c66c7e8513eb555f31ffbfdd04f009833a7f25f93ec",
+    "review": {
+      "decision": "核心复用",
+      "value": "整网到首个已观测异常、双端图与张量下钻",
+      "direction": "S2 精度对齐；P01/P02/P04",
+      "gap": "示例数值/根因为合成；补真实 dump、语义映射、轮次和干预验证"
+    }
+  },
+  "trainscope": {
+    "id": "trainscope",
+    "title": "TrainScope · 盘古训练透视",
+    "launchNumber": 11,
+    "demo": "pangu-moe-trainviz/index.html",
+    "sourceImage": "assets/trainscope-pangu-moe-trainviz.png",
+    "image": "assets/reuse/trainscope.png",
+    "sha256": "d65e60d3c39432b2183e3b0828270f293e95c5d4b749baaef7d49b99f32d6843",
+    "review": {
+      "decision": "核心复用",
+      "value": "loss、路由、Rank 通信与权重异常的排障链",
+      "direction": "S2/S4 跨证据定位；P02/P04",
+      "gap": "保持盘古案例归属，接双端语义映射、真实运行和干预复验"
+    }
+  },
+  "memory-reuse": {
+    "id": "memory-reuse",
+    "title": "内存复用分析",
+    "launchNumber": 7,
+    "demo": "ascend-hardware-map/memory-reuse-analysis.html",
+    "sourceImage": "assets/preview-memory-reuse-analysis.png",
+    "image": "assets/reuse/memory-reuse.png",
+    "sha256": "0dc7b2940afb056b0a17285ba0443f2c55f9bcc055101529ae107185d7042e27",
+    "review": {
+      "decision": "核心复用",
+      "value": "生命周期、地址图和内存复用关系",
+      "direction": "S3 生命周期解释模式；P07",
+      "gap": "原型是片上 buffer；接 NPU 整网分配历史、失败点和栈后再作 OOM 证据"
+    }
+  },
+  "memory-workbench": {
+    "id": "memory-workbench",
+    "title": "内存工作台",
+    "launchNumber": 27,
+    "demo": "Memory-Visual/index.html",
+    "sourceImage": "assets/preview-memory-workbench.png",
+    "image": "assets/reuse/memory-workbench.png",
+    "sha256": "312dc758cf004a7a042d9e627515272d6ad4e329ba10565d86d5895ddb32574a",
+    "review": {
+      "decision": "核心复用",
+      "value": "地址布局、生命周期 × 流水、峰值与 workspace",
+      "direction": "S3 峰值重叠解释模式；P07",
+      "gap": "片上数据不能当整网显存；补 HBM/框架/主机不同口径及时间联合实验"
+    }
+  },
+  "monitoring": {
+    "id": "monitoring",
+    "title": "训练任务监控",
+    "launchNumber": 16,
+    "demo": "Profiling_Insight_and_Tool/training-run-twin-standalone/training-monitoring-v2.html",
+    "sourceImage": "assets/training-monitoring.png",
+    "image": "assets/reuse/monitoring.png",
+    "sha256": "fa3aeb595109f08385179afc885eb4f92f8d65a3cf8aa460186c3e37b0df16a6",
+    "review": {
+      "decision": "核心复用",
+      "value": "异常入口、训练动态、内存举证及多版本对比",
+      "direction": "S3 联合诊断；S5 复验；P07/P09",
+      "gap": "用真实失败现场和测量取代示例；监控/效果对比/关系追踪等变体分别定位"
+    }
+  },
+  "performance": {
+    "id": "performance",
+    "title": "智能性能分析",
+    "launchNumber": 30,
+    "demo": "Profiling_Insight_and_Tool/AI_Profiling_Tool/index_v3.html",
+    "sourceImage": "assets/preview-mindstudio-next.png",
+    "image": "assets/reuse/performance.png",
+    "sha256": "711f353532b85106ca9375b04849d0b9a517e387f7a6a7fe35423c2d8e67c9d8",
+    "review": {
+      "decision": "核心复用",
+      "value": "性能总览、报告、计算图、Timeline 与助手",
+      "direction": "S4 主线 B；P01/P02/P03",
+      "gap": "沿用现有能力；新增真实补采、失败恢复、目标修订与业务复验"
+    }
+  },
+  "communication": {
+    "id": "communication",
+    "title": "分布式通信观测台",
+    "launchNumber": 14,
+    "demo": "distributed-communication-observatory-3d-traffic/index.html",
+    "sourceImage": "assets/preview-distributed-communication-observatory-3d-traffic.png",
+    "image": "assets/reuse/communication.png",
+    "sha256": "7d036c781a40341df839af02adefbc79e1b3e4982239944fbe58163caa0c5e59",
+    "review": {
+      "decision": "核心复用",
+      "value": "Rank 拓扑、流量、MoE 路由与等待链",
+      "direction": "S4 通信假设复核；P02/P04",
+      "gap": "匹配同一次 collective、时钟和相关 Rank；流量热点不直接等于根因"
+    }
+  },
+  "swimlane": {
+    "id": "swimlane",
+    "title": "Swimlane 执行视图",
+    "launchNumber": 28,
+    "demo": "swimlane/index.html",
+    "sourceImage": "assets/preview-swimlane-execution-16x9.png",
+    "image": "assets/reuse/swimlane.png",
+    "sha256": "44872b3e8ba9098bc0b70a2ef3f12f8b10cbc26cc82a6eba0c6440164561bfc5",
+    "review": {
+      "decision": "核心复用",
+      "value": "主/参考泳道、Before/After 与任务下钻",
+      "direction": "S4 前后复验；P03/P04",
+      "gap": "对齐同负载、Step、时钟与统计范围；保留无收益试验"
+    }
+  },
+  "migration": {
+    "id": "migration",
+    "title": "AscendPort 迁移工作台",
+    "launchNumber": 4,
+    "demo": "ascendport_migration-pangu/ascendport_migration_V3_MLA_pto.html",
+    "sourceImage": "assets/ascendport-mla-migration-workbench.png",
+    "image": "assets/reuse/migration.png",
+    "sha256": "cfcd04e480c81808880583856192d1b5520a83987f3f7a2b845c2c168cc4c4ab",
+    "review": {
+      "decision": "核心复用",
+      "value": "七阶段迁移、计算图、代码、精度与性能串联",
+      "direction": "S5 迁移交付；P03/P04/P09",
+      "gap": "补整网验收、可比吞吐与 checkpoint 恢复证据；原型是算子迁移"
+    }
+  },
+  "operator-matrix": {
+    "id": "operator-matrix",
+    "title": "算子矩阵",
+    "launchNumber": 18,
+    "demo": "Ascend%20operator%20matrix/ascend-operator-matrix_V2.html?theme=light",
+    "sourceImage": "assets/preview-ascend-operator-matrix-light-16x9.png",
+    "image": "assets/reuse/operator-matrix.png",
+    "sha256": "1d58cb808aba497ab0c513551ff3c0af13b77512375cef0eda02ebe35c4c7264",
+    "review": {
+      "decision": "核心复用",
+      "value": "模型/阶段/dtype/硬件支持矩阵",
+      "direction": "S5 兼容性检查；P04/P10",
+      "gap": "维护真实支持矩阵与来源，支持状态不代表迁移已验收"
+    }
+  },
+  "candidates": {
+    "id": "candidates",
+    "title": "Recommendation Trace",
+    "launchNumber": 35,
+    "demo": "operator-planning/recommendation-trace-V3.html",
+    "sourceImage": "assets/preview-recommendation-trace.png",
+    "image": "assets/reuse/candidates.png",
+    "sha256": "bcc82b2e9a85146f30d7f1b21508994271445f1481f08a4b63b1bf9b778e0ece",
+    "review": {
+      "decision": "核心复用",
+      "value": "候选谱系、淘汰理由、资源余量和代价并排比较",
+      "direction": "S6 候选取舍交互模式；P05/P06",
+      "gap": "原型是 MatMul+Bias+GELU 算子候选；尚无服务级仿真/尾延迟/校准视图"
+    }
+  },
+  "hardware": {
+    "id": "hardware",
+    "title": "Ascend A5 架构映射",
+    "launchNumber": 6,
+    "demo": "ascend-hardware-map/index.html",
+    "sourceImage": "assets/preview-a5-data-flow-map.png",
+    "image": "assets/reuse/hardware.png",
+    "sha256": "43fb2b8c2c44910c44115a182cfbe9369e80f27ced85926c85d23e777630786e",
+    "review": {
+      "decision": "核心复用",
+      "value": "设备层级、计算路径、访存与代际映射",
+      "direction": "S6 设备画像解释；P06；S5 支线",
+      "gap": "这里只解释硬件画像；需接 msModeling 校准与服务负载，不能预测尾延迟"
+    }
+  }
+});

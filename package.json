@@ -36,6 +36,7 @@
     "typescript": "5.9.3"
   },
   "scripts": {
+    "preview:demo": "node demo/server.cjs",
     "dev": "remotion studio",
     "build": "remotion bundle",
     "build:chat": "node tools/build-chat-pages.cjs",

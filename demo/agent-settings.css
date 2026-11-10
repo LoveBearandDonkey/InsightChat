@@ -1,0 +1,84 @@
+/* Host-only adaptations; original assistant settings styles live in vendor. */
+.agent-client .agent-settings-dialog{
+  --font-sans:'Inter','Source Han Sans SC','PingFang SC','Noto Sans SC','Segoe UI','Microsoft YaHei',sans-serif;
+  --font-mono:'JetBrains Mono','Fira Code',Consolas,monospace;
+  --radius-sm:4px;--radius-md:8px;--radius-lg:12px;--radius-xl:16px;
+  --duration-fast:150ms;--duration-base:200ms;--duration-slow:300ms;--easing-default:cubic-bezier(.2,0,0,1);
+  --space-2:8px;--space-3:12px;--space-4:16px;
+  --font-weight-bold:700;--font-weight-semibold:600;
+  --shadow-lg:var(--agent-window-shadow);--primary:var(--brand-blue);--primary-foreground:var(--agent-on-accent);
+  position:absolute;inset:auto;margin:0;min-width:0;min-height:0;
+  width:min(800px,calc(100% - 32px));height:min(600px,calc(100% - 32px));
+  max-width:calc(100% - 32px);max-height:calc(100% - 32px);
+  font:var(--agent-font-body)/1.6 var(--font-sans);color:var(--foreground);color-scheme:var(--agent-color-scheme);
+}
+.agent-client .agent-settings-dialog:not([open]){display:none}
+.agent-client .agent-settings-dialog .wzh-settings-head-title{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.agent-client .agent-settings-dialog .wzh-settings-nav{overflow:auto}
+.agent-client .agent-settings-dialog .wzh-settings-sidebar{min-width:0;overflow:auto}
+.agent-client .agent-settings-dialog .wzh-settings-nav-item{gap:10px;padding-inline:10px}
+.agent-client .agent-settings-dialog :is(button,input,select,textarea):disabled{cursor:default;opacity:.42}
+.agent-client .agent-settings-dialog .wzh-general-switch:disabled{opacity:.42}
+.agent-client .agent-settings-dialog .wzh-skills-toolbar{flex-wrap:wrap;gap:8px}
+.agent-client .agent-settings-dialog .wzh-skills-tabs{gap:14px;overflow:auto}
+.agent-client .agent-settings-dialog .wzh-settings-scroll{padding-bottom:20px}
+.agent-client .agent-settings-dialog .wzh-settings-close{color:var(--foreground)}
+.agent-client .agent-settings-dialog .btn{border:1px solid var(--button-secondary-border);border-radius:var(--button-radius);background:var(--button-secondary-bg);color:var(--button-secondary-fg);box-shadow:none}
+.agent-client .agent-settings-dialog .btn:not(:disabled):is(:hover,:focus-visible){border-color:var(--brand-blue);color:var(--brand-blue);background:var(--button-secondary-bg)}
+.agent-client .agent-settings-dialog .btn:not(:disabled):active{background:var(--button-secondary-bg-press)}
+.agent-client .agent-settings-dialog [aria-disabled='true']{cursor:default}
+.agent-client>.agent-modal-layer:has(>.agent-settings-dialog[open]){background:rgb(0 0 0 / 36%);backdrop-filter:none;-webkit-backdrop-filter:none}
+.agent-client .msagent-mcp-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:5px;font:var(--agent-font-caption)/1.5 var(--font-sans);color:var(--brand-green);background:var(--agent-success-bg);white-space:nowrap}
+.agent-client .msagent-mcp-badge.is-paused{color:var(--foreground-secondary);background:var(--surface-2)}
+.agent-client .msagent-mcp-section>.wzh-skills-toolbar{padding-bottom:18px;margin-bottom:0;box-shadow:none}
+.agent-client .msagent-mcp-tabs{display:flex;gap:28px;margin:0;padding:0;border:0;border-radius:0;background:transparent;min-height:32px}
+.agent-client .msagent-mcp-tabs>button{flex:0 0 auto;height:32px;min-height:32px;padding-inline:0;border-radius:0;background:transparent;font-size:var(--agent-font-body)}
+.agent-client .msagent-mcp-tabs>button.is-active{color:var(--brand-blue);background:transparent}
+.agent-client .msagent-mcp-body{min-width:0}
+.agent-client .msagent-mcp-service{border:1px solid var(--divider-strong);border-radius:16px;padding:18px 20px;margin:0 0 28px;background:var(--surface-1)}
+.agent-client .msagent-mcp-service>header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.agent-client .msagent-mcp-service>header>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.agent-client .msagent-mcp-service strong{font-weight:600}
+.agent-client .msagent-mcp-address{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:0;font-size:var(--agent-font-caption);color:var(--foreground-secondary)}
+.agent-client .msagent-mcp-address code{overflow-wrap:anywhere;font:inherit;font-family:var(--font-mono)}
+.agent-client .msagent-mcp-address button{color:var(--brand-blue);font:inherit;background:none}
+.agent-client .msagent-mcp-tools-heading{display:flex;align-items:center;gap:12px;margin:0 0 12px;color:var(--foreground-secondary);font-size:var(--agent-font-caption)}
+.agent-client .msagent-mcp-tools-list .wzh-skills-row{padding-inline:16px}
+.agent-client .msagent-mcp-tool-icon{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border-radius:9px;background:color-mix(in srgb,var(--brand-purple) var(--brand-tint-strong),transparent);color:var(--brand-purple)}
+.agent-client .msagent-mcp-tool-icon>.codicon{font-size:20px}
+.agent-client .msagent-tool-group{margin:0;padding:0 16px 12px 68px}
+.agent-client .msagent-tool-group>summary{display:flex;align-items:center;gap:6px;width:fit-content;list-style:none;cursor:pointer;color:var(--foreground-secondary);font-size:var(--agent-font-caption);line-height:1.8}
+.agent-client .msagent-tool-group>summary::-webkit-details-marker{display:none}
+.agent-client .msagent-tool-group>summary>.codicon{font-size:12px;transition:transform 150ms ease}
+.agent-client .msagent-tool-group[open]>summary>.codicon{transform:rotate(90deg)}
+.agent-client .msagent-tool-group>summary:focus-visible{outline:2px solid var(--brand-blue);outline-offset:3px;border-radius:3px}
+.agent-client .msagent-tool-list{list-style:none;padding:0;margin:8px 0 0;border-top:1px solid var(--divider-weak)}
+.agent-client .msagent-tool-list>li{padding:12px 0;border-bottom:1px solid var(--divider-weak)}
+.agent-client .msagent-tool-list>li:last-child{border-bottom:0}
+.agent-client .msagent-tool-list code{display:block;font:var(--agent-font-body)/1.6 var(--font-mono);color:var(--foreground);overflow-wrap:anywhere}
+.agent-client .msagent-tool-list p{margin:4px 0 0;font-size:var(--agent-font-caption);line-height:1.8;color:var(--foreground-placeholder);overflow-wrap:anywhere}
+.agent-client .msagent-mcp-note a{color:var(--brand-blue);text-underline-offset:3px}
+.agent-client .msagent-mcp-external{display:grid;grid-template-columns:128px minmax(0,1fr);min-width:0;min-height:300px}
+.agent-client .msagent-mcp-clients{padding-right:10px;border-right:1px solid var(--divider-weak)}
+.agent-client .msagent-mcp-clients>button{display:flex;align-items:center;gap:8px;min-height:36px;width:100%;padding:6px 8px;margin-bottom:4px;border-radius:6px;color:var(--foreground);font-size:var(--agent-font-caption);text-align:left}
+.agent-client .msagent-mcp-clients>button.selected{background:var(--agent-accent-tint);color:var(--foreground)}
+.agent-client .msagent-mcp-clients :is(img,.agent-svg-icon,.codicon){width:18px;height:18px;font-size:18px;flex-shrink:0;object-fit:contain}
+.agent-client .msagent-mcp-clients>button>.agent-svg-icon{color:var(--foreground)}
+.agent-client .msagent-mcp-manual{min-width:0;padding-left:18px;color:var(--foreground)}
+.agent-client .msagent-mcp-manual h4{font-size:var(--agent-font-body);margin:0 0 12px}
+.agent-client .msagent-mcp-manual p{font-size:var(--agent-font-caption);line-height:1.8;color:var(--foreground);margin:10px 0}
+.agent-client .msagent-mcp-manual code{font-size:var(--agent-font-caption);font-family:var(--font-mono);color:var(--foreground);overflow-wrap:anywhere}
+.agent-client .msagent-mcp-route{padding:7px 10px;background:var(--surface-2);border-radius:5px;color:var(--foreground);font-size:var(--agent-font-caption);line-height:1.7}
+.agent-client .msagent-mcp-config{position:relative;padding:16px 28px 16px 14px;border-radius:10px;background:var(--surface-2);margin-top:16px}
+.agent-client .msagent-mcp-config pre{font:var(--agent-font-caption)/1.8 var(--font-mono);color:var(--foreground);white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
+.agent-client .msagent-mcp-config>button{position:absolute;right:8px;top:8px;display:grid;place-items:center;width:24px;height:24px;color:var(--foreground);border-radius:4px}
+.agent-client .msagent-mcp-note{font-size:var(--agent-font-caption);line-height:1.7;color:var(--foreground-secondary);margin:16px 0 0}
+@container agent-window (max-width:700px){
+  .agent-client .agent-settings-dialog .wzh-settings-layout{grid-template-columns:142px minmax(0,1fr)}
+  .agent-client .agent-settings-dialog .wzh-settings-scroll{padding-inline:16px}
+  .agent-client .agent-settings-dialog .wzh-settings-head{padding-inline:16px}
+  .agent-client .msagent-mcp-external{grid-template-columns:minmax(0,1fr)}
+  .agent-client .msagent-mcp-clients{display:flex;flex-wrap:wrap;gap:4px;padding:0 0 10px;border-right:0;border-bottom:1px solid var(--divider-weak);margin-bottom:16px}
+  .agent-client .msagent-mcp-clients>button{width:auto;margin:0}
+  .agent-client .msagent-mcp-manual{padding-left:0}
+}

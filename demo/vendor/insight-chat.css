@@ -1,0 +1,1282 @@
+/* Conversation styles extracted from InsightChat app/chat.css, section [7].
+   Source class names and declarations retained; selectors scoped to .agent-client,
+   asset paths localized, and text sizes raised to the 12px client minimum. */
+
+    .agent-client .wzh-chat-panel {
+      position: relative;
+      flex: 0 0 0px;
+      align-self: stretch;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface-1);
+      border: 1px solid var(--divider-strong);
+      border-radius: var(--radius-xl);
+      opacity: 0;
+      transition: flex-basis var(--duration-base) var(--easing-default),
+                  opacity var(--duration-base) var(--easing-default);
+      pointer-events: none;
+      /* 挤入式展开后的宽度。480px 只是初值:拖 #chatShellResizer 会把它改成别的像素值,
+         下限 320px、上限是工作区的一半;窄窗口宽度规则见 desktop.css。 */
+      --wzh-chat-w: 480px;
+      /* 品牌蓝:面板内所有蓝色(发送按钮、标签、描边)统一取这一个值 */
+      --mi-brand-blue: var(--brand-blue);
+      /* 挤入式贴着内容区,不投影;浮动窗才用 --wzh-chat-shadow */
+      --wzh-chat-shadow: var(--shadow-lg);
+      box-shadow: none;
+    }
+    .agent-client[data-theme='light'] .wzh-chat-panel {
+      --wzh-chat-shadow: 0 14px 34px rgba(58, 68, 120, 0.14), 0 2px 8px rgba(58, 68, 120, 0.07);
+    }
+    .agent-client .wzh-chat-panel.is-open {
+      flex-basis: var(--wzh-chat-w, 480px);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .agent-client .wzh-chat-panel.is-resizing { transition: none; }
+    .agent-client .wzh-chat-panel.is-floating {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      bottom: 8px;
+      left: auto;
+      flex: 0 0 auto;
+      width: 480px;
+      max-width: 92vw;
+      z-index: 1900;
+      box-shadow: var(--wzh-chat-shadow);
+      opacity: 1;
+      transform: translateX(calc(100% + 40px));
+      transition: transform var(--duration-base) var(--easing-default);
+    }
+    .agent-client .wzh-chat-panel.is-floating.is-open {
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+    .agent-client .wzh-chat-panel.is-open.is-visualizing {
+      position: fixed;
+      top: var(--wzh-viz-top, 48px);
+      right: var(--wzh-viz-right, 8px);
+      bottom: var(--wzh-viz-bottom, 8px);
+      left: var(--wzh-viz-left, 8px);
+      z-index: 1950;
+      width: auto;
+      max-width: none;
+      flex: 0 0 auto;
+      display: grid;
+      grid-template-columns:
+        minmax(calc(25% - 2px), var(--wzh-viz-chat-w, calc(50% - 4px)))
+        8px minmax(calc(25% - 2px), 1fr);
+      grid-template-rows: auto auto minmax(0, 1fr);
+      overflow: hidden;
+      opacity: 1;
+      transform: none;
+      box-shadow: var(--wzh-chat-shadow);
+      transition: box-shadow var(--duration-base) var(--easing-default);
+    }
+    .agent-client .wzh-chat-panel.is-open.is-visualizing.is-viz-expanding {
+      grid-template-columns: minmax(0, var(--wzh-viz-chat-w)) 0px minmax(0, 1fr);
+      transition: left 320ms var(--easing-default), right 320ms var(--easing-default),
+                  grid-template-columns 320ms var(--easing-default);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .agent-client .wzh-chat-panel.is-open.is-visualizing.is-viz-expanding { transition: none; }
+    }
+    .agent-client .wzh-chat-panel.is-visualizing > .wzh-chat-head { grid-column: 1; grid-row: 1; }
+    .agent-client .wzh-chat-panel.is-visualizing > .wzh-chat-session { grid-column: 1; grid-row: 2; }
+    .agent-client .wzh-chat-panel.is-visualizing > .wzh-chat-body { grid-column: 1; grid-row: 3; min-width: 0; }
+    .agent-client .wzh-chat-viz-resizer { grid-column: 2; grid-row: 1 / 4; align-self: stretch; }
+    .agent-client .wzh-chat-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--space-2); flex: 0 0 auto;
+      padding: 12px 12px 8px 16px;
+    }
+    .agent-client .wzh-chat-head-brand { position: relative; min-width: 0; }
+    .agent-client .wzh-chat-head-title-row {
+      display: flex; align-items: center; gap: 8px; min-width: 0;
+      /* 负外边距把按钮内边距抵掉:浮不浮底色,头像和文字都停在同一个位置 */
+      margin: 0 -10px; padding: 5px 10px;
+      border: none; border-radius: var(--radius-md, 8px);
+      background: transparent; cursor: pointer; text-align: left;
+      transition: background var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-head-title-row:hover { background: var(--state-hover); }
+    .agent-client .wzh-chat-head-title-row:focus-visible { outline: none; background: var(--state-hover); }
+    .agent-client .wzh-chat-head-title-row[aria-expanded='true'] { background: var(--state-hover); }
+    .agent-client .wzh-chat-head-logo { width: 20px; height: 20px; flex-shrink: 0; display: block; }
+    .agent-client .wzh-chat-head-title {
+      font: 400 14px/1.4 var(--font-sans); color: var(--foreground);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .agent-client .wzh-chat-head-caret {
+      width: 16px; height: 16px; flex-shrink: 0; opacity: .75; display: block;
+      transition: transform var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-head-title-row[aria-expanded='true'] .wzh-chat-head-caret { transform: rotate(180deg); }
+    .agent-client .wzh-chat-agent-pop {
+      position: absolute; top: calc(100% + 6px); left: -10px; z-index: 30;
+      box-sizing: border-box; min-width: 236px; padding: 8px;
+      background: var(--surface-1);
+      border: 1px solid var(--divider-strong);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--wzh-chat-shadow);
+    }
+    .agent-client .wzh-chat-agent-pop[hidden] { display: none; }
+    .agent-client .wzh-chat-agent-pop-title {
+      margin: 0; padding: 4px 10px 8px;
+      font: 400 14px/1.4 var(--font-sans); color: var(--foreground-placeholder);
+    }
+    .agent-client .wzh-chat-agent-list { display: flex; flex-direction: column; gap: 2px; }
+    .agent-client .wzh-chat-agent-item {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%; box-sizing: border-box;
+      padding: 8px 10px; border: none; border-radius: var(--radius-md, 8px);
+      background: none; cursor: pointer; text-align: left;
+      font: 400 14px/1.4 var(--font-sans); color: var(--foreground);
+      transition: background var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-agent-item:hover { background: var(--state-hover); }
+    .agent-client .wzh-chat-agent-item:focus-visible { outline: none; background: var(--state-hover); }
+    .agent-client .wzh-chat-agent-item.is-current,
+    .agent-client .wzh-chat-agent-item.is-current:hover { background: var(--state-selected); }
+    .agent-client .wzh-chat-agent-item img {
+      width: 20px; height: 20px; flex-shrink: 0; display: block;
+    }
+    .agent-client .wzh-chat-head-logo,
+    .agent-client .wzh-chat-agent-item img { border-radius: 5px; }
+    .agent-client .wzh-chat-head-logo[data-icon="msinsightbotAvatar.png"],
+    .agent-client .wzh-chat-agent-item img[data-icon="msinsightbotAvatar.png"] { border-radius: 50%; }
+    .agent-client .wzh-chat-agent-item-name {
+      min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .agent-client .wzh-chat-agent-check {
+      width: 16px; height: 16px; flex-shrink: 0;
+      fill: none; stroke: var(--mi-brand-blue); stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round;
+      visibility: hidden;
+    }
+    .agent-client .wzh-chat-agent-item.is-current .wzh-chat-agent-check { visibility: visible; }
+    .agent-client .wzh-chat-agent-pop-foot {
+      margin-top: 8px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    }
+    .agent-client .wzh-chat-agent-foot-btn {
+      display: block; width: 100%; box-sizing: border-box; min-width: 0;
+      padding: 9px 10px; border: 1px solid var(--divider-strong);
+      border-radius: var(--radius-md, 8px); background: transparent; cursor: pointer;
+      font: 400 14px/1.4 var(--font-sans); color: var(--foreground); text-align: center;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      transition: background var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-agent-foot-btn:hover { border-color: var(--brand-blue); color: var(--brand-blue); }
+    .agent-client .wzh-chat-agent-foot-btn:focus-visible { outline: none; }
+    .agent-client .wzh-chat-agent-foot-btn:disabled { opacity: .6; cursor: default; }
+    .agent-client .wzh-chat-head-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+    .agent-client .wzh-chat-head-menu { position: relative; display: inline-flex; }
+    .agent-client .wzh-chat-head-btn {
+      position: relative;
+      width: 28px; height: 28px; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: none; border-radius: var(--radius-sm); background: transparent;
+      color: var(--foreground); cursor: pointer;
+      transition: background var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-head-btn:not(:disabled):hover { background: var(--state-hover); }
+    .agent-client .wzh-chat-head-btn[aria-expanded='true'],
+    .agent-client .wzh-chat-head-btn.is-active { background: var(--state-selected); }
+    .agent-client .wzh-chat-head-btn:disabled { opacity: 1; cursor: default; }
+    .agent-client .wzh-chat-head-btn img { width: 20px; height: 20px; display: block; }
+    .agent-client .wzh-chat-history-pop {
+      position: absolute; top: calc(100% + 8px); right: -100px; z-index: 40;
+      box-sizing: border-box; width: 300px; padding: 8px;
+      background: var(--surface-1); border: 1px solid var(--divider-strong);
+      border-radius: var(--radius-lg); box-shadow: var(--wzh-chat-shadow);
+    }
+    .agent-client .wzh-chat-history-pop[hidden] { display: none; }
+    .agent-client .wzh-chat-history-pop-title {
+      margin: 0; padding: 4px 10px 8px;
+      font: 400 14px/1.4 var(--font-sans); color: var(--foreground-placeholder);
+    }
+    .agent-client .wzh-chat-history-item {
+      display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box;
+      padding: 9px 10px; border: none; border-radius: var(--radius-md, 8px);
+      background: transparent; color: var(--foreground); cursor: pointer; text-align: left;
+      font: 400 14px/1.4 var(--font-sans);
+      transition: background var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-history-item:hover,
+    .agent-client .wzh-chat-history-item:focus-visible { background: var(--state-hover); outline: none; }
+    .agent-client .wzh-chat-history-item img { width: 18px; height: 18px; flex: 0 0 auto; }
+    .agent-client .wzh-chat-history-item-text {
+      min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .agent-client .wzh-chat-session { flex: 0 0 auto; padding: 0 16px; min-width: 0; }
+    .agent-client .wzh-chat-session[hidden] { display: none; }
+    .agent-client .wzh-chat-session-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      max-width: 100%; min-width: 0;
+      margin: 0 -10px; padding: 5px 10px;
+      border: none; border-radius: var(--radius-sm, 8px);
+      background: transparent; cursor: pointer; text-align: left;
+      font: var(--font-weight-bold, 700) 14px/1.4 var(--font-sans); color: var(--foreground);
+      transition: background var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-session-btn:hover,
+    .agent-client .wzh-chat-session-btn:focus-visible {
+      background: color-mix(in srgb, var(--foreground) 7%, transparent);
+      outline: none;
+    }
+    .agent-client .wzh-chat-session-text { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .agent-client .wzh-chat-session-pen {
+      width: 15px; height: 15px; flex-shrink: 0;
+      display: block;
+      opacity: 0; transition: opacity var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-session-btn:hover .wzh-chat-session-pen,
+    .agent-client .wzh-chat-session-btn:focus-visible .wzh-chat-session-pen { opacity: .72; }
+    .agent-client .wzh-chat-session-input {
+      display: block; box-sizing: border-box;
+      width: calc(100% + 20px); margin: 0 -10px; padding: 5px 10px;
+      border: 1px solid var(--mi-brand-blue); border-radius: var(--radius-sm, 8px);
+      background: var(--surface-1); color: var(--foreground);
+      font: var(--font-weight-bold, 700) 14px/1.4 var(--font-sans); outline: none;
+    }
+    .agent-client .wzh-chat-session-input[hidden] { display: none; }
+    .agent-client .wzh-chat-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    @property --wzh-chat-fade-top { syntax: '<length>'; inherits: false; initial-value: 0px; }
+    @property --wzh-chat-fade-bottom { syntax: '<length>'; inherits: false; initial-value: 0px; }
+    .agent-client .wzh-chat-messages {
+      flex: 1; overflow-y: auto; overflow-x: hidden; padding: 8px 16px var(--space-3);
+      display: flex; flex-direction: column; gap: 16px;
+      font-size: 14px; line-height: 1.65; color: var(--foreground-secondary); word-break: break-word;
+      overscroll-behavior: contain;       /* 消息区滚到头不再把整页/底层面板带着一起滚 */
+      --wzh-chat-fade-top: 0px;
+      --wzh-chat-fade-bottom: 0px;
+      -webkit-mask-image: linear-gradient(to bottom,
+        transparent 0, #000 var(--wzh-chat-fade-top),
+        #000 calc(100% - var(--wzh-chat-fade-bottom)), transparent 100%);
+      mask-image: linear-gradient(to bottom,
+        transparent 0, #000 var(--wzh-chat-fade-top),
+        #000 calc(100% - var(--wzh-chat-fade-bottom)), transparent 100%);
+      transition: --wzh-chat-fade-top var(--duration-base, 200ms) var(--easing-default, ease),
+                  --wzh-chat-fade-bottom var(--duration-base, 200ms) var(--easing-default, ease);
+    }
+    .agent-client .wzh-chat-messages.is-fade-top { --wzh-chat-fade-top: 28px; }
+    .agent-client .wzh-chat-messages.is-fade-bottom { --wzh-chat-fade-bottom: 32px; }
+    .agent-client .wzh-chat-welcome {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 20px; padding: 24px 0 32px; text-align: center;
+    }
+    .agent-client .wzh-chat-welcome-hero {
+      position: relative; width: 100%;
+      /* 点阵的颜色与浓度:canvas 在每次重建/换主题时读一次这几个变量(见 readDotStyle)。
+         --wzh-dots-hot-rgb 是"被照亮"时偏过去的颜色——亮起来不只是变浓,还会往紫偏一点。
+         两个主题共用同一组颜色,暗色只单独提一档 --wzh-dots-alpha(见下面的 data-theme='dark' 规则)。 */
+      --wzh-dots-rgb: 99 102 241;
+      --wzh-dots-hot-rgb: 123 37 244;
+      --wzh-dots-alpha: .08;
+    }
+    .agent-client .wzh-chat-welcome-dots {
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      /* 与原图 722×776 同比例,底纹在 hero 里的占位跟还原稿保持一致 */
+      width: 560px; height: 602px;
+      pointer-events: none;   /* 指针事件挂在 hero 上,canvas 自己不拦截下面引导卡的点击 */
+      z-index: 0;
+    }
+    .agent-client .wzh-chat-welcome-hero > *:not(.wzh-chat-welcome-dots) { position: relative; z-index: 1; }
+    .agent-client .wzh-chat-welcome-logo { display: block; width: 58px; height: 58px; margin: 0 auto 20px; }
+    .agent-client .wzh-chat-welcome-text {
+      font-size: 24px; font-weight: var(--font-weight-bold, 700);
+      line-height: 1.3; color: var(--foreground); min-height: 34px;
+    }
+    .agent-client .wzh-chat-guide-list {
+      display: flex; flex-direction: column; gap: 12px;
+      width: 100%; box-sizing: border-box; padding: 0 48px;
+    }
+    .agent-client .wzh-chat-guide-card {
+      display: flex; align-items: center; gap: 12px;
+      width: 100%; box-sizing: border-box; padding: 16px;
+      text-align: left; cursor: pointer; font-family: inherit;
+      border: 1px solid var(--card-neutral-border); border-radius: 12px;
+      background: var(--card-neutral-bg);
+      transition: background var(--duration-fast) var(--easing-default),
+                  border-color var(--duration-fast) var(--easing-default);
+    }
+    @media (hover: hover) {
+      .agent-client .wzh-chat-guide-card:hover {
+        background: linear-gradient(100deg,
+          color-mix(in srgb, var(--brand-purple) var(--brand-tint-strong), transparent) 0%,
+          color-mix(in srgb, var(--brand-blue) var(--brand-tint-strong), transparent) 100%);
+        border-color: color-mix(in srgb, var(--brand-blue) var(--brand-tint-border), transparent);
+      }
+    }
+    .agent-client .wzh-chat-guide-card:focus,
+    .agent-client .wzh-chat-guide-card:focus-visible { outline: none; }
+    .agent-client .wzh-chat-guide-card:active { background: var(--card-neutral-press); }
+    .agent-client .wzh-chat-guide-icon { width: 34px; height: 34px; flex-shrink: 0; display: block; }
+    .agent-client .wzh-chat-guide-text { display: flex; flex: 1 1 0; flex-direction: column; gap: 7px; min-width: 0; }
+    .agent-client .wzh-chat-guide-title { font-size: 15px; font-weight: var(--font-weight-semibold, 600); color: var(--foreground); }
+    .agent-client .wzh-chat-guide-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .agent-client .wzh-chat-guide-sub { display: -webkit-box; min-width: 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; font-size: 14px; line-height: 18px; }
+    .agent-client .wzh-chat-guide-tag {
+      display: inline-flex; align-items: center; gap: 2px; margin-right: 4px;
+      padding: 1px 6px 1px 3px; border-radius: 6px; vertical-align: middle;
+      background: color-mix(in srgb, var(--mi-brand-blue) var(--brand-tint), transparent);
+      border: 1px solid color-mix(in srgb, var(--mi-brand-blue) var(--brand-tint-border), transparent);
+      font-size: 14px; line-height: 18px; color: var(--foreground); white-space: nowrap;
+    }
+    .agent-client .wzh-chat-guide-tag img { width: 14px; height: 14px; display: block; flex: 0 0 auto; }
+    .agent-client .wzh-chat-guide-desc { display: inline; font-size: 14px; line-height: 18px; color: var(--foreground-secondary); overflow-wrap: anywhere; }
+    .agent-client .wzh-chat-typewriter-cursor {
+      position: relative;
+      display: inline-block;
+      width: 0;
+      height: 1em;
+      vertical-align: -0.15em;
+    }
+    .agent-client .wzh-chat-typewriter-cursor::after {
+      content: '';
+      position: absolute;
+      left: 1px; top: 0;
+      width: 2px; height: 100%;
+      background: var(--primary);
+      animation: wzh-chat-typewriter-blink .8s step-end infinite;
+    }
+    @keyframes wzh-chat-typewriter-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    .agent-client .wzh-chat-message.user {
+      align-self: flex-end;
+      max-width: 80%;
+      padding: 8px 12px;
+      border-radius: 14px 14px 3px 14px;
+      background: color-mix(in srgb, var(--primary) 16%, var(--surface-2));
+      color: var(--foreground);
+      box-shadow: var(--shadow-sm);
+    }
+    .agent-client .wzh-chat-message.ai { align-self: stretch; display: flex; flex-direction: column; gap: 6px; }
+    .agent-client .wzh-chat-body-content { padding: 0 8px; }
+
+    .agent-client .wzh-chat-messages p { margin: 0 0 6px; }
+    .agent-client .wzh-chat-messages p:last-child { margin-bottom: 0; }
+    .agent-client .wzh-chat-messages strong { color: var(--foreground); }
+    .agent-client .wzh-chat-messages ul, .agent-client .wzh-chat-messages ol { padding-left: 16px; margin: 0 0 6px; }
+    .agent-client .wzh-chat-messages li { margin-bottom: 2px; }
+    .agent-client .wzh-chat-messages code { font-family: var(--font-mono); font-size: 12px; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); padding: 1px 4px; border-radius: 3px; }
+    .agent-client .wzh-chat-messages pre { margin: 0 0 6px; padding: 8px 10px; background: color-mix(in srgb, var(--accent) 8%, transparent); border-radius: var(--radius-sm); overflow-x: auto; }
+    .agent-client .wzh-chat-messages pre code { background: none; padding: 0; }
+    .agent-client .wzh-chat-codeblock { position: relative; }
+    .agent-client .wzh-chat-copy {
+      position: absolute; top: 5px; right: 5px;
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px; padding: 0;
+      border: 1px solid var(--divider-strong); border-radius: var(--radius-sm);
+      background: var(--surface-1); color: var(--foreground-secondary);
+      cursor: pointer; opacity: 0;
+      transition: opacity var(--duration-fast) var(--easing-default),
+                  color var(--duration-fast) var(--easing-default),
+                  border-color var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-codeblock:hover .wzh-chat-copy,
+    .agent-client .wzh-chat-copy:focus-visible { opacity: 1; }
+    .agent-client .wzh-chat-copy:hover { color: var(--brand-blue); border-color: var(--brand-blue); }
+    .agent-client .wzh-chat-copy.is-done { opacity: 1; color: var(--brand-green); border-color: color-mix(in srgb, var(--brand-green) 45%, transparent); }
+    .agent-client .wzh-chat-copy svg {
+      width: 13px; height: 13px;
+      fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+    }
+    @media (hover: none) { .agent-client .wzh-chat-copy { opacity: 1; } }
+    .agent-client .wzh-chat-messages h1, .agent-client .wzh-chat-messages h2, .agent-client .wzh-chat-messages h3 { font-size: 14px; color: var(--foreground); margin: 0 0 5px; }
+    .agent-client .wzh-chat-messages h2 { font-size: 18px; }
+    .agent-client .wzh-chat-messages h3 { font-size: 16px; }
+    .agent-client .wzh-chat-table { width: 100%; border-collapse: collapse; margin: 0 0 8px; font-size: 12px; }
+    .agent-client .wzh-chat-table th, .agent-client .wzh-chat-table td { border: 1px solid var(--divider-weak); padding: 4px 6px; text-align: left; vertical-align: top; }
+    .agent-client .wzh-chat-table th { background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--foreground-secondary); font-weight: 600; white-space: nowrap; }
+    .agent-client .wzh-chat-table td { color: var(--foreground-secondary); }
+    .agent-client .wzh-chat-input-bar {
+      /* 排队卡片收起时要沉到输入框背后,这里必须压在它上面且底不透明(见 .wzh-chat-queue) */
+      position: relative; z-index: 2; flex-shrink: 0;
+      margin: 0 16px 16px; padding: 8px; box-sizing: border-box;
+      /* 描边粗细只在这里改一处:跑马光的外撑量也是按它算的(见 .wzh-chat-input-glow) */
+      --wzh-input-border-w: 1.5px;
+      border: var(--wzh-input-border-w) solid transparent; border-radius: 24px;
+      background:
+        linear-gradient(var(--surface-1), var(--surface-1)) padding-box,
+        linear-gradient(90deg, var(--mi-brand-blue) 0%, var(--brand-purple) 100%) border-box;
+      transition: box-shadow var(--duration-fast) var(--easing-default);
+    }
+    .agent-client[data-theme='dark'] .wzh-chat-input-bar {
+      background:
+        linear-gradient(var(--surface-1), var(--surface-1)) padding-box,
+        linear-gradient(90deg,
+          color-mix(in srgb, var(--mi-brand-blue) 60%, var(--surface-1)) 0%,
+          color-mix(in srgb, var(--brand-purple) 60%, var(--surface-1)) 100%) border-box;
+    }
+    .agent-client .wzh-chat-input-bar:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--mi-brand-blue) 8%, transparent); }
+    .agent-client .wzh-chat-input-glow {
+      /* SVG 是替换元素,width/height 为 auto 时不会被 inset 撑开(会退回 300×150 的固有尺寸),
+         所以这里必须显式给尺寸。absolute 的 inset 是从 padding box 起算的,往外各撑半个
+         border 宽:让 rect 的描边中心线正好落在那圈渐变 border 的正中,光就是贴着描边跑,
+         而不是浮在它里侧或外侧。跟着 --wzh-input-border-w 走,改粗细不用再动这里。 */
+      position: absolute;
+      top: calc(var(--wzh-input-border-w) / -2); left: calc(var(--wzh-input-border-w) / -2);
+      width: calc(100% + var(--wzh-input-border-w)); height: calc(100% + var(--wzh-input-border-w));
+      display: block; overflow: visible; /* 描边有一半在 rect 外沿,别被 svg 视口裁掉 */
+      pointer-events: none; opacity: 0;
+      transition: opacity var(--duration-base) var(--easing-default);
+    }
+    .agent-client .wzh-chat-input-glow rect { fill: none; stroke: #FFF; stroke-linecap: round; }
+    .agent-client .wzh-chat-input-glow-halo { stroke-width: 5; opacity: .09; stroke-dasharray: 22 28; }
+    .agent-client .wzh-chat-input-glow-core { stroke-width: 1.6; opacity: .44; stroke-dasharray: 10 40; }
+    .agent-client .wzh-chat-input-bar.is-flowing .wzh-chat-input-glow { opacity: 1; }
+    .agent-client .wzh-chat-input-bar.is-flowing .wzh-chat-input-glow rect {
+      animation: wzh-chat-input-glow-run 2.1s linear infinite;
+    }
+    .agent-client .wzh-chat-input-bar.is-flowing .wzh-chat-input-glow-core { animation-delay: -.126s; }
+    .agent-client[data-theme='dark'] .wzh-chat-input-bar.is-flowing .wzh-chat-input-glow { opacity: .24; }
+    @keyframes wzh-chat-input-glow-run {
+      from { stroke-dashoffset: 0; }
+      to   { stroke-dashoffset: -100; } /* 负值 = 顺着 rect 的路径方向,也就是顺时针 */
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .agent-client .wzh-chat-input-bar.is-flowing .wzh-chat-input-glow { opacity: 0; }
+      .agent-client .wzh-chat-input-bar.is-flowing .wzh-chat-input-glow rect { animation: none; }
+    }
+    .agent-client .wzh-chat-input-bar.is-pop-open { z-index: 6; }
+    .agent-client .wzh-chat-input-wrap { position: relative; width: calc(100% - 4px); margin: 0; }
+    .agent-client .wzh-chat-input {
+      display: block; width: calc(100% - 8px); box-sizing: border-box;
+      background: transparent; border: none; border-radius: 0;
+      margin: 0 0 0 8px; padding: 0;
+      color: transparent; caret-color: var(--foreground);
+      font-size: 14px; font-family: var(--font-sans); resize: none;
+      min-height: 44px; max-height: 126px; overflow-y: auto; line-height: 1.5;
+    }
+    .agent-client .wzh-chat-input:focus { outline: none; }
+    .agent-client .wzh-chat-input { scrollbar-width: none; }
+    .agent-client .wzh-chat-input::-webkit-scrollbar { width: 0; height: 0; }
+    .agent-client .wzh-chat-input-hl {
+      position: absolute; inset: 0 -4px 0 4px; overflow: hidden; pointer-events: none;
+      padding: 0 4px; margin: 0; border: none;
+      font-size: 14px; font-family: var(--font-sans); line-height: 1.5;
+      color: var(--foreground);
+      white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;
+    }
+    .agent-client .wzh-chat-input-hint { color: var(--foreground-placeholder); }
+    .agent-client .wzh-chat-input-chip {
+      padding: 1px 4px; margin: 0 -4px; border-radius: 4px;
+      background: color-mix(in srgb, var(--mi-brand-blue) var(--brand-tint-strong), transparent);
+      color: var(--mi-brand-blue);
+    }
+    .agent-client .wzh-chat-input-bar.has-operator-tooltip { z-index: 6; }
+    .agent-client .wzh-chat-operator-tooltip {
+      position: absolute; z-index: 7; bottom: calc(100% + 8px);
+      box-sizing: border-box; max-width: min(360px, 100%);
+      padding: 8px 10px; border: 1px solid var(--border-line);
+      border-radius: var(--radius-md); background: var(--surface-1);
+      box-shadow: var(--wzh-chat-shadow); color: var(--foreground);
+      font: 14px/1.5 var(--font-sans); overflow-wrap: anywhere;
+      pointer-events: none;
+    }
+    .agent-client .wzh-chat-operator-tooltip[hidden] { display: none; }
+    .agent-client .wzh-chat-ctx-pop {
+      /* left/right 贴着 .wzh-chat-input-bar 的 padding box:宽度跟输入区一致,不会比输入框宽 */
+      position: absolute; left: 0; right: 0; bottom: calc(100% + 8px); z-index: 20;
+      display: none; box-sizing: border-box; padding: 4px;
+      max-height: 268px; overflow-y: auto; overscroll-behavior: contain;
+      background: var(--surface-1);
+      border: 1px solid var(--divider-strong);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--wzh-chat-shadow);
+    }
+    .agent-client .wzh-chat-ctx-pop.is-open { display: block; }
+    .agent-client .wzh-chat-ctx-pop::-webkit-scrollbar { width: 6px; }
+    .agent-client .wzh-chat-ctx-pop::-webkit-scrollbar-thumb { background: var(--divider-strong); border-radius: 3px; }
+    .agent-client .wzh-chat-ctx-item {
+      display: grid; grid-template-columns: 2fr 3fr; align-items: center; gap: 12px;
+      width: 100%; box-sizing: border-box;
+      padding: 8px 12px; border: none; border-radius: var(--radius-md);
+      background: none; cursor: pointer; text-align: left;
+      font-family: var(--font-sans); font-size: 14px; line-height: 1.4;
+    }
+    .agent-client .wzh-chat-ctx-item:focus, .agent-client .wzh-chat-ctx-item:focus-visible { outline: none; }
+    .agent-client .wzh-chat-ctx-item.is-active { background: var(--surface-3); }
+    .agent-client .wzh-chat-ctx-name { display: flex; min-width: 0; color: var(--foreground); }
+    .agent-client .wzh-chat-ctx-name-stem {
+      min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .agent-client .wzh-chat-ctx-name-ext { flex: 0 0 auto; white-space: nowrap; }
+    .agent-client .wzh-chat-ctx-path {
+      min-width: 0; text-align: right;
+      color: var(--foreground-placeholder); font-size: 14px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .agent-client .wzh-chat-ctx-item mark { background: none; color: var(--mi-brand-blue); font-weight: 600; }
+    .agent-client .wzh-chat-ctx-empty { padding: 10px 12px; font-size: 14px; color: var(--foreground-muted); }
+    .agent-client .wzh-chat-picker-icon { width: 16px; height: 16px; flex: none; color: var(--foreground-muted); }
+    .agent-client .wzh-chat-picker-icon--asset { display: block; object-fit: contain; opacity: .65; }
+    .agent-client[data-theme='dark'] .wzh-chat-picker-icon--asset { filter: invert(1); }
+    .agent-client .wzh-chat-picker-item {
+      grid-template-columns: 16px minmax(0, 2fr) minmax(0, 3fr);
+    }
+    .agent-client .wzh-chat-code-file-pop mark { background: none; color: var(--mi-brand-blue); font-weight: 600; }
+    .agent-client .wzh-chat-command-item { grid-template-columns: 1fr; }
+    .agent-client .wzh-chat-input:disabled { opacity: .5; cursor: not-allowed; }
+    .agent-client .wzh-chat-input::placeholder { color: var(--foreground-placeholder); }
+    .agent-client .wzh-chat-composer-toolbar { display: flex; align-items: center; gap: 0; }
+    .agent-client .wzh-chat-tool {
+      box-sizing: border-box; height: 32px;
+      display: inline-flex; align-items: center; gap: 6px; padding: 0 10px;
+      border: none; border-radius: 999px; background: transparent; cursor: pointer;
+      font: 14px/1.4 var(--font-sans); color: var(--foreground);
+      transition: background var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-tool:hover,
+    .agent-client .wzh-chat-tool:focus-visible,
+    .agent-client .wzh-chat-tool[aria-expanded='true'] {
+      outline: none;
+      background: var(--state-hover);
+    }
+    .agent-client .wzh-chat-tool img { width: 16px; height: 16px; display: block; }
+    .agent-client .wzh-chat-model-wrap { position: relative; display: inline-flex; }
+    .agent-client .wzh-chat-model-pop {
+      position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 30;
+      box-sizing: border-box; min-width: 220px; padding: 8px;
+      background: var(--surface-1);
+      border: 1px solid var(--divider-strong);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--wzh-chat-shadow);
+    }
+    .agent-client .wzh-chat-model-pop[hidden] { display: none; }
+    .agent-client .wzh-chat-model-pop .wzh-chat-agent-item { font-size: 14px; }
+    .agent-client .wzh-chat-switch-note {
+      align-self: stretch; display: flex; align-items: center; gap: 10px;
+      color: var(--foreground-muted); font-size: 14px; user-select: none;
+    }
+    .agent-client .wzh-chat-switch-note-text { flex: 0 0 auto; white-space: nowrap; }
+    .agent-client .wzh-chat-switch-note-wave {
+      flex: 1 1 0; min-width: 16px; height: 8px;
+      background: currentColor; opacity: .55;
+      -webkit-mask-image: var(--wzh-wave); mask-image: var(--wzh-wave);
+      -webkit-mask-repeat: repeat-x; mask-repeat: repeat-x;
+      -webkit-mask-size: 16px 8px; mask-size: 16px 8px;
+      -webkit-mask-position: center; mask-position: center;
+      --wzh-wave: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='8' viewBox='0 0 16 8'><path d='M0 4 Q 4 0.9 8 4 T 16 4' fill='none' stroke='%23000' stroke-width='1.2' stroke-linecap='round'/></svg>");
+    }
+    .agent-client .wzh-chat-composer-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+    .agent-client .wzh-chat-clean-btn {
+      width: 24px; height: 24px; margin-right: 4px; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: none; background: none; cursor: pointer;
+    }
+    .agent-client .wzh-chat-clean-btn[hidden], .agent-client .wzh-chat-clean-divider[hidden] { display: none; }
+    .agent-client .wzh-chat-clean-icon {
+      width: 18px; height: 18px; display: block;
+      background: color-mix(in srgb, var(--foreground) 30%, transparent);
+      -webkit-mask: url('../assets/insight-chat/clean.svg') center / contain no-repeat;
+      mask: url('../assets/insight-chat/clean.svg') center / contain no-repeat;
+    }
+    .agent-client .wzh-chat-clean-divider {
+      width: 1px; height: 16px; flex: 0 0 1px;
+      background: var(--divider-strong);
+    }
+    .agent-client .wzh-chat-mic-btn {
+      width: 32px; height: 32px; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: none; border-radius: 999px; background: transparent; cursor: pointer;
+      transition: background var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-mic-btn:hover,
+    .agent-client .wzh-chat-mic-btn:focus-visible {
+      outline: none;
+      background: var(--state-hover);
+    }
+    .agent-client .wzh-chat-mic-btn img { width: 18px; height: 18px; display: block; }
+    .agent-client .wzh-chat-send-btn {
+      position: relative; overflow: hidden; isolation: isolate;
+      width: 32px; height: 32px; padding: 0; border-radius: 50%;
+      background: var(--mi-brand-blue); border: none; color: var(--primary-foreground);
+      cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+      transition: background var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-send-btn:hover { background: color-mix(in srgb, var(--mi-brand-blue) 84%, #000); }
+    .agent-client .wzh-chat-send-btn:disabled { background: var(--brand-blue-disabled); opacity: 1; cursor: default; }
+    .agent-client .wzh-chat-send-btn img {
+      position: relative; z-index: 2;
+      width: 16px; height: 16px; display: block; filter: brightness(0) invert(1);
+    }
+    .agent-client .wzh-chat-send-btn::after {
+      content: ''; position: absolute; z-index: 1; pointer-events: none;
+      left: var(--wzh-send-press-x, 50%); top: var(--wzh-send-press-y, 50%);
+      width: 72px; height: 72px; border-radius: 50%; opacity: 0;
+      background: radial-gradient(circle,
+        rgba(91, 132, 242, .42) 0%,
+        rgba(83, 151, 239, .32) 26%,
+        rgba(102, 104, 225, .24) 54%,
+        rgba(67, 105, 239, .08) 70%,
+        rgba(67, 105, 239, 0) 78%);
+      transform: translate(-50%, -50%) scale(.04);
+    }
+    .agent-client .wzh-chat-send-btn.is-press-fx { animation: wzh-chat-send-press 320ms var(--easing-default) both; }
+    .agent-client .wzh-chat-send-btn.is-press-fx::after { animation: wzh-chat-send-fill 400ms ease-out both; }
+    @keyframes wzh-chat-send-press {
+      0% { transform: scale(1); }
+      28% { transform: scale(.96); }
+      100% { transform: scale(1); }
+    }
+    @keyframes wzh-chat-send-fill {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(.04); }
+      12% { opacity: .58; }
+      72% { opacity: .36; }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .agent-client .wzh-chat-send-btn.is-press-fx { animation: none; }
+      .agent-client .wzh-chat-send-btn.is-press-fx::after { animation: none; }
+    }
+    .agent-client .wzh-chat-send-btn.is-stop { background: color-mix(in srgb, var(--foreground) 9%, transparent); }
+    .agent-client .wzh-chat-send-btn.is-stop:hover { background: color-mix(in srgb, var(--foreground) 16%, transparent); }
+    .agent-client .wzh-chat-send-btn.is-stop img { filter: none; }
+    .agent-client .wzh-chat-send-btn.is-resume img { filter: brightness(0) invert(1); }
+    .agent-client .wzh-chat-stopped { margin-top: 8px; font: 14px/1.5 var(--font-sans); color: var(--foreground-muted); }
+
+    .agent-client .wzh-chat-typing { display: inline-flex; align-items: center; gap: 4px; padding: 3px 0; }
+    .agent-client .wzh-chat-typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--foreground-muted); opacity: .4; animation: wzh-chat-typing-blink 1.2s infinite ease-in-out both; }
+    .agent-client .wzh-chat-typing span:nth-child(2) { animation-delay: .18s; }
+    .agent-client .wzh-chat-typing span:nth-child(3) { animation-delay: .36s; }
+    @keyframes wzh-chat-typing-blink {
+      0%, 80%, 100% { opacity: .25; transform: scale(.85); }
+      40% { opacity: .9; transform: scale(1); }
+    }
+    .agent-client .wzh-chat-context-chips {
+      display: flex; align-items: center; gap: 6px;
+      max-width: calc(100% - 4px);
+      margin: 4px 0 8px 4px;
+    }
+    .agent-client .wzh-chat-context-chips[hidden] { display: none; }
+    .agent-client .wzh-chat-anchor-chip[hidden],
+    .agent-client .wzh-chat-context-item[hidden],
+    .agent-client .wzh-chat-code-chip[hidden],
+    .agent-client .wzh-chat-local-code-add[hidden],
+    .agent-client .wzh-chat-anchor-close[hidden] { display: none; }
+    .agent-client .wzh-chat-anchor-chip {
+      position: relative; min-width: 0; flex: 0 1 auto;
+      display: inline-flex; align-items: stretch;
+      max-width: 100%; overflow: hidden;
+      border: 1px dashed var(--border-line); border-radius: 8px;
+      background: transparent;
+      color: var(--foreground); font-size: 14px; font-weight: 400;
+    }
+    .agent-client .wzh-chat-context-item {
+      position: relative; min-width: 0; flex: 0 1 auto;
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 8px;
+    }
+    .agent-client .wzh-chat-code-context { max-width: 300px; }
+    .agent-client .wzh-chat-code-context.is-bound { flex: 0 1 auto; }
+    .agent-client #trainChatAnchorChip:not([hidden]) + #trainChatCodeContext:not([hidden]) { padding-left: 13px; }
+    .agent-client #trainChatAnchorChip:not([hidden]) + #trainChatCodeContext.is-bound { padding-left: 8px; }
+    .agent-client #trainChatAnchorChip:not([hidden]) + #trainChatCodeContext:not([hidden])::before {
+      content: ''; position: absolute; left: 0; top: 4px; bottom: 4px;
+      border-left: 1px solid var(--divider-strong);
+    }
+    .agent-client .wzh-chat-local-code-add {
+      min-width: 0; display: inline-flex; align-items: center; gap: 4px;
+      padding: 0; border: 0; background: transparent;
+      color: var(--foreground-muted);
+      font: inherit;
+      cursor: pointer;
+    }
+    .agent-client .wzh-chat-local-code-add:hover,
+    .agent-client .wzh-chat-local-code-add:focus-visible {
+      color: var(--foreground);
+    }
+    .agent-client .wzh-chat-local-code-add-icon,
+    .agent-client .wzh-chat-code-icon {
+      width: 14px; height: 14px; flex-shrink: 0;
+      display: block;
+    }
+    .agent-client .wzh-chat-local-code-add-icon {
+      background: currentColor;
+      mask: url('../assets/insight-chat/addfile.svg') center / contain no-repeat;
+    }
+    .agent-client .wzh-chat-code-chip {
+      position: relative; min-width: 0; max-width: 100%;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .agent-client .wzh-chat-code-icon {
+      width: 12px; height: 12px; flex-shrink: 0;
+      display: block;
+    }
+    .agent-client .wzh-chat-code-path { min-width: 0; flex: 0 1 auto; }
+    .agent-client .wzh-chat-code-popover {
+      position: fixed; z-index: 2000;
+      box-sizing: border-box; width: max-content;
+      max-width: min(360px, calc(100vw - 16px));
+      display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+      padding: 12px; border: 1px solid var(--divider-strong); border-radius: 8px;
+      background: var(--surface-1); color: var(--foreground);
+      box-shadow: var(--wzh-chat-shadow);
+      font-size: 14px;
+    }
+    .agent-client .wzh-chat-code-popover[hidden] { display: none; }
+    .agent-client .wzh-chat-code-popover-path { overflow-wrap: anywhere; line-height: 1.5; }
+    .agent-client .wzh-chat-code-popover-open {
+      padding: 5px 10px; border: 1px solid var(--divider-strong); border-radius: 6px;
+      background: var(--button-secondary-bg); color: var(--button-secondary-fg);
+      box-shadow: var(--button-secondary-shadow); text-decoration: none;
+      font-size: 14px; line-height: 1.4;
+    }
+    .agent-client .wzh-chat-code-popover-open:is(:hover, :focus-visible) {
+      border-color: var(--brand-blue); color: var(--brand-blue);
+    }
+    .agent-client .wzh-chat-code-popover-open:focus-visible { outline: 2px solid var(--button-focus-ring); outline-offset: 2px; }
+    .agent-client .wzh-chat-anchor-chip img {
+      width: 12px; height: 12px; flex-shrink: 0; display: block;
+    }
+    .agent-client .wzh-chat-anchor-chip span {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      transition: -webkit-mask-image var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-anchor-close {
+      position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+      /* 尺寸比照头部 .wzh-chat-head-btn(20px 图标 / 28px 命中区)等比缩到 chip 尺度:
+         原来 10px 的图标把 20 号视口的描边压到了半像素,抗锯齿一糊就显得比头部那颗淡一截 */
+      width: 20px; height: 20px; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: none; background: none; cursor: pointer; border-radius: 3px;
+      opacity: 0; pointer-events: none;
+      transition: opacity var(--duration-fast) var(--easing-default),
+                  background var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-context-item:hover > .wzh-chat-anchor-close,
+    .agent-client .wzh-chat-code-chip:hover > .wzh-chat-anchor-close,
+    .agent-client .wzh-chat-anchor-close:focus-visible { opacity: 1; pointer-events: auto; }
+    .agent-client .wzh-chat-context-item:hover > span,
+    .agent-client .wzh-chat-context-item:focus-within > span,
+    .agent-client .wzh-chat-code-chip:hover > span,
+    .agent-client .wzh-chat-code-chip:focus-within > span {
+      /* 渐变在按钮左边缘就走完:最后 18px(关闭键实际占的那一段)是纯透明的硬段,
+         不让渐变斜跨在按钮底下——那样按钮中间还压着半透的字,看着发脏 */
+      -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent calc(100% - 18px));
+      mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent calc(100% - 18px));
+    }
+    .agent-client .wzh-chat-anchor-close:hover { background: var(--state-hover); }
+    .agent-client .wzh-chat-anchor-close img { width: 16px; height: 16px; display: block; }
+    .agent-client .wzh-chat-queue[hidden] { display: none; }
+    .agent-client .wzh-chat-queue {
+      flex: none; margin: 0 16px 8px; position: relative; z-index: 1;
+      transition: margin-bottom var(--duration-slow) var(--easing-default);
+    }
+    .agent-client .wzh-chat-queue.is-collapsed { margin-bottom: -14px; }
+    .agent-client .wzh-chat-queue-card {
+      box-sizing: border-box; margin: 0; padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 8px;
+      border: 1px solid var(--border-line); border-radius: 14px;
+      background: #fafafa;
+      transform-origin: 50% 100%;
+      transition: margin var(--duration-slow) var(--easing-default),
+                  padding var(--duration-slow) var(--easing-default),
+                  gap var(--duration-slow) var(--easing-default),
+                  background var(--duration-slow) var(--easing-default),
+                  border-color var(--duration-slow) var(--easing-default);
+    }
+    .agent-client[data-theme='dark'] .wzh-chat-queue-card { background: var(--surface-1); }
+    .agent-client .wzh-chat-queue.is-collapsed .wzh-chat-queue-card {
+      margin: 0 16px; padding: 13px 16px 24px; gap: 0;
+      background: #fafafa;
+      border-color: var(--card-neutral-border);
+    }
+    .agent-client[data-theme='dark'] .wzh-chat-queue.is-collapsed .wzh-chat-queue-card {
+      background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, .03),
+        rgba(255, 255, 255, .08)
+      );
+    }
+    .agent-client .wzh-chat-queue.is-zshift .wzh-chat-queue-card { animation: wzh-queue-zshift 380ms var(--easing-default) both; }
+    @keyframes wzh-queue-zshift {
+      0%   { transform: perspective(700px) translate3d(0, 0, 0); }
+      45%  { transform: perspective(700px) translate3d(0, 8px, -48px); }
+      100% { transform: perspective(700px) translate3d(0, 0, 0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .agent-client .wzh-chat-queue.is-zshift .wzh-chat-queue-card { animation: none; }
+      .agent-client .wzh-chat-queue, .agent-client .wzh-chat-queue-listwrap, .agent-client .wzh-chat-queue-list, .agent-client .wzh-chat-queue-card { transition: none; }
+    }
+    .agent-client .wzh-chat-queue-listwrap {
+      display: grid; grid-template-rows: 1fr; min-height: 0; overflow: hidden;
+      transition: grid-template-rows var(--duration-slow) var(--easing-default);
+    }
+    .agent-client .wzh-chat-queue.is-collapsed .wzh-chat-queue-listwrap { grid-template-rows: 0fr; }
+    .agent-client .wzh-chat-queue-head { display: flex; align-items: center; gap: 8px; }
+    .agent-client .wzh-chat-queue-toggle {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 0; border: none; background: none; cursor: pointer;
+      font: inherit; color: var(--foreground);
+    }
+    .agent-client .wzh-chat-queue-toggle svg {
+      width: 15px; height: 15px; flex-shrink: 0;
+      fill: none; stroke: currentColor; stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round;
+      transform: rotate(90deg);
+      transition: transform var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-queue.is-collapsed .wzh-chat-queue-toggle svg { transform: rotate(0); }
+    .agent-client .wzh-chat-queue-title { font-size: 14px; }
+    .agent-client .wzh-chat-queue-clear {
+      margin-left: auto; padding: 0; border: none; background: none; cursor: pointer;
+      font: 14px/1.4 var(--font-sans); color: var(--foreground-muted);
+    }
+    .agent-client .wzh-chat-queue-clear:hover { color: var(--foreground); }
+    .agent-client .wzh-chat-queue-list {
+      list-style: none; margin: 0; padding: 0; min-height: 0;
+      /* 不跟着 0fr 的行一起被压扁:保住自身高度,才谈得上向下滑出去被裁掉 */
+      align-self: start;
+      display: flex; flex-direction: column;
+      max-height: 132px; overflow-y: auto;
+      transition: transform var(--duration-slow) var(--easing-default),
+                  opacity var(--duration-base) var(--easing-default);
+    }
+    .agent-client .wzh-chat-queue.is-collapsed .wzh-chat-queue-list {
+      transform: translateY(12px); opacity: 0; overflow: hidden;
+    }
+    .agent-client .wzh-chat-queue-item {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 0; min-width: 0;
+    }
+    .agent-client .wzh-chat-queue-item.is-dragging {
+      background: var(--state-hover); border-radius: 5px;
+    }
+    .agent-client .wzh-chat-queue-dot {
+      width: 15px; height: 15px; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 0; border: 0; background: none; color: var(--foreground-muted);
+      position: relative;
+    }
+    .agent-client .wzh-chat-queue-dot::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: color-mix(in srgb, var(--foreground-muted) 70%, transparent);
+    }
+    .agent-client .wzh-chat-queue-dot svg {
+      position: absolute; width: 15px; height: 15px; opacity: 0;
+      fill: currentColor;
+    }
+    .agent-client .wzh-chat-queue.has-multiple .wzh-chat-queue-dot { cursor: grab; }
+    .agent-client .wzh-chat-queue.has-multiple .wzh-chat-queue-dot::before { opacity: 0; }
+    .agent-client .wzh-chat-queue.has-multiple .wzh-chat-queue-dot svg { opacity: .5; }
+    .agent-client .wzh-chat-queue.is-sorting, .agent-client .wzh-chat-queue.has-multiple .wzh-chat-queue-dot { touch-action: none; }
+    .agent-client .wzh-chat-queue-text {
+      flex: 1; min-width: 0;
+      font-size: 14px; color: var(--foreground);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .agent-client .wzh-chat-queue-text .wzh-chat-input-chip {
+      display: inline; margin: 0 2px; padding: 1px 4px;
+      white-space: nowrap; font-weight: 500;
+    }
+    .agent-client .wzh-chat-queue-del, .agent-client .wzh-chat-queue-edit, .agent-client .wzh-chat-queue-send {
+      width: 20px; height: 20px; flex-shrink: 0; padding: 0; border-radius: 4px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: none; background: none; cursor: pointer; color: var(--foreground-muted);
+      transition: background var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-queue-del:hover, .agent-client .wzh-chat-queue-edit:hover, .agent-client .wzh-chat-queue-send:hover { background: var(--state-hover); color: var(--foreground); }
+    .agent-client .wzh-chat-queue-del svg, .agent-client .wzh-chat-queue-edit svg, .agent-client .wzh-chat-queue-send svg {
+      width: 14px; height: 14px; fill: none; stroke: currentColor;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .agent-client .wzh-chat-queue-send img { width: 14px; height: 14px; display: block; opacity: .68; }
+    .agent-client .wzh-chat-queue-send:hover img { opacity: 1; }
+    .agent-client[data-theme='dark'] .wzh-chat-queue-send img { filter: invert(1); }
+    .agent-client .wzh-chat-message.user.wzh-chat-queued-sent {
+      display: table; width: fit-content; max-width: min(80%, 620px);
+      margin: 12px 0 12px auto; padding: 12px 14px; border-radius: 12px;
+      background: color-mix(in srgb, var(--mi-brand-blue) var(--brand-tint), var(--surface-1));
+      color: var(--foreground); box-shadow: none; overflow-wrap: anywhere;
+      font-size: 14px; line-height: 1.6;
+    }
+    .agent-client[data-theme='dark'] .wzh-chat-message.user.wzh-chat-queued-sent {
+      background: color-mix(in srgb, var(--mi-brand-blue) var(--brand-tint), var(--surface-2));
+    }
+    .agent-client .wzh-chat-qcard {
+      align-self: stretch;
+      box-sizing: border-box;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--mi-brand-blue) var(--brand-tint), var(--surface-1));
+      color: var(--foreground);
+      display: grid;
+      /* 折叠列默认 0 宽:三行以内的短问题根本不会出现箭头,没必要给它留一条空白 */
+      grid-template-columns: 0 1fr;
+      column-gap: 0;
+      row-gap: 8px;
+    }
+    .agent-client .wzh-chat-qcard.is-clampable {
+      cursor: pointer;
+      padding-left: 10px;
+      grid-template-columns: 20px 1fr;
+      column-gap: 4px;
+    }
+    .agent-client .wzh-chat-qcard.is-pinned { position: sticky; top: 0; z-index: 3; }
+    .agent-client .wzh-chat-qcard.is-pinned::after {
+      content: ''; position: absolute; left: -12px; right: -12px; top: 100%; height: 28px;
+      background: linear-gradient(to bottom,
+        var(--surface-1) 0%,
+        color-mix(in srgb, var(--surface-1) 55%, transparent) 55%,
+        transparent 100%);
+      opacity: 0; pointer-events: none;
+      transition: opacity var(--duration-base) var(--easing-default);
+    }
+    .agent-client .wzh-chat-qcard.is-pinned.is-stuck::after { opacity: 1; }
+    .agent-client .wzh-chat-qcard.is-pinned::before {
+      content: ''; position: absolute; left: -12px; right: -12px; bottom: 100%; height: 16px;
+      background: var(--surface-1);
+    }
+    .agent-client[data-theme='dark'] .wzh-chat-qcard {
+      background: color-mix(in srgb, var(--mi-brand-blue) var(--brand-tint), var(--surface-2));
+    }
+    .agent-client .wzh-chat-qcard-toggle {
+      grid-column: 1; grid-row: 1;
+      width: 20px; height: 20px; padding: 0;
+      display: none; align-items: center; justify-content: center;
+      border: none; background: none; cursor: pointer;
+      color: var(--foreground-secondary);
+    }
+    .agent-client .wzh-chat-qcard.is-clampable .wzh-chat-qcard-toggle { display: inline-flex; }
+    .agent-client .wzh-chat-qcard-toggle svg {
+      width: 14px; height: 14px; fill: none; stroke: currentColor;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      transform: rotate(90deg); /* 展开态:朝下 */
+      transition: transform var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-qcard.is-collapsed .wzh-chat-qcard-toggle svg { transform: rotate(0); }
+    .agent-client .wzh-chat-qcard-anchor {
+      grid-column: 2; grid-row: 1;
+      display: inline-flex; align-items: center; align-self: center;
+      max-width: 100%; overflow: hidden;
+      padding: 2px 8px; border-radius: 6px;
+      background: color-mix(in srgb, var(--mi-brand-blue) var(--brand-tint-strong), transparent);
+      color: var(--foreground); font-size: 14px; line-height: 18px;
+      justify-self: start;
+    }
+    .agent-client .wzh-chat-qcard-anchor img { width: 12px; height: 12px; flex-shrink: 0; display: block; }
+    .agent-client .wzh-chat-qcard-context-item { min-width: 0; max-width: 100%; display: inline-flex; align-items: center; gap: 5px; }
+    .agent-client .wzh-chat-qcard-context-item > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .agent-client .wzh-chat-qcard-code { flex: 1 1 auto; }
+    .agent-client .wzh-chat-qcard-divider { height: 14px; margin: 0 8px; border-left: 1px solid var(--divider-strong); flex-shrink: 0; }
+    .agent-client .wzh-chat-qcard-text {
+      grid-column: 2; grid-row: 2;
+      font-size: 14px; line-height: 1.6; color: var(--foreground);
+    }
+    .agent-client .wzh-chat-qcard:not(.has-context) .wzh-chat-qcard-text { grid-row: 1; }
+    .agent-client .wzh-chat-qcard.is-collapsed .wzh-chat-qcard-text {
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+      overflow: hidden;
+    }
+    .agent-client .wzh-chat-qref {
+      display: inline-block; white-space: nowrap; /* 标签整块换行,不在标签内部断开 */
+      padding: 1px 5px; border-radius: 5px;
+      background: color-mix(in srgb, var(--mi-brand-blue) var(--brand-tint-strong), transparent);
+      color: var(--mi-brand-blue); font-size: 14px;
+    }
+    .agent-client .wzh-chat-think { align-self: stretch; display: flex; flex-direction: column; }
+    .agent-client .wzh-chat-think-head {
+      display: none; align-items: center; gap: 6px;
+      padding: 0; border: none; background: none; cursor: pointer;
+      font: inherit; color: var(--foreground-muted);
+      align-self: flex-start;
+    }
+    .agent-client .wzh-chat-think-head { display: inline-flex; }
+    .agent-client .wzh-chat-think-head-label,
+    .agent-client .wzh-chat-think-head-time { font-size: 14px; }
+    .agent-client .wzh-chat-think-head-time { font-variant-numeric: tabular-nums; }
+    .agent-client .wzh-chat-think-head svg {
+      width: 15px; height: 15px; fill: none; stroke: currentColor;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      transform: rotate(90deg);
+      transition: transform var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-think.is-collapsed .wzh-chat-think-head svg { transform: rotate(0); }
+    .agent-client .wzh-chat-think.is-done.is-collapsed { margin-bottom: 12px; }
+    .agent-client .wzh-chat-think.is-collapsed .wzh-chat-think-body { display: none; }
+    .agent-client .wzh-chat-think-body {
+      position: relative;
+      padding-left: 18px;
+      margin-top: 10px;    /* 与上面常驻的折叠条隔开 */
+      margin-bottom: 16px; /* 与下面的正式回答留出一档间距 */
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .agent-client .wzh-chat-think-body::before {
+      content: ''; position: absolute; left: 3.5px; top: 5px; bottom: 5px;
+      width: 1px; background: var(--divider-strong);
+    }
+    .agent-client .wzh-chat-think-node { position: relative; }
+    .agent-client .wzh-chat-think-dot {
+      position: absolute; left: -18px; top: 5px;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--brand-green);
+      transition: background var(--duration-base) var(--easing-default);
+    }
+    .agent-client .wzh-chat-think-node.is-running .wzh-chat-think-dot {
+      background: var(--mi-brand-blue);
+      animation: wzh-chat-dot-breathe 1.5s ease-in-out infinite;
+    }
+    @keyframes wzh-chat-dot-breathe {
+      0%, 100% { transform: scale(.91); }
+      50%      { transform: scale(1.175); }
+    }
+    .agent-client .wzh-chat-think-node-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+    .agent-client .wzh-chat-think-node-title { font-size: 14px; color: var(--foreground); }
+    .agent-client .wzh-chat-think-node.is-running .wzh-chat-think-node-title {
+      --wzh-shine: color-mix(in srgb, var(--foreground) 10%, #fff);
+      background-image: linear-gradient(100deg,
+        var(--foreground) 0%,
+        var(--foreground) 10%,
+        var(--wzh-shine) 50%,
+        var(--foreground) 90%,
+        var(--foreground) 100%);
+      background-size: 300% 100%;
+      -webkit-background-clip: text; background-clip: text;
+      color: transparent; -webkit-text-fill-color: transparent;
+      animation: wzh-chat-title-shine 1.2s linear infinite;
+    }
+    .agent-client[data-theme='dark'] .wzh-chat-think-node.is-running .wzh-chat-think-node-title { --wzh-shine: #fff; }
+    @keyframes wzh-chat-title-shine {
+      from { background-position: 150% 0; }
+      to   { background-position: -50% 0; }
+    }
+    .agent-client .wzh-chat-think-node-time { font-size: 14px; color: var(--foreground-muted); font-variant-numeric: tabular-nums; }
+    .agent-client .wzh-chat-think-node-text {
+      font-size: 14px; line-height: 1.7; color: var(--foreground-muted);
+      word-break: break-word;
+    }
+    .agent-client .wzh-chat-think-node-text p { margin: 0 0 4px; color: inherit; }
+    .agent-client .wzh-chat-think-node-text p:last-child { margin-bottom: 0; }
+    .agent-client .wzh-chat-think-node-text strong { color: var(--foreground-secondary); }
+    .agent-client .wzh-chat-think-node-text code {
+      font-family: var(--font-mono); font-size: 12px;
+      color: var(--foreground-secondary);
+      background: color-mix(in srgb, var(--foreground) 7%, transparent);
+      padding: 1px 4px; border-radius: 3px;
+    }
+    .agent-client .wzh-chat-answer { font-size: 14px; line-height: 1.7; color: var(--foreground); }
+    .agent-client .wzh-chat-answer p,
+    .agent-client .wzh-chat-answer li,
+    .agent-client .wzh-chat-answer td { color: var(--foreground); }
+    .agent-client .wzh-chat-answer code { color: var(--foreground); }
+    .agent-client .wzh-chat-viz-card {
+      width: 100%; min-width: 0; box-sizing: border-box;
+      display: grid; grid-template-columns: 34px minmax(0, 1fr) 20px;
+      align-items: center; gap: 10px;
+      margin: 10px 0 12px; padding: 11px 12px;
+      border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+      border-radius: 10px;
+      background: var(--surface-1);
+      box-shadow: none;
+      color: var(--foreground); text-align: left; cursor: pointer;
+      transition: border-color var(--duration-fast) var(--easing-default),
+                  background var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-viz-card:hover {
+      border-color: color-mix(in srgb, var(--brand-accent) 42%, var(--surface-1));
+      background: linear-gradient(100deg,
+        color-mix(in srgb, var(--brand-accent) 6%, var(--surface-1)) 0%,
+        var(--surface-1) 100%);
+    }
+    .agent-client .wzh-chat-viz-card:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--brand-accent) 42%, var(--surface-1));
+      outline-offset: 2px;
+    }
+    .agent-client .wzh-chat-viz-card.is-active {
+      border-color: color-mix(in srgb, var(--brand-accent) 58%, var(--surface-1));
+      background: linear-gradient(100deg,
+        color-mix(in srgb, var(--brand-accent) 6%, var(--surface-1)) 0%,
+        var(--surface-1) 100%);
+    }
+    .agent-client .wzh-chat-viz-card-icon {
+      width: 34px; height: 34px; display: grid; place-items: center;
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--brand-accent) 14%, var(--surface-1));
+      color: var(--brand-accent);
+    }
+    .agent-client .wzh-chat-viz-card-icon svg,
+    .agent-client .wzh-chat-viz-card-arrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .agent-client .wzh-chat-viz-card-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .agent-client .wzh-chat-viz-card-title { font-size: 14px; line-height: 1.45; font-weight: 600; color: var(--foreground); }
+    .agent-client .wzh-chat-viz-card-desc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 1.5; color: var(--foreground-secondary); }
+    .agent-client .wzh-chat-viz-card-arrow { display: grid; place-items: center; color: var(--foreground-muted); }
+    .agent-client .wzh-chat-viz-pane {
+      grid-column: 3; grid-row: 1 / 4;
+      min-width: 0; min-height: 0;
+      display: flex; flex-direction: column;
+      border-left: 1px solid var(--divider-strong);
+      background: var(--ide-frame-pane-bg);
+    }
+    .agent-client .wzh-chat-viz-pane[hidden] { display: none; }
+    .agent-client .wzh-chat-viz-head {
+      min-height: 55px; box-sizing: border-box;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 8px 12px 7px 10px;
+    }
+    .agent-client .wzh-chat-viz-tabs {
+      min-width: 0; flex: 1 1 auto;
+      display: flex; align-items: center; gap: 4px;
+      overflow-x: auto; overflow-y: hidden;
+      scrollbar-width: none;
+    }
+    .agent-client .wzh-chat-viz-tabs::-webkit-scrollbar { display: none; }
+    .agent-client .wzh-chat-viz-tab {
+      min-width: 0; max-width: 100%; width: max-content; flex: 0 0 auto;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 6px 6px 10px;
+      border: 0; border-radius: 7px;
+      background: transparent; color: var(--foreground-secondary);
+      cursor: pointer; outline: none;
+      transition: background var(--duration-fast) var(--easing-default),
+                  color var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-viz-tab:hover { background: var(--state-hover); color: var(--foreground); }
+    .agent-client .wzh-chat-viz-tab[aria-selected="true"] {
+      background: color-mix(in srgb, var(--brand-accent) var(--brand-tint), transparent);
+      color: var(--brand-accent);
+    }
+    .agent-client .wzh-chat-viz-tab:focus-visible { box-shadow: 0 0 0 2px var(--focus-ring); }
+    .agent-client .wzh-chat-viz-tab-title {
+      min-width: 0; flex: 1 1 auto;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-size: 14px; line-height: 1.4; font-weight: 500;
+    }
+    .agent-client .wzh-chat-viz-tab-close {
+      width: 20px; height: 20px; flex: 0 0 auto; padding: 0;
+      display: grid; place-items: center;
+      border: 0; border-radius: 5px; background: transparent;
+      color: var(--foreground-muted); cursor: pointer;
+    }
+    .agent-client .wzh-chat-viz-tab-close:hover { background: color-mix(in srgb, var(--foreground) 9%, transparent); color: var(--foreground); }
+    .agent-client .wzh-chat-viz-tab-close svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+    .agent-client .wzh-chat-viz-close {
+      width: 28px; height: 28px; flex: 0 0 auto; padding: 0;
+      display: grid; place-items: center;
+      border: 0; border-radius: 7px; background: transparent; color: var(--foreground); cursor: pointer;
+    }
+    .agent-client .wzh-chat-viz-close:hover { background: var(--state-hover); }
+    .agent-client .wzh-chat-viz-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+    .agent-client .wzh-chat-viz-viewport { min-width: 0; min-height: 0; flex: 1 1 auto; background: transparent; }
+    .agent-client .wzh-chat-viz-frame { display: block; width: 100%; height: 100%; border: 0; background: transparent; }
+    .agent-client .wzh-chat-viz-frame[hidden] { display: none; }
+    .agent-client .wzh-chat-locate {
+      display: inline-flex; align-items: center; gap: 3px; vertical-align: baseline;
+      margin: 0 1px; padding: 1px 5px;
+      font-family: inherit; font-size: 12px; line-height: 1.6;
+      color: var(--mi-brand-blue);
+      background: color-mix(in srgb, var(--mi-brand-blue) var(--brand-tint-strong), transparent);
+      border: none; border-radius: 4px; cursor: pointer;
+      transition: background var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-locate:hover { background: color-mix(in srgb, var(--mi-brand-blue) 22%, transparent); }
+    .agent-client .wzh-chat-locate svg {
+      width: 11px; height: 11px; flex: 0 0 auto;
+      fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round;
+    }
+    .agent-client .wzh-chat-locate.is-hit { animation: wzh-chat-locate-hit .7s var(--easing-default); }
+    @keyframes wzh-chat-locate-hit {
+      0%   { background: var(--mi-brand-blue); color: #FFF; }
+      100% { background: color-mix(in srgb, var(--mi-brand-blue) var(--brand-tint-strong), transparent); color: var(--mi-brand-blue); }
+    }
+    .agent-client .wzh-chat-think-node.is-final .wzh-chat-think-dot { background: var(--brand-green); }
+    .agent-client .wzh-chat-think-node.is-final .wzh-chat-think-node-head { margin-bottom: 0; }
+    .agent-client .wzh-chat-answer-actions {
+      display: flex; align-items: center; gap: 4px;
+      margin-top: 4px;
+    }
+    .agent-client .wzh-chat-answer-action {
+      width: 26px; height: 26px; padding: 0; border-radius: 6px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: none; background: none; cursor: pointer;
+      transition: background var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-answer-action:hover { background: var(--surface-2); }
+    .agent-client .wzh-chat-answer-action.is-active { background: color-mix(in srgb, var(--mi-brand-blue) var(--brand-tint-strong), transparent); }
+    .agent-client .wzh-chat-answer-action img { width: 16px; height: 16px; display: block; }
+    .agent-client .wzh-chat-answer-action.is-copied { color: var(--brand-green); }
+    .agent-client .wzh-chat-answer-action.is-copied svg {
+      width: 16px; height: 16px; fill: none; stroke: currentColor;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      animation: wzh-chat-copy-pop 240ms cubic-bezier(.2, 1.4, .4, 1) both;
+    }
+    .agent-client .wzh-chat-answer-action.is-copied svg path {
+      stroke-dasharray: 24;
+      stroke-dashoffset: 24;
+      animation: wzh-chat-copy-draw 300ms ease-out forwards;
+    }
+    @keyframes wzh-chat-copy-pop {
+      from { opacity: .4; transform: scale(.65); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes wzh-chat-copy-draw { to { stroke-dashoffset: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .agent-client .wzh-chat-answer-action.is-copied svg,
+      .agent-client .wzh-chat-answer-action.is-copied svg path { animation: none; }
+      .agent-client .wzh-chat-answer-action.is-copied svg path { stroke-dashoffset: 0; }
+    }
+    .agent-client .wzh-chat-jump-wrap { position: relative; height: 0; flex-shrink: 0; z-index: 4; }
+    .agent-client .wzh-chat-jump-btn {
+      position: absolute; left: 50%; bottom: 12px; transform: translate(-50%, 6px);
+      width: 32px; height: 32px; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid var(--divider-strong); border-radius: 50%;
+      background: var(--surface-1); color: var(--foreground-secondary);
+      box-shadow: 0 4px 12px -4px rgba(0, 0, 0, .28);
+      cursor: pointer; opacity: 0; pointer-events: none;
+      transition: opacity var(--duration-fast) var(--easing-default),
+                  transform var(--duration-fast) var(--easing-default);
+    }
+    .agent-client .wzh-chat-jump-btn.is-visible { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+    .agent-client .wzh-chat-jump-btn:hover { border-color: var(--brand-blue); color: var(--brand-blue); }
+    .agent-client .wzh-chat-jump-btn svg {
+      width: 15px; height: 15px; fill: none; stroke: currentColor;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .agent-client .wzh-chat-jump-dots { display: none; align-items: center; gap: 3px; }
+    .agent-client .wzh-chat-jump-dots i {
+      width: 4px; height: 4px; border-radius: 50%; background: currentColor;
+      display: block; animation: wzh-chat-jump-bounce 1s ease-in-out infinite;
+    }
+    .agent-client .wzh-chat-jump-dots i:nth-child(2) { animation-delay: .14s; }
+    .agent-client .wzh-chat-jump-dots i:nth-child(3) { animation-delay: .28s; }
+    .agent-client .wzh-chat-jump-btn.is-thinking .wzh-chat-jump-arrow { display: none; }
+    .agent-client .wzh-chat-jump-btn.is-thinking .wzh-chat-jump-dots { display: inline-flex; }
+    .agent-client .wzh-chat-jump-btn.is-thinking:hover .wzh-chat-jump-dots,
+    .agent-client .wzh-chat-jump-btn.is-thinking:focus-visible .wzh-chat-jump-dots { display: none; }
+    .agent-client .wzh-chat-jump-btn.is-thinking:hover .wzh-chat-jump-arrow,
+    .agent-client .wzh-chat-jump-btn.is-thinking:focus-visible .wzh-chat-jump-arrow { display: block; }
+    @keyframes wzh-chat-jump-bounce {
+      0%, 60%, 100% { transform: translateY(0);    opacity: .55; }
+      30%           { transform: translateY(-4px); opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .agent-client .wzh-chat-think-node.is-running .wzh-chat-think-dot,
+      .agent-client .wzh-chat-jump-dots i { animation: none; }
+      .agent-client .wzh-chat-think-node.is-running .wzh-chat-think-node-title {
+        background-image: none; color: var(--foreground); -webkit-text-fill-color: currentColor;
+      }
+    }
+    .agent-client[data-theme='dark'] .wzh-chat-head-btn img,
+    .agent-client[data-theme='dark'] .wzh-chat-history-item img,
+    .agent-client[data-theme='dark'] .wzh-chat-head-caret,
+    .agent-client[data-theme='dark'] .wzh-chat-tool img,
+    .agent-client[data-theme='dark'] .wzh-chat-mic-btn img,
+    .agent-client[data-theme='dark'] .wzh-chat-answer-action img,
+    .agent-client[data-theme='dark'] .wzh-chat-anchor-close img,
+    .agent-client[data-theme='dark'] .wzh-chat-session-pen,
+    .agent-client[data-theme='dark'] .wzh-chat-send-btn.is-stop img { filter: invert(1); }
+    .agent-client[data-theme='dark'] .wzh-chat-welcome-hero { --wzh-dots-alpha: .22; }
+
+    @media (max-width: 720px) {
+      .agent-client .wzh-chat-panel.is-floating { left: 8px; width: auto; max-width: none; }
+    }

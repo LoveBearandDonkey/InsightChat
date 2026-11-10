@@ -1,0 +1,245 @@
+/* Desktop window geometry is shared by chat, timeline and compare pages. */
+(function () {
+  const desktop = document.getElementById('msiDesktop');
+  const frame = desktop?.querySelector('.pto-ide-frame');
+  const titlebar = frame?.querySelector('.pto-ide-frame__topbar');
+  if (!desktop || !frame || !titlebar) return;
+
+  const TASKBAR_HEIGHT = 42;
+  const HORIZONTAL_MARGIN = 80;
+  const VERTICAL_MARGIN = 28;
+  const MIN_WIDTH = 900;
+  const MIN_HEIGHT = 520;
+  const clamp = (value, low, high) => Math.min(Math.max(value, low), Math.max(low, high));
+  // Presenter controls live outside the desktop, including when the IDE is maximized.
+  const bounds = () => ({ width: desktop.clientWidth || window.innerWidth, height: Math.max(0, (desktop.clientHeight || window.innerHeight - 106) - TASKBAR_HEIGHT) });
+
+  function defaultGeometry() {
+    const { width, height } = bounds();
+    return {
+      x: HORIZONTAL_MARGIN,
+      y: VERTICAL_MARGIN,
+      w: Math.max(0, width - HORIZONTAL_MARGIN * 2),
+      h: Math.max(0, height - VERTICAL_MARGIN * 2),
+    };
+  }
+
+  // Window geometry lives only for this page load. Refresh always starts at the default inset.
+  const state = { ...defaultGeometry(), maximized: false, customized: false };
+  let hidden = false;
+  let shown = defaultGeometry();
+
+  function fit(geometry) {
+    const { width, height } = bounds();
+    // Keep the top-left anchor when DevTools reduces the viewport; shrink before shifting.
+    const minWidth = Math.min(MIN_WIDTH, Math.max(0, width - HORIZONTAL_MARGIN * 2));
+    const minHeight = Math.min(MIN_HEIGHT, Math.max(0, height - VERTICAL_MARGIN * 2));
+    const x = clamp(Math.round(geometry.x), 0, width - minWidth);
+    const y = clamp(Math.round(geometry.y), 0, height - minHeight);
+    return {
+      x, y,
+      w: clamp(Math.round(geometry.w), minWidth, width - x),
+      h: clamp(Math.round(geometry.h), minHeight, height - y),
+    };
+  }
+
+  const maxButton = document.getElementById('msiWindowMaximize');
+  const taskbarApp = document.getElementById('msiTaskbarApp');
+  const taskbarStart = document.getElementById('msiTaskbarStart');
+  const WALLPAPER_KEY = 'msi-desktop-wallpaper';
+  const WALLPAPERS = ['light', 'dark', 'purple'];
+  const WALLPAPER_LABELS = { light: '浅色', dark: '深色', purple: '紫色' };
+
+  function setWallpaper(wallpaper) {
+    desktop.classList.toggle('is-light-wallpaper', wallpaper === 'light');
+    desktop.classList.toggle('is-purple-wallpaper', wallpaper === 'purple');
+    if (taskbarStart) {
+      const next = WALLPAPERS[(WALLPAPERS.indexOf(wallpaper) + 1) % WALLPAPERS.length];
+      const label = '切换为' + WALLPAPER_LABELS[next] + '桌面壁纸';
+      taskbarStart.title = label;
+      taskbarStart.setAttribute('aria-label', label);
+    }
+    try { localStorage.setItem(WALLPAPER_KEY, wallpaper); } catch (_) { /* Optional preference. */ }
+  }
+
+  let wallpaper = 'light';
+  try {
+    const saved = localStorage.getItem(WALLPAPER_KEY);
+    if (WALLPAPERS.includes(saved)) wallpaper = saved;
+  } catch (_) { /* Optional preference. */ }
+  setWallpaper(wallpaper);
+  taskbarStart?.addEventListener('click', () => {
+    wallpaper = WALLPAPERS[(WALLPAPERS.indexOf(wallpaper) + 1) % WALLPAPERS.length];
+    setWallpaper(wallpaper);
+  });
+
+  function render() {
+    shown = fit(state.customized ? state : defaultGeometry());
+    frame.style.left = shown.x + 'px';
+    frame.style.top = shown.y + 'px';
+    frame.style.width = shown.w + 'px';
+    frame.style.height = shown.h + 'px';
+    frame.classList.toggle('is-desktop-maximized', state.maximized);
+    frame.classList.toggle('is-desktop-hidden', hidden);
+    taskbarApp?.classList.toggle('is-active', !hidden);
+    maxButton?.setAttribute('aria-pressed', String(state.maximized));
+    if (maxButton) {
+      maxButton.disabled = false;
+      maxButton.title = state.maximized ? '还原窗口' : '最大化';
+      maxButton.setAttribute('aria-label', maxButton.title);
+    }
+  }
+
+  function setMaximized(value) {
+    state.maximized = value;
+    hidden = false;
+    render();
+  }
+
+  function openWindow() { hidden = false; desktop.dataset.activeWindow='main'; document.dispatchEvent(new CustomEvent('msi:window-activated')); render(); }
+  function hideWindow() { hidden = true; render(); }
+  document.addEventListener('msi:window-open', openWindow);
+
+  // An overlay can prepare the live product window before handing control to it.
+  document.addEventListener('msi:window-geometry', (event) => {
+    const geometry = event.detail;
+    if (!geometry || !['x', 'y', 'w', 'h'].every(key => Number.isFinite(geometry[key]))) return;
+    Object.assign(state, geometry, { customized: true, maximized: false });
+    hidden = false;
+    render();
+  });
+
+  document.getElementById('msiWindowMinimize')?.addEventListener('click', hideWindow);
+  document.getElementById('msiWindowClose')?.addEventListener('click', hideWindow);
+  maxButton?.addEventListener('click', () => setMaximized(!state.maximized));
+  taskbarApp?.addEventListener('click', () => hidden || desktop.dataset.activeWindow==='agent' ? openWindow() : hideWindow());
+  document.getElementById('msiDesktopShortcut')?.addEventListener('click', openWindow);
+  titlebar.addEventListener('dblclick', (event) => {
+    if (event.target.closest('button, a, input, select, textarea')) return;
+    setMaximized(!state.maximized);
+  });
+
+  function startPointer(event, move, end) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    let dx = 0;
+    let dy = 0;
+    let pendingFrame = 0;
+    document.body.classList.add('is-desktop-dragging');
+    const flush = () => { pendingFrame = 0; move(dx, dy); };
+    const onMove = (next) => {
+      dx = next.clientX - startX;
+      dy = next.clientY - startY;
+      if (!pendingFrame) pendingFrame = requestAnimationFrame(flush);
+    };
+    const onEnd = () => {
+      if (pendingFrame) cancelAnimationFrame(pendingFrame);
+      move(dx, dy);
+      end?.();
+      document.body.classList.remove('is-desktop-dragging');
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onEnd);
+      window.removeEventListener('pointercancel', onEnd);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onEnd);
+    window.addEventListener('pointercancel', onEnd);
+  }
+
+  titlebar.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
+    if (state.maximized || frame.classList.contains('is-desktop-maximized')) return;
+    if (event.target.closest('button, a, input, select, textarea, [data-no-window-drag]')) return;
+    const start = { ...shown };
+    let moved = false;
+    frame.style.willChange = 'transform';
+    startPointer(event, (dx, dy) => {
+      if (dx || dy) {
+        if (!moved) Object.assign(state, start);
+        moved = true;
+        state.customized = true;
+      }
+      const { width, height } = bounds();
+      state.x = clamp(start.x + dx, 0, width - start.w);
+      state.y = clamp(start.y + dy, 0, height - start.h);
+      // Moving a composited layer avoids relaying out the entire workbench per pointer event.
+      frame.style.transform = `translate3d(${state.x - start.x}px, ${state.y - start.y}px, 0)`;
+    }, () => {
+      frame.style.transform = '';
+      frame.style.willChange = '';
+      render();
+    });
+  });
+
+  function resized(start, edge, dx, dy) {
+    const { width, height } = bounds();
+    const result = { ...start };
+    const minWidth = Math.min(MIN_WIDTH, Math.max(0, width - HORIZONTAL_MARGIN * 2));
+    const minHeight = Math.min(MIN_HEIGHT, Math.max(0, height - VERTICAL_MARGIN * 2));
+    if (edge.includes('w')) {
+      result.x = clamp(start.x + dx, 0, start.x + start.w - minWidth);
+      result.w = start.x + start.w - result.x;
+    }
+    if (edge.includes('e')) result.w = clamp(start.w + dx, minWidth, width - start.x);
+    if (edge.includes('n')) {
+      result.y = clamp(start.y + dy, 0, start.y + start.h - minHeight);
+      result.h = start.y + start.h - result.y;
+    }
+    if (edge.includes('s')) result.h = clamp(start.h + dy, minHeight, height - start.y);
+    return result;
+  }
+
+  // This shell does not carry InsightChat's static resize handles in its HTML.
+  // Install all eight hit areas before binding the shared resize behavior.
+  const resizeEdges={n:'上边缘',e:'右边缘',s:'下边缘',w:'左边缘',ne:'右上角',se:'右下角',sw:'左下角',nw:'左上角'};
+  for(const [edge,label] of Object.entries(resizeEdges)){
+    if(frame.querySelector('[data-resize-edge="'+edge+'"]'))continue;
+    const handle=document.createElement('div');
+    handle.className='msi-window-resize msi-window-resize--'+edge;
+    handle.dataset.resizeEdge=edge;
+    handle.tabIndex=0;
+    handle.setAttribute('role','separator');
+    handle.setAttribute('aria-label','调整 VS Code 窗口'+label);
+    handle.setAttribute('aria-orientation',edge==='n'||edge==='s'?'horizontal':'vertical');
+    frame.append(handle);
+  }
+  frame.querySelectorAll('[data-resize-edge]').forEach((handle) => {
+    const edge = handle.dataset.resizeEdge;
+    handle.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0 || frame.classList.contains('is-desktop-maximized')) return;
+      event.stopPropagation();
+      const start = { ...shown };
+      state.customized = true;
+      startPointer(event, (dx, dy) => {
+        Object.assign(state, resized(start, edge, dx, dy));
+        render();
+      });
+    });
+    handle.addEventListener('keydown', (event) => {
+      if (frame.classList.contains('is-desktop-maximized')) return;
+      const delta = { ArrowLeft: [-24, 0], ArrowRight: [24, 0], ArrowUp: [0, -24], ArrowDown: [0, 24] }[event.key];
+      if (!delta) return;
+      event.preventDefault();
+      state.customized = true;
+      Object.assign(state, resized(shown, edge, ...delta));
+      render();
+    });
+  });
+
+  const clock = document.getElementById('msiTaskbarClock');
+  function updateClock() {
+    if (!clock) return;
+    const now = new Date();
+    const options = { timeZone: 'Asia/Shanghai' };
+    clock.textContent = now.toLocaleTimeString('zh-CN', { ...options, hour: '2-digit', minute: '2-digit', hour12: false }) + '\n' +
+      now.toLocaleDateString('zh-CN', { ...options, year: 'numeric', month: 'numeric', day: 'numeric' });
+    clock.dateTime = now.toISOString();
+  }
+
+  window.addEventListener('resize', render);
+  updateClock();
+  setInterval(updateClock, 30_000);
+  render();
+})();

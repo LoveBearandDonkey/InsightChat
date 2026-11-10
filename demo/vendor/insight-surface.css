@@ -1,0 +1,98 @@
+/* User-provided InsightChat app/chat.css: verbatim IDE glass/gradient tokens.
+   Scoped to the client/dialogs, with conditional light overrides. */
+.agent-client, .agent-mcp-dialog, .agent-trial-dialog {
+  --ide-bg-start: #17181d;
+  --ide-bg-mid: #101114;
+  --ide-bg-end: #0c0d10;
+  --ide-shell-opacity: 92%;
+  --ide-glow-left: 155 96 170;
+  --ide-glow-right: 67 105 239;
+  --ide-glow-center: 20 184 166;
+  --ide-glow-lower: 67 105 239;
+  --ide-glow-bottom: 244 114 182;
+  --ide-dot-color: 116 140 190;
+  --ide-dot-hot-color: 155 96 170;
+  --ide-cursor-color: 67 105 239;
+  --ide-gradient-left-alpha: 0.06;
+  --ide-gradient-right-alpha: 0.08;
+  --ide-gradient-center-alpha: 0.03;
+  --ide-gradient-lower-alpha: 0.05;
+  --ide-aura-bottom-alpha: 0.035;
+  --ide-dot-opacity: 0;
+  --ide-dot-size: 1px;
+  --ide-dot-gap: 20px;
+  --ide-dot-hot-radius: 220px;
+  --ide-cursor-x: 50%;
+  --ide-cursor-y: 40%;
+  --ide-cursor-alpha: 0;
+  --ide-cursor-radius: 380px;
+  --ide-gradient-bg:
+    radial-gradient(circle at top left, rgb(var(--ide-glow-left) / var(--ide-gradient-left-alpha)), transparent 28%),
+    radial-gradient(circle at top right, rgb(var(--ide-glow-right) / var(--ide-gradient-right-alpha)), transparent 30%),
+    radial-gradient(circle at 48% 6%, rgb(var(--ide-glow-center) / var(--ide-gradient-center-alpha)), transparent 34%),
+    radial-gradient(circle at 18% 86%, rgb(var(--ide-glow-lower) / var(--ide-gradient-lower-alpha)), transparent 34%),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--ide-bg-start) var(--ide-shell-opacity), transparent) 0%,
+      color-mix(in srgb, var(--ide-bg-mid) var(--ide-shell-opacity), transparent) 44%,
+      color-mix(in srgb, var(--ide-bg-end) var(--ide-shell-opacity), transparent) 100%);
+  --ide-aura-bg:
+    radial-gradient(circle at var(--ide-cursor-x) var(--ide-cursor-y), rgb(var(--ide-cursor-color) / var(--ide-cursor-alpha)) 0, transparent var(--ide-cursor-radius)),
+    radial-gradient(circle at 72% 86%, rgb(var(--ide-glow-bottom) / var(--ide-aura-bottom-alpha)), transparent 0 18rem);
+  --ide-frame-page-bg: var(--ide-gradient-bg);
+  --ide-frame-bg: var(--ide-gradient-bg);
+  --ide-frame-backdrop-filter: blur(8px);
+  --ide-frame-chrome-bg: transparent;
+  --ide-frame-pane-bg: var(--background);
+  --ide-frame-pane-fill: color-mix(in srgb, var(--ide-frame-pane-bg) 80%, transparent);
+  --ide-frame-pane-header-fill: color-mix(in srgb, var(--ide-frame-pane-bg) 72%, transparent);
+  --ide-frame-pane-backdrop-filter: blur(18px) saturate(1.18);
+  --ide-frame-pane-shadow: 0 12px 30px color-mix(in srgb, var(--background) 10%, transparent);
+  --ide-frame-pane-border: var(--divider-weak);
+  --ide-frame-header-height: 32px;
+  --ide-frame-title-font: 600 12.5px / 1.2 var(--font-sans);
+  --ide-frame-meta-font: 500 11px / 1.35 var(--font-mono);
+  --ide-frame-icon-stroke: var(--foreground);
+  --ide-frame-icon-stroke-inverse: #101010;
+  --ide-frame-icon-opacity-strong: 1;
+  --ide-frame-icon-opacity-secondary: 1;
+  --ide-frame-icon-opacity-muted: 1;
+}
+.agent-client[data-theme="light"], .agent-mcp-dialog[data-theme="light"], .agent-trial-dialog[data-theme="light"] {
+  --ide-bg-start: #f6f7fb;
+  --ide-bg-mid: #f6f7fb;
+  --ide-bg-end: #eceff6;
+  --ide-shell-opacity: 92%;
+  --ide-glow-left: 155 96 170;
+  --ide-glow-right: 24 99 220;
+  --ide-glow-center: 20 184 166;
+  --ide-glow-lower: 24 99 220;
+  --ide-glow-bottom: 244 114 182;
+  --ide-dot-color: 24 99 220;
+  --ide-dot-hot-color: 155 96 170;
+  --ide-cursor-color: 24 99 220;
+  --ide-gradient-left-alpha: 0.07;
+  --ide-gradient-right-alpha: 0.08;
+  --ide-gradient-center-alpha: 0.04;
+  --ide-gradient-lower-alpha: 0.08;
+  --ide-aura-bottom-alpha: 0.035;
+  --ide-gradient-bg:
+    radial-gradient(circle at top left, rgb(var(--ide-glow-left) / var(--ide-gradient-left-alpha)), transparent 28%),
+    radial-gradient(circle at top right, rgb(var(--ide-glow-right) / var(--ide-gradient-right-alpha)), transparent 30%),
+    radial-gradient(circle at 48% 6%, rgb(var(--ide-glow-center) / var(--ide-gradient-center-alpha)), transparent 34%),
+    radial-gradient(circle at 18% 86%, rgb(var(--ide-glow-lower) / var(--ide-gradient-lower-alpha)), transparent 34%),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--ide-bg-start) var(--ide-shell-opacity), transparent) 0%,
+      color-mix(in srgb, var(--ide-bg-mid) var(--ide-shell-opacity), transparent) 42%,
+      color-mix(in srgb, var(--ide-bg-end) var(--ide-shell-opacity), transparent) 100%);
+  --ide-aura-bg:
+    radial-gradient(circle at var(--ide-cursor-x) var(--ide-cursor-y), rgb(var(--ide-cursor-color) / var(--ide-cursor-alpha)) 0, transparent var(--ide-cursor-radius)),
+    radial-gradient(circle at 72% 86%, rgb(var(--ide-glow-bottom) / var(--ide-aura-bottom-alpha)), transparent 0 18rem);
+  --ide-frame-page-bg: var(--ide-gradient-bg);
+  --ide-frame-bg: var(--ide-gradient-bg);
+  --ide-frame-pane-bg: #ffffff;
+  --ide-frame-icon-stroke: var(--foreground);
+  --ide-frame-icon-stroke-inverse: #ffffff;
+  --ide-frame-icon-opacity-strong: 1;
+  --ide-frame-icon-opacity-secondary: 1;
+  --ide-frame-icon-opacity-muted: 1;
+}
