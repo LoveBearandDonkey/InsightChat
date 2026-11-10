@@ -47,7 +47,7 @@ function renderVisualUpgrade() {
   const stage = fs.readFileSync(path.join(app, 'visual-upgrade-stage.html'), 'utf8').trimEnd();
   return '<!DOCTYPE html>\n<!-- Generated from app/visual-upgrade-stage.html by npm run build:chat. -->\n' +
     '<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">' +
-    '<title>视觉升级 · MindStudio Insight</title><style>body{display:none}</style></head><body>\n' +
+    '<title>视觉升级 · MindStudio Insight</title><link rel="icon" type="image/x-icon" href="../../src/pic/icon/MSInsight.ico"><style>body{display:none}</style></head><body>\n' +
     '<div class="vu-stage" aria-label="视觉升级拆解演示">\n' + stage + '\n</div>\n' +
     '<script src="../visual-upgrade-layer.js"></script>\n</body></html>\n';
 }
