@@ -44,6 +44,17 @@ test('01 preserves negative Dense-layer source evidence as a review gap through 
   assert.ok(result.parse.warnings.some(warning=>warning.code==='PARSE_DENSE_LAYER_COUNT_UNRESOLVED'));
   assert.ok(result.parse.data.unmapped_fields.some(field=>field.source_key==='first-k-dense-replace'&&field.value==='-1'));
   assert.equal(result.validation,null);
+  const completion=result.parse.data.completion;
+  const best=completion.plans.find(plan=>plan.id===completion.recommended_plan_id);
+  assert.match(best.id,/^preserve-current-resources-/);
+  assert.equal(best.validation.status,'valid');
+  assert.equal(best.capacity_assessment.recommendation_eligible,true);
+  assert.equal(best.proposed_config.parallel.dp,64);
+  assert.equal(best.proposed_config.parallel.ep,64);
+  assert.equal(best.proposed_config.cluster.total_ranks,256);
+  assert.equal(best.proposed_config.model.first_k_dense_layers,2);
+  assert.equal(result.parse.data.normalized_config.parallel.ep,128);
+  assert.ok(best.values.some(value=>value.path==='parallel.ep'&&value.confidence==='requires-confirmation'));
 });
 test('rejects unrelated directories and ambiguous multiple companion files',async()=>{
   await assert.rejects(()=>bridge.check({active:'a/config.json',files:[{path:'b/config.json',content:'{}'}]}));

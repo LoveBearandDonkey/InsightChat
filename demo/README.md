@@ -25,6 +25,8 @@ MCP 连接或调用失败时，demo 自动打开静态工作台，以 `postMessa
 
 `ConfigTest/07_mindspeed_128rank_experiment/` 是现有“128Rank-实验配置”的完整契约样例：DP16、PP4、TP2、CP1、切出式 EP8，46 层按 `[12,12,11,11]` 分配，GBS384。训练 JSON 与模型 JSON 联合解析后无缺失必填项、无来源冲突、无并行规则错误或警告；这表示静态校验通过，不能代替实机训练验证。
 
+01 的第三栏自动采用经过规则与理论容量复验的候选：优先保持原有 256 Rank 和 DP64，将 EP128 调整为 EP64，并预填需确认的前置 Dense 层数 2。缺口补充保留普通样式；改动输入配置时显示黄色“源配置解析值：xx”及黄色表单框，切换方案或恢复原值后同步更新。交接保留本次 MindSpeed 规则口径，确认应用前不修改原文件。
+
 重新生成 07 后运行 `node tools/build-demo-training-configs.cjs` 更新工程文件索引；`node --test demo/mindspeed-bridge.test.cjs` 覆盖真实 MCP 调用、07 正例、未保存负例与输入缺口。
 
 Windows 下也可双击 `启动预览.cmd` 启动服务器，然后打开上述地址。
