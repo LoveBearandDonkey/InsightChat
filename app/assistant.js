@@ -2647,6 +2647,7 @@
 
     const sections = buildProfilingAnswerSections();
     const { el: aiDiv, bodyEl } = createAiMessageShell();
+    restoreCompletedThinkBlock(bodyEl, PROFILING_THINK_SCRIPT);
     const answer = document.createElement('div');
     answer.className = 'wzh-chat-answer';
     answer._markdownSource = sections.join('\n');
@@ -2673,6 +2674,19 @@
     });
   }
 
+  function restoreCompletedThinkBlock(bodyEl, steps) {
+    const think = createThinkBlock(bodyEl, {});
+    steps.forEach((step) => {
+      think.startNode(step).setText(step.text);
+      think.finishNode();
+    });
+    think.finish();
+    // 历史演示没有保存耗时，保留思考内容但不展示即时拼装产生的 0s。
+    think.el.querySelectorAll('.wzh-chat-think-head-time, .wzh-chat-think-node-time')
+      .forEach((time) => time.remove());
+    if (activeThink === think) activeThink = null;
+  }
+
   function restoreCompletedDemoHistory(question, sessionTitle, markdown, options = {}) {
     const msgEl = $('trainChatMessages');
     if (!msgEl) return;
@@ -2683,16 +2697,7 @@
     });
     const { el, bodyEl } = createAiMessageShell();
     if (options.thinkSteps) {
-      const think = createThinkBlock(bodyEl, {});
-      options.thinkSteps.forEach((step) => {
-        think.startNode(step).setText(step.text);
-        think.finishNode();
-      });
-      think.finish();
-      // 历史演示没有保存耗时，保留思考内容但不展示即时拼装产生的 0s。
-      think.el.querySelectorAll('.wzh-chat-think-head-time, .wzh-chat-think-node-time')
-        .forEach((time) => time.remove());
-      if (activeThink === think) activeThink = null;
+      restoreCompletedThinkBlock(bodyEl, options.thinkSteps);
     }
     const answer = document.createElement('div');
     answer.className = 'wzh-chat-answer';
@@ -2728,11 +2733,11 @@
     }
     if (key === 'statistics') {
       return restoreCompletedDemoHistory(KNOWLEDGE_QUESTION, '耗时拆解统计',
-        buildModuleStatisticReadyAnswerMarkdown());
+        buildModuleStatisticReadyAnswerMarkdown(), { thinkSteps: MODULE_STATISTIC_READY_THINK_SCRIPT });
     }
     if (key === 'guidance') {
       return restoreCompletedDemoHistory(KNOWLEDGE_QUESTION, '耗时拆解方法指导',
-        buildKnowledgeAnswerMarkdown());
+        buildKnowledgeAnswerMarkdown(), { thinkSteps: KNOWLEDGE_THINK_SCRIPT });
     }
   }
 

@@ -156,3 +156,11 @@ S1–S6 的固定脚本与构造历史均保存在本目录。S1 默认保留 ID
 后续界面调整：侧栏“对话历史”使用二级文字色；收起侧栏时按钮切为空心图标，对话面板保留左侧 8px 间距。标题使用 InsightChat 的 `wzh-chat-session-btn` 原位改名，Enter/失焦保存、Esc 取消，空标题保留原值，最多 40 字。移除历史说明块；只有最新一轮问题置顶，长问题遵循原组件的三行折叠与点击展开规则。对话头部移除下分割线。预览页签左侧无图标、右侧可单独关闭，支持方向键切换和 Delete 关闭；最后一页关闭时收起预览。新建图标复用 `newchat.svg`，网页 favicon 使用 `MindStudio.svg`，MSAgent 默认位于 VS Code 前景。上述状态与交互已通过 jsdom 检查；jsdom 不验证实屏布局。
 
 上下文标签仅保留项目目录，复用 InsightChat 的目录添加/已绑定、悬浮关闭、文字渐隐和目录气泡结构，不显示性能任务锚点。所用 `folder.svg`、`localfile.svg`、`close.svg`、`addfile.svg` 原样复制到 `src/pic/icon/`。六段历史和新建对话默认绑定目录。输入区与问题气泡共用同一锚点组件，图标、目录名称、虚线边框及悬浮控件一致；每条问题保存提问时的绑定快照，后续输入区解绑不改写历史。问题锚点可独立操作，点击时不触发问题卡片折叠。目录绑定按主题保存，移除目录后恢复添加入口。目录绑定为当前演示工作区引用，“打开目录”在预览中展示该工作区 README。预览正文透明，页头无下分割线，页签选中使用品牌淡色；侧栏开关无持续蓝底，新对话操作区下间距为 12px。Chromium 下使用显式 8px 轨道和圆角滑块并隐藏全部原生箭头按钮，保留原已隐藏滚动条；Firefox 保留细滚动条回退。InsightChat 的主题表已同步补充无箭头规范。
+
+## 2026-11-12 · S1 历史对话打磨
+
+`index.html` 加载的 `agent-history.js` 是 msAgent 六主题历史；`s1.js` 是 IDE 逐步演示，两者分别维护。本轮只打磨历史 S1 的四轮回答。每轮回答上方提供 3–4 步可折叠的演示调用记录，复用 `app/pages/chat.html` 对应 `wzh-chat-think-*` 的竖轨、节点及收起样式，不显示虚构耗时。
+
+映射规划《六个故事与 Demo》S1 与《产品架构与接入》：统一服务 `mindstudio`，`training` / `task` 为内部分组。工具名与 `mcp-tools.js` 一致；`resolve_training_config` / `check_training_config` 对应本仓 `MindSpeed/`，方案规划与仿真前提对应 `MindStudio Training Tools/TinkerREADME.md`，产物关联/读取对应 `MindStudio Agent/` 的拟议任务职责。20 个产品目录按职责选择，本故事不调用其余诊断/推理/算子能力；不将目录逐个虚构成独立 MCP。所有步骤均为构造历史，不是真实调用。
+
+首屏及前两张证据卡改用指定 `Profiling_Insight_and_Tool/工具矩阵.md` 中的 `training-run-twin-standalone/config-relation-plane.html`，新截图见 `assets/reuse/config-relations.png`，来源及 SHA256 见 manifest。此前 Training Run Twin 是从 launch-v2 复用清单选择的训练大盘上下文，偏离 S1 的配置校验重点；保留原素材供其他故事按需使用。新截图保持原始示例数据，不作为 32 卡故事的实测证据。

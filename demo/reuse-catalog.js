@@ -1,5 +1,20 @@
 /* Original demo screenshot catalog; see assets/reuse/manifest.json. */
 window.MS_REUSE_VIEWS = Object.freeze({
+  "config-relations": {
+  "id": "config-relations",
+  "title": "Config & Relation Observer · 平面视图",
+  "sourceLabel": "工具矩阵 · 训练配置、监控与关系观测",
+  "demo": "Profiling_Insight_and_Tool/training-run-twin-standalone/config-relation-plane.html",
+  "sourceImage": "Profiling_Insight_and_Tool/training-run-twin-standalone/config-relation-plane.html · 1920×1080 浏览器截图（2026-11-12）",
+  "image": "assets/reuse/config-relations.png",
+  "sha256": "51b4112c374570c52c5da3866664398d40ed28f6920a342bc95c1433bd08b6b9",
+  "review": {
+    "decision": "S1 主视图",
+    "value": "配置来源、DP / EP 分组、Rank / Layer 平面与逐 PP Stage 理论容量",
+    "direction": "S1：配置变更 → 分组约束 → 合法候选容量；依据指定工具矩阵选择",
+    "gap": "截图为原 openPangu 示例，非故事的 32 卡配置或实测。实际交互、来源定位与故事候选待接入；理论容量不替代运行验证。"
+  }
+},
   "training-context": {
     "id": "training-context",
     "title": "Training Run Twin · Light",

@@ -110,3 +110,14 @@
   .agent-client .agent-conversation .wzh-chat-context-chips{flex-wrap:wrap}
   .agent-client .agent-conversation .wzh-chat-composer-toolbar{flex-wrap:wrap;gap:4px}
 }
+
+/* Recorded S1 tool summaries reuse InsightChat's collapsible vertical track. */
+.agent-client .wzh-chat-think-node-text code{overflow-wrap:anywhere}
+.agent-client .wzh-chat-think-head:focus-visible{outline:2px solid var(--brand-blue);outline-offset:4px;border-radius:3px}
+
+/* Match app/chat.css thinking typography, including its smaller code text. */
+.agent-client .wzh-chat-think{font-family:'Inter','Source Han Sans SC','PingFang SC','Noto Sans SC',sans-serif}
+.agent-client .wzh-chat-think-node-title,
+.agent-client .wzh-chat-think-node-time,
+.agent-client .wzh-chat-think-node-text{font-size:12px}
+.agent-client .wzh-chat-think-node-text code{font-size:11px}

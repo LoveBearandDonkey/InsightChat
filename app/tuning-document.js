@@ -539,7 +539,7 @@
     menu.setAttribute('role', 'menu');
     menu.setAttribute('aria-label', '划选文本操作');
     menu.hidden = true;
-    for (const [action, label] of [['copy', '复制'], ['add', '添加到调优文档'], ['ask', '提问']]) {
+    for (const [action, label] of [['ask', '添加到对话']]) {
       const button = document.createElement('button');
       button.type = 'button';
       button.dataset.selectionAction = action;
@@ -594,7 +594,7 @@
       if (action === 'ask') {
         const input = document.getElementById('trainChatInput');
         if (!input) return;
-        input.value = (input.value.trim() ? input.value.trimEnd() + '\n\n' : '') + '关于以下内容，我想问：\n“' + text + '”\n\n';
+        input.value = (input.value.trim() ? input.value.trimEnd() + '\n\n' : '') + text;
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);

@@ -6,13 +6,13 @@
   const q=(text,context)=>({role:'user',text,context});
   const a=(html)=>({role:'assistant',html});
   window.MS_AGENT_HISTORIES = [
-    {story:'S1',title:'32 卡怎么保持原训练目标？',date:'11月04日',summary:'分组修复后，还要核对容量',context:'train_npu.sh · model.yaml',firstView:'training-context',status:'候选已保留 · 真机待验证',messages:[
+    {story:'S1',title:'32 卡怎么保持原训练目标？',date:'11月04日',summary:'分组修复后，还要核对容量',context:'train_npu.sh · model.yaml',firstView:'config-relations',status:'候选已保留 · 真机待验证',messages:[
       q('今晚只有 32 卡。我把 DP 从 8 改成 4、微批从 1 改成 2，新模板还关闭了优化器分片。全局 batch 128、16K 和数值策略不变，先帮我检查，不占卡。','scripts/train_npu.sh · configs/model.yaml'),
-      a('<p>先有一处确定的分组冲突：<strong>DP 已是 4，EP 仍为 8</strong>，当前规则下专家组无法组成。全局 batch 不变，只说明一项约束成立，不能证明这份配置可运行。</p><p>这次要一起核对设备数、并行分组、每卡专家和微批；建议先将 EP 调整为合法值，再检查容量。</p>'+card('training-context','展开训练对象与硬件关系','已有 Training Run Twin · 模型、阶段与硬件联动示例')),
+      a('<p>先有一处确定的分组冲突：<strong>DP 已是 4，EP 仍为 8</strong>，当前规则下专家组无法组成。全局 batch 不变，只说明一项约束成立，不能证明这份配置可运行。</p><p>这次要一起核对设备数、并行分组、每卡专家和微批；建议先将 EP 调整为合法值，再检查容量。</p>'+card('config-relations','展开配置与并行分组关系','Config & Relation Observer · 配置来源、DP / EP 与 Rank 平面')),
       q('那把 EP 改成 4，是不是就能跑了？','候选 A · DP=4 / EP=4'),
-      a('<p><strong>分组合法后，容量仍有风险。</strong>故事中的静态估算显示首段约 68.61 GiB，超过示例卡的 64 GiB。EP 缩小使每卡专家增多，微批加倍增加激活，关闭分片又增加优化器状态。</p><p>这是理论估算，尚未覆盖运行临时区和真实峰值。不能把“规则通过”标成“运行通过”。</p>'+card('training-timeline','查看 Stage 与训练执行关系','已有分布式泳道 · 前向、反向、通信与优化器时序示例')),
+      a('<p><strong>分组合法后，容量仍有风险。</strong>故事中的静态估算显示首段约 68.61 GiB，超过示例卡的 64 GiB。EP 缩小使每卡专家增多，微批加倍增加激活，关闭分片又增加优化器状态。</p><p>这是理论估算，运行预留采用未校准系数，尚未验证真实临时区和峰值。不能把“规则通过”标成“运行通过”。</p>'+card('config-relations','查看逐 Stage 理论容量','配置关系平面视图 · 并行分组、显存观测与 Stage 峰值估算')),
       q('保留训练目标，给我两个可比较的改法。','固定 GBS=128 · 序列长度=16K'),
-      a('<p><strong>A：</strong>恢复优化器分片，微批降回 1，并增加梯度累积；<strong>B：</strong>恢复分片，保留微批 2，增加局部重计算。两者都要重新校验分组和容量。</p><p>A 增加累积次数；B 用额外计算换激活容量。没有匹配的测量包，暂不承诺哪一个更快。</p>'),
+      a('<p><strong>A：</strong>恢复优化器分片，微批降回 1，并增加梯度累积；<strong>B：</strong>恢复分片，保留微批 2，增加全量重计算。两者均修正 EP=4：A 为 MBS=1、累积=32，理论 46.79 GiB；B 为 MBS=2、累积=16，理论 33.14 GiB。均保持 GBS=128，并重新校验分组和容量。</p><p>A 增加累积次数；B 用额外计算换激活容量。没有匹配的测量包，暂不承诺哪一个更快。</p>'),
       q('先保留 A，给我能复核的方案，真机窗口后面再安排。','候选 A · 等效 batch 待复核'),
       a('<p>已在这段示例对话中保留 A：配置来源、交叉约束、理论容量和候选取舍一起交付。下一次验证核对真实峰值、特性生效、通信初始化及 checkpoint 保存/恢复。</p><p><strong>当前结论：候选可供审阅，运行仍待验证。</strong>截图保留原 demo 的模型和指标，展示关系视图的复用方式。</p>')
     ]},
@@ -67,4 +67,97 @@
       a('<p>在故事中，偏差改变候选排序；保留两套方案及下一轮代表负载压测计划，同时交付假设、画像来源和未建模因素。</p><p><strong>当前交付是实验决策依据。</strong>完整 TTFT/TPOT、尾延迟、容量与成本仍需真实服务测试。现有算子推荐和硬件图仅复用交互模式；msModeling 的服务仿真与校准视图后续接入。</p>')
     ]}
   ];
+  // Architecture proposal: one mindstudio server; task/training are internal groups.
+  // Curated action summaries for the fixture, never actual model reasoning or live calls.
+  const s1Thoughts = [
+  [
+    [
+      "读取配置来源",
+      "resolve_training_config",
+      "读取启动脚本、64 卡基线、新草稿与资源声明；锁定 GBS=128、16K 和数值策略。",
+      "MindSpeed"
+    ],
+    [
+      "核对并行约束",
+      "check_training_config",
+      "world=4×4×2×1=32；split 口径要求 DP % EP=0，DP=4 / EP=8 阻断。",
+      "MindSpeed"
+    ],
+    [
+      "保留检查边界",
+      "get_training_trial_result",
+      "非法草稿先不输出容量结论；实际通信组与运行特性仍待验证。",
+      "MindSpeed"
+    ]
+  ],
+  [
+    [
+      "复核 EP=4 候选",
+      "check_training_config",
+      "只在候选副本修正 EP，复查分组；不改源配置，不提交训练。",
+      "MindSpeed"
+    ],
+    [
+      "筛选理论容量",
+      "plan_training_trial",
+      "按逐 Stage 容量检查合法候选；首段理论 68.61 GiB / 64 GiB。",
+      "MindSpeed · 配置能力适配草案"
+    ],
+    [
+      "解释容量分项",
+      "get_training_trial_result",
+      "关联每卡专家、微批激活与优化器分片变化；理论风险与实测 OOM 分列。",
+      "MindSpeed"
+    ]
+  ],
+  [
+    [
+      "构造两个候选",
+      "plan_training_trial",
+      "保持训练目标：A 减微批、增累积；B 保留微批、全量重计算；共同恢复 ZeRO-1。",
+      "MindSpeed / MindStudio Training Tools"
+    ],
+    [
+      "复查等效关系",
+      "check_training_config",
+      "A：1×4×32=128；B：2×4×16=128；逐项复查 EP、分片与重计算。",
+      "MindSpeed"
+    ],
+    [
+      "核对仿真前提",
+      "plan_training_trial",
+      "检查 Tinker 的支持组合与 profiled_data_path；缺匹配测量包，跳过 submit_training_trial。",
+      "MindStudio Training Tools / Tinker"
+    ],
+    [
+      "汇总候选取舍",
+      "get_training_trial_result",
+      "只呈现理论容量 46.79 / 33.14 GiB；无模拟步时，不据容量高低判断速度。",
+      "MindSpeed / MindStudio Training Tools"
+    ]
+  ],
+  [
+    [
+      "复核所选方案 A",
+      "check_training_config",
+      "保留 EP=4、ZeRO-1、MBS=1、累积=32；训练目标与恢复进度不变。",
+      "MindSpeed"
+    ],
+    [
+      "关联交付产物",
+      "attach_artifact",
+      "关联候选配置、Diff、规则来源、容量依据与未验证项；不触发运行。",
+      "MindStudio Agent · 任务与产物"
+    ],
+    [
+      "读取检阅包",
+      "get_artifact",
+      "返回同一版本的方案引用；真机峰值、通信初始化、特性及 checkpoint 恢复列为待验。",
+      "MindStudio Agent · 任务与产物"
+    ]
+  ]
+];
+  window.MS_AGENT_HISTORIES[0].messages.filter(m=>m.role==='assistant').forEach((m,i)=>{
+    m.thinking=s1Thoughts[i].map(([title,tool,text,product])=>({title,server:'mindstudio',group:['attach_artifact','get_artifact'].includes(tool)?'task':'training',tool,text,product}));
+  });
 })();
