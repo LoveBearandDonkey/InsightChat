@@ -1,4 +1,4 @@
-/* A local presentation shell. No model, MCP server, SSH session or training job is invoked. */
+/* Local presentation shell. MindSpeed checks use the demo's real MCP bridge; no training runs. */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -6,11 +6,25 @@
   const key = 'mindstudio-2027-demo-workspace-s1-scale-down-v2';
   const fresh = () => ({project: DEMO.project, files: {...DEMO.files}, webviewUrl:''});
   let workspace = fresh();
-  try { const saved = JSON.parse(localStorage.getItem(key)); if (saved && validFiles(saved.files) && typeof saved.project === 'string' && validUrl(saved.webviewUrl || '')) workspace = saved; } catch (_) {}
-  let story = DEMO.stories[0], stage = 0, active = 'configs/model.yaml', tabs = [active, 'scripts/train_npu.sh'];
-  let collapsed = new Set(), dirty = new Set(), messages = [], focusLine = 0, timer = null, busy = false, panel = 'terminal', context = active;
+  try {
+    const saved = JSON.parse(localStorage.getItem(key));
+    if (saved && validFiles(saved.files) && typeof saved.project === 'string' && validUrl(saved.webviewUrl || '')) {
+      const legacyFolders=new Set(Object.keys(DEMO.trainingFiles || {}).map(path=>path.split('/')[1]));
+      const files={...DEMO.trainingFiles};
+      for(const [path,value] of Object.entries(saved.files)) {
+        const target=legacyFolders.has(path.split('/')[0])?'ConfigTest/'+path:path;
+        if(target===path||!Object.hasOwn(saved.files,target)) files[target]=value;
+      }
+      workspace=saved;
+      if(validFiles(files)) workspace={...saved,files};
+    }
+  } catch (_) {}
+  const initialFile=Object.keys(DEMO.trainingFiles || {})[0] || 'configs/model.yaml';
+  let story = DEMO.stories[0], stage = 0, active = initialFile, tabs = [active];
+  let collapsed = new Set(Object.keys(DEMO.trainingFiles || {}).map(path=>path.split('/').slice(0,-1).join('/')).filter(folder=>!active.startsWith(folder+'/'))), dirty = new Set(), messages = [], focusLine = 0, timer = null, busy = false, panel = 'terminal', context = active;
   let applied = false, exported = false, candidate = 'A', validationPlan = null;
   const frame = document.querySelector('.ide');
+  const mindspeedViews = new Map();
   const terminalLines = ['<span class="dim">S1 · 64 → 32 卡 · 本轮不占卡 · 无 MCP / 训练作业</span>'];
   const navigation={back:[],forward:[]};
   const icon = name => `<span class="codicon codicon-${name}" aria-hidden="true"></span>`;
@@ -39,7 +53,7 @@
     }
     $('fileTree').innerHTML=branch(root); $('projectLabel').textContent=workspace.project.toUpperCase();$('commandProject').textContent=workspace.project+' [SSH: npu-dev-01]';
   }
-  function label(path) { return path==='@task'?'MindStudio · 配置任务':path==='@s1'?'64 → 32 卡 · 配置证据':path==='@diff'?'model.yaml (缩卡候选)':path==='@settings'?'设置':path==='@story'?story.id+' · '+story.short:path.split('/').pop(); }
+  function label(path) { return path.startsWith('@mindspeed/')?'MindSpeed · 配置校验':path==='@task'?'MindStudio · 配置任务':path==='@s1'?'64 → 32 卡 · 配置证据':path==='@diff'?'model.yaml (缩卡候选)':path==='@settings'?'设置':path==='@story'?story.id+' · '+story.short:path.split('/').pop(); }
   function renderTabs() {
     $('editorTabs').innerHTML=tabs.map(path=>`<div role="tab" tabindex="${path===active?0:-1}" aria-selected="${path===active}" class="editor-tab" data-tab="${esc(path)}">${path.startsWith('@')?icon(path==='@task'?'browser':path==='@settings'?'settings-gear':'diff'):fileIcon(path)}<span>${esc(label(path))}</span>${dirty.has(path)?'<span class="tab-dirty">●</span>':''}<button class="tab-close" data-close="${esc(path)}" aria-label="关闭 ${esc(label(path))}" title="关闭 (${navigator.platform.includes('Mac')?'⌘':'Ctrl'}+W)">${icon('close')}</button></div>`).join('');
   }
@@ -62,6 +76,13 @@
     document.title=(active?label(active)+' - ':'')+workspace.project+' [SSH: npu-dev-01] - Visual Studio Code';
     $('languageStatus').textContent=active.startsWith('@')?'MindStudio':({yaml:'YAML',sh:'Shell Script',py:'Python',json:'JSON',md:'Markdown',log:'Log'})[active.split('.').pop()]||'Plain Text';
     const content=$('editorContent');
+    if(active.startsWith('@mindspeed/')) {
+      const id=active.slice('@mindspeed/'.length);
+      const url=mindspeedViews.get(id)||'/demo/mindspeed/workbench.html#handoff='+encodeURIComponent(id);
+      content.innerHTML=`<iframe class="mindspeed-webview" title="MindSpeed 配置工作台" src="${esc(url)}" sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox"></iframe>`;
+      document.dispatchEvent(new CustomEvent('msi:mindspeed-frame',{detail:{id,frame:content.querySelector('iframe')}}));
+      return;
+    }
     if(active==='@task') return renderWebview();
     if(active==='@s1') {content.innerHTML=S1.render(storyState());return;}
     if(active==='@diff') return renderDiff();
@@ -255,7 +276,7 @@
   document.querySelector('.menubar').onclick=e=>{const button=e.target.closest('[data-command]');if(!button)return;const menus={files:[{label:'新建文本文件',key:'Ctrl+N',run:newFile},{label:'转到文件…',key:'Ctrl+P',run:()=>openCommands()},null,{label:'保存',key:'Ctrl+S',run:persist},{label:'关闭编辑器',key:'Ctrl+W',run:()=>document.querySelector('.editor-tab[aria-selected=true] .tab-close')?.click()}],edit:[{label:'撤销',key:'Ctrl+Z',run:()=>window.MS_EDITOR?.instance?.trigger('menu','undo')},{label:'重做',key:'Ctrl+Y',run:()=>window.MS_EDITOR?.instance?.trigger('menu','redo')},null,{label:'查找',key:'Ctrl+F',run:()=>window.MS_EDITOR?.action('actions.find')}],selection:[{label:'全选',key:'Ctrl+A',run:()=>{window.MS_EDITOR?.action('editor.action.selectAll');$('codeInput')?.select();}},{label:'展开选择',key:'Shift+Alt+→',run:()=>window.MS_EDITOR?.action('editor.action.smartSelect.expand')}],view:[{label:'命令面板…',key:'Ctrl+Shift+P',run:()=>openCommands('>')},null,{label:'主侧栏',key:'Ctrl+B',run:()=>frame.classList.toggle('sidebar-hidden')},{label:'辅助侧栏',run:()=>frame.classList.toggle('chat-hidden')},{label:'终端',key:'Ctrl+J',run:()=>frame.classList.toggle('terminal-hidden')}],go:[{label:'转到文件…',key:'Ctrl+P',run:()=>openCommands()},{label:'后退',key:'Alt+←',run:()=>historyMove('back')},{label:'前进',key:'Alt+→',run:()=>historyMove('forward')}],run:[{label:'运行和调试',key:'Ctrl+Shift+D',run:()=>{frame.classList.remove('terminal-hidden');openFile('scripts/train_npu.sh');}}],terminal:[{label:'新建终端',key:'Ctrl+Shift+`',run:()=>{frame.classList.remove('terminal-hidden');panel='terminal';renderPanel();$('terminalInput').focus();}},{label:'清除终端',run:()=>{terminalLines.length=0;renderPanel();}},{label:'切换终端',key:'Ctrl+J',run:()=>frame.classList.toggle('terminal-hidden')}],help:[{label:'显示所有命令',key:'Ctrl+Shift+P',run:()=>openCommands('>')},null,{label:'关于',run:()=>$('aboutDialog').showModal()}]};showMenu(button,menus[button.dataset.command]);};
   $('openTask').onclick=openTask;$('showDesktop').onclick=()=>$('msiWindowMinimize').click();$('remoteStatus').onclick=()=>notify('SSH 主机为演示标签，当前没有建立远程连接');
   document.addEventListener('keydown',e=>{if($('msiDesktop').dataset.activeWindow==='agent')return;if(e.ctrlKey&&e.key.toLowerCase()==='p'){e.preventDefault();openCommands(e.shiftKey?'>':'');}else if(e.ctrlKey&&e.key.toLowerCase()==='b'){e.preventDefault();frame.classList.toggle('sidebar-hidden');}else if(e.ctrlKey&&e.key.toLowerCase()==='j'){e.preventDefault();frame.classList.toggle('terminal-hidden');}else if(e.ctrlKey&&e.key.toLowerCase()==='s'){e.preventDefault();persist();}else if(e.key==='Escape')$('nativeMenu').hidden=true;});
-  $('presenterToggle').onclick=()=>{document.body.classList.toggle('presenter-collapsed');const collapsed=document.body.classList.contains('presenter-collapsed');$('presenterToggle').title=collapsed?'展开演示控制台':'收起演示控制台';$('presenterToggle').setAttribute('aria-label',$('presenterToggle').title);window.dispatchEvent(new Event('resize'));};
+  $('presenterToggle').onclick=()=>{document.body.classList.toggle('presenter-collapsed');const collapsed=document.body.classList.contains('presenter-collapsed');$('presenterToggle').title=collapsed?'展开演示控制台':'收起演示控制台';$('presenterToggle').setAttribute('aria-label',$('presenterToggle').title);$('presenterToggle').setAttribute('aria-expanded',String(!collapsed));window.dispatchEvent(new Event('resize'));};
   $('helpOpen').onclick=()=>$('helpDialog').showModal();$('navigateBack').onclick=()=>historyMove('back');$('navigateForward').onclick=()=>historyMove('forward');
   $('newFileButton').onclick=newFile;$('treeRefresh').onclick=renderTree;$('explorerMore').onclick=e=>showMenu(e.currentTarget,[{label:'新建文件',run:newFile},{label:'刷新',run:renderTree},{label:'折叠文件夹',run:()=>$('treeCollapse').click()}]);
   $('outlineToggle').onclick=e=>{e.currentTarget.querySelector('.codicon').classList.toggle('codicon-chevron-down');};$('timelineToggle').onclick=e=>{e.currentTarget.querySelector('.codicon').classList.toggle('codicon-chevron-down');};
@@ -264,6 +285,15 @@
   $('agentMode').onclick=e=>showMenu(e.currentTarget,['Agent','Ask','Edit'].map(mode=>({label:mode,run:()=>{$('agentMode').innerHTML=esc(mode)+icon('chevron-down');}})));
   $('modelMode').onclick=e=>showMenu(e.currentTarget,[{label:'Auto',run:()=>{$('modelMode').innerHTML='Auto'+icon('chevron-down');}}]);
   $('chatTools').onclick=e=>showMenu(e.currentTarget,[{label:'✓  mindstudio-config',run:()=>{}},{label:'✓  工作区文件',run:()=>{}},{label:'配置工具…',run:()=>openFile('.mcp.json')}]);
+  $('chatMaximize').onclick=()=>{
+    const maximized=frame.classList.toggle('chat-maximized');
+    const button=$('chatMaximize');
+    button.title=maximized?'还原聊天大小':'最大化聊天';
+    button.setAttribute('aria-label',button.title);
+    button.setAttribute('aria-pressed',String(maximized));
+    button.querySelector('.codicon').className='codicon codicon-screen-'+(maximized?'normal':'full');
+    window.dispatchEvent(new Event('resize'));
+  };
   $('chatHistory').onclick=e=>showMenu(e.currentTarget,[{label:messages.length?'检查长序列训练配置':'没有聊天历史记录',run:()=>{frame.classList.remove('chat-hidden');}}]);
   $('chatMore').onclick=e=>showMenu(e.currentTarget,[{label:'新建聊天',run:()=>$('newChat').click()},{label:'将当前文件添加到聊天',run:()=>{context=active.startsWith('@')?'':active;renderContext();}},{label:'隐藏聊天',run:()=>frame.classList.add('chat-hidden')}]);
   $('chatViewMenu').onclick=e=>showMenu(e.currentTarget,[{label:'聊天',run:()=>{}},{label:'聊天历史记录',run:()=>$('chatHistory').click()}]);
@@ -277,6 +307,6 @@
   window.addEventListener('message',e=>{if(e.source!==$('taskFrame')?.contentWindow||workspace.webviewUrl)return;const msg=e.data;if(!msg||typeof msg!=='object')return;if(msg.type==='ms-demo-ready')syncTask();if(msg.type==='ms-demo-action'){if(msg.action==='candidate')return chooseCandidate(msg.candidate);if(msg.action==='source'&&fixturePaths.includes(msg.path))return openFile(msg.path,Number(msg.line)||0);({diff:reviewDiff,test:shortTest,plan:shortTest,export:exportPackage,start:()=>startCheck(),next,evidence:()=>openFile('@s1')})[msg.action]?.();}});
   resizePanel('explorerResize','--explorer-width',()=>$('explorer').offsetWidth,'right',145,()=>Math.max(145,frame.clientWidth*.3));resizePanel('chatResize','--chat-width',()=>$('chatPanel').offsetWidth,'left',250,()=>Math.max(250,frame.clientWidth*.48));resizePanel('terminalResize','--terminal-height',()=>$('terminal').offsetHeight,'vertical',80,()=>Math.max(80,frame.clientHeight*.55));
   if(!Object.hasOwn(workspace.files,active)){active=Object.keys(workspace.files)[0];tabs=Object.keys(workspace.files).slice(0,2);context=active;}
-  window.MS_DEMO=Object.freeze({getSnapshot:()=>({...storyState(),files:{...workspace.files},webviewUrl:workspace.webviewUrl||''}),revealSource:(path,line=0)=>{document.dispatchEvent(new CustomEvent('msi:window-open'));openFile(path,line);},reviewDiff:()=>{document.dispatchEvent(new CustomEvent('msi:window-open'));reviewDiff();},start:()=>{selectStory('S1');startCheck();},next,exportPackage,chooseCandidate,openEvidence:()=>openFile('@s1')});
+  window.MS_DEMO=Object.freeze({getSnapshot:()=>({...storyState(),active,files:{...workspace.files},webviewUrl:workspace.webviewUrl||''}),appendMessage:say,logMindspeed:log,openMindspeed:(id,url)=>{if(url)mindspeedViews.set(id,url);openFile('@mindspeed/'+id);},revealSource:(path,line=0)=>{document.dispatchEvent(new CustomEvent('msi:window-open'));openFile(path,line);},reviewDiff:()=>{document.dispatchEvent(new CustomEvent('msi:window-open'));reviewDiff();},start:()=>{selectStory('S1');startCheck();},next,exportPackage,chooseCandidate,openEvidence:()=>openFile('@s1')});
   renderAll();renderPanel();
 })();

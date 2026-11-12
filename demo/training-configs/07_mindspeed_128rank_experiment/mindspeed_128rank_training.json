@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "rule_profile": {
+    "framework": "mindspeed-llm-mcore",
+    "version": "0.12.1"
+  },
+  "model": {
+    "id": "openpangu-flash",
+    "total_layers": 46,
+    "hidden_size": 2560,
+    "num_attention_heads": 48,
+    "ffn_hidden_size": 9216,
+    "expert_ffn_hidden_size": 1024,
+    "vocab_size": 151552,
+    "routed_experts": 256,
+    "top_k": 8,
+    "shared_experts": 1,
+    "first_k_dense_layers": 2
+  },
+  "parallel": {
+    "dp": 16,
+    "pp": 4,
+    "tp": 2,
+    "cp": 1,
+    "ep": 8,
+    "vpp": 1,
+    "pipeline_layer_mode": "dynamic",
+    "num_layer_list": [
+      12,
+      12,
+      11,
+      11
+    ],
+    "ep_mode": "split",
+    "cp_mode": "ulysses",
+    "sequence_parallel": false,
+    "vocab_embedding_data_parallel": true,
+    "expert_tensor_parallel": false
+  },
+  "cluster": {
+    "total_ranks": 128,
+    "ranks_per_node": 8,
+    "card_model": "昇腾 910B",
+    "card_memory_gib": 64
+  },
+  "batch": {
+    "micro_batch_size": 1,
+    "sequence_length": 4096,
+    "micro_batch_count": 24,
+    "global_batch_size": 384
+  },
+  "memory": {
+    "compute_dtype": "bf16",
+    "parameter_dtype": "bf16",
+    "recompute_mode": "full",
+    "shard_mode": "zero1",
+    "lora_enabled": false
+  },
+  "policy": {
+    "locked_fields": [],
+    "objective": "minimal-change"
+  }
+}

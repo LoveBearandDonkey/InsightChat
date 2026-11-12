@@ -1,0 +1,17 @@
+{
+    "schema_version":  "1.0",
+    "packaged_at_asia_shanghai":  "20261112-150321",
+    "product_version":  "v1.0.15",
+    "entry":  "index.html",
+    "bytes":  1831929,
+    "sha256":  "A0DEC576F7F77570CC2967E7A139CDF23D7BD041F5A2E916B2F9C74BBD62855A",
+    "execution_mode":  "browser-local-config-core",
+    "mcp_protocol_endpoint":  false,
+    "capabilities":  [
+                         "parse_training_config",
+                         "validate_parallel_config",
+                         "compute_rank_topology",
+                         "suggest_config_fixes",
+                         "estimate_training_capacity"
+                     ]
+}

@@ -13,11 +13,33 @@ node demo/server.cjs
 
 访问 http://127.0.0.1:2027/demo/ 。可在命令后添加其他端口。
 
+### MindSpeed MCP 实时配置演示
+
+右侧“检查当前训练配置”卡片只填写自然语言问题，不要求用户指定 MCP；点击发送时读取当前 VS Code 文件与同目录的 `.sh` / `.ssh`、JSON、YAML 配置，包括未保存的编辑内容。当前演示由前端按配置检查意图路由到真实 MCP stdio 连接，调用 `parse_training_config`，只有工具就绪时继续 `validate_parallel_config`；这不是大模型自主选工具的实现。回答给出简短结论与工作台链接，同时打开 VS Code Webview；来源、模型配置和本次解析值随链接交接，工作台的计算继续通过 MCP 执行。其他故事仍为构造回放，不启动训练或 SSH。
+
+使用本机 Live Server 打开页面时，页面会优先探测并连接 `http://127.0.0.1:2027` 的真实 MCP 后端。GitHub Pages 不会尝试连接访问者的本机后端。默认 MCP 项目为相邻的 `../mindspeed-config-mcp`，可用 `MINDSPEED_CONFIG_MCP_ROOT` 指定其他路径；真实 MCP 模式须已安装依赖并完成 `npm run build:ui`。
+
+MCP 连接或调用失败时，demo 自动打开静态工作台，以 `postMessage` 交接当前文件夹的配置内容，复用页面打包的 `config-core` 解析与静态校验。公开站点优先使用 `https://lovebearanddonkey.github.io/mindspeed-config-mcp/config-relation-plane-mindspeed-config-mcp.html`；该地址不可用、版本过旧或未响应时，使用随 demo 保存的 `vendor/mindspeed/index.html`。本地预览直接使用随附包。两端都核对消息来源窗口、origin 和请求编号。回答明确标注“页面本地校验”，不会宣称 MCP 已调用；输入不全时不报告完整通过。Webview 中导入、拓扑、规划、报告和快照继续使用页面计算核心。
+
+因此只发布 InsightChat 静态文件也能演示校验，无需公开 MCP 凭据。部署到项目子路径时保留整个 `demo/vendor/mindspeed/` 目录；结论链接在当前 demo 会话内可重新打开并恢复当次发送内容。若需指定其他工作台地址，可在 `mindspeed-pages.js` 加载前设置 `window.MINDSPEED_DEMO_WORKBENCH_URL`（目标须支持本次页面通信协议并信任宿主 origin）。更新规则或界面后，在 MCP 仓库运行 `npm run package:github-pages`，再在 InsightChat 运行 `node tools/sync-mindspeed-pages.cjs` 同步经过 SHA-256 核对的完整静态包。腾讯云发布与此独立。
+
+`ConfigTest/07_mindspeed_128rank_experiment/` 是现有“128Rank-实验配置”的完整契约样例：DP16、PP4、TP2、CP1、切出式 EP8，46 层按 `[12,12,11,11]` 分配，GBS384。训练 JSON 与模型 JSON 联合解析后无缺失必填项、无来源冲突、无并行规则错误或警告；这表示静态校验通过，不能代替实机训练验证。
+
+重新生成 07 后运行 `node tools/build-demo-training-configs.cjs` 更新工程文件索引；`node --test demo/mindspeed-bridge.test.cjs` 覆盖真实 MCP 调用、07 正例、未保存负例与输入缺口。
+
 Windows 下也可双击 `启动预览.cmd` 启动服务器，然后打开上述地址。
 
 不要用 `file://` 地址评估编辑器观感：直接双击 HTML 时，为避开浏览器的文件安全限制，编辑区会回退为简易文本编辑层。
 
 窗口拖动按 `requestAnimationFrame` 合并指针事件，移动期间仅更新 `translate3d`，松手后提交坐标；桌面边界和尺寸下限在手势开始时读取。边缘缩放同样按帧处理，窗口显示/最大化状态不变时不重建按钮 DOM。合成的 100 次连续移动检查中，移动阶段尺寸读取由 1000 次降为 0，显示状态回调由 100 次降为 0；这只验证 DOM 工作量，不是浏览器 FPS 或绘制耗时测量。已检查八方向缩放、边界、松手/取消/失焦清理、窗口大小变化、最大化和任务栏恢复。
+
+## 本地训练配置样本
+
+`training-configs/` 保存六组训练配置的本地副本，共 12 个 Shell、JSON 和 YAML 文件。来源与固定版本说明保留在 `training-configs/README.md`，预览无需访问原项目目录。
+
+VS Code 工程树将 `01_…` 至 `06_…` 六组样本放在 `ConfigTest/` 下，默认展开 01 组并选中其第一个文件，其他组折叠。可打开、编辑、添加聊天上下文并通过 Ctrl+S 保存到浏览器。已有浏览器工程会自动补入缺少的样本，旧的顶层样本路径会迁入 `ConfigTest/`，保留已保存的文件修改。页面初始显示 VS Code 在前、msAgent 在后。
+
+修改本地样本后，在仓库根目录运行 `node tools/build-demo-training-configs.cjs`，更新随页面加载的 `training-configs/workspace.js`。样本仅作为工程文件接入，S1 仍使用原有固定故事配置。
 
 ## 已实现
 
