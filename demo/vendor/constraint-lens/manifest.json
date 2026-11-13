@@ -3,7 +3,7 @@
   "channel": "mindspeed-constraint-lens/v1",
   "source_repository": "mindspeed-config-mcp",
   "source_path": "apps/web/prototypes/constraint-lens.html",
-  "source_revision": "dfccd22ea6b75eb433fb3e2b45d5f75d588ee0af",
+  "source_revision": "03cbec183060918420ad374e1da96885c5cd6c4a",
   "sha256": "a8454faa1b5e34fa82da220a1b3945bef34364da9417faed81ffd8bf192a3473",
   "source_content_sha256": "69fc45692c82f8218ec17eef3356bebb56ed7025b659e7954896701948627ef2",
   "execution_mode": "constructed-history-local-prototype",
