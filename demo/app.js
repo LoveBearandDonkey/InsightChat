@@ -119,8 +119,18 @@
   }
   function renderStoryPreview(){ $('editorContent').innerHTML=`<article class="story-preview"><small>${esc(story.id)} / SCENARIO PREVIEW</small><h1>${esc(story.title)}</h1><p>${esc(story.role)}</p><p>${esc(story.description)}</p><div class="route">${esc(story.handoff)}</div><p class="scope">此故事已预留入口，尚未制作完整操作脚本。当前仅展示目标流程，不产生检查结果或通过状态。</p><button class="primary-btn" id="backToS1">返回 S1 完整演示</button></article>`; $('backToS1').onclick=()=>selectStory('S1'); }
   function welcome(){return `<div class="welcome"><div class="welcome-mark">${icon('copilot-large')}</div><h2>${'使用 Agent 构建'}</h2><p>从代码到运行，描述你要完成的任务。Agent 可以使用工作区中的文件和工具。</p><div class="chat-suggestions"><button class="suggestion" data-action="start">${icon('checklist')}<span>检查当前训练配置</span>${icon('arrow-right')}</button><button class="suggestion" data-action="explain">${icon('code')}<span>解释当前文件</span>${icon('arrow-right')}</button><button class="suggestion" data-action="files">${icon('search')}<span>查找工作区中的文件</span>${icon('arrow-right')}</button></div><p class="shortcut-note">添加文件上下文 <kbd>Ctrl</kbd> + <kbd>#</kbd></p></div>`;}
+  function chatTopic(){
+    if(messages[0]?.historyTitle)return messages[0].historyTitle;
+    const question=messages.find(m=>m.role==='user');
+    if(!question)return '聊天';
+    const content=document.createElement('div');content.innerHTML=question.html;
+    const text=content.textContent.replace(/\s+/g,' ').trim();
+    return text.length>24?text.slice(0,24)+'…':text||'聊天';
+  }
   function renderChat(){
-    $('chatMessages').innerHTML=messages.length?messages.map((m,i)=>`<article class="interactive-item-container ${m.role==='user'?'interactive-request':'interactive-response'}"><div class="header"><div class="user"><span class="avatar">${icon(m.role==='user'?'account':'copilot')}</span><span class="username">${m.role==='user'?'你':'GitHub Copilot'}</span></div><div class="message-toolbar"><button class="icon-btn" data-copy="${i}" title="复制消息" aria-label="复制消息">${icon('copy')}</button></div></div><div class="value">${m.role==='user'&&m.context?`<div class="request-attachments"><button data-source="${esc(m.context)}">${fileIcon(m.context)}${esc(m.context.split('/').pop())}</button></div>`:''}${m.html}</div>${m.role!=='user'?`<div class="chat-footer-toolbar"><button class="icon-btn" data-copy="${i}" title="复制" aria-label="复制回答">${icon('copy')}</button><button class="icon-btn" data-feedback="up" title="有帮助" aria-label="回答有帮助">${icon('thumbsup')}</button><button class="icon-btn" data-feedback="down" title="没有帮助" aria-label="回答没有帮助">${icon('thumbsdown')}</button><button class="icon-btn" data-retry="${i}" title="重试" aria-label="重试回答">${icon('refresh')}</button><span>Auto</span></div>`:''}</article>`).join(''):welcome();
+    $('chatTitle').textContent=chatTopic();
+    $('chatTitle').title=chatTopic();
+    $('chatMessages').innerHTML=messages.length?messages.map((m,i)=>`<article class="interactive-item-container ${m.role==='user'?'interactive-request':'interactive-response'}">${m.role==='user'?'':`<div class="header"><span class="thinking-complete">思考完成${icon('chevron-right')}</span></div>`}<div class="value">${m.role==='user'&&m.context?`<div class="request-attachments"><button data-source="${esc(m.context)}">${fileIcon(m.context)}${esc(m.context.split('/').pop())}</button></div>`:''}${m.html}</div>${m.role!=='user'?`<div class="chat-footer-toolbar"><button class="icon-btn" data-copy="${i}" title="复制" aria-label="复制回答">${icon('copy')}</button><button class="icon-btn" data-feedback="up" title="有帮助" aria-label="回答有帮助">${icon('thumbsup')}</button><button class="icon-btn" data-feedback="down" title="没有帮助" aria-label="回答没有帮助">${icon('thumbsdown')}</button><button class="icon-btn" data-retry="${i}" title="重试" aria-label="重试回答">${icon('refresh')}</button></div>`:''}</article>`).join(''):welcome();
     $('chatMessages').scrollTop=$('chatMessages').scrollHeight;
   }
   function say(html,role='assistant'){messages.push({role,html,context:role==='user'?context:null});renderChat();}
@@ -237,7 +247,7 @@
   function renderCommands(){$('commandResults').innerHTML=commandList.items.map((c,i)=>`<button class="command-item ${i===commandList.index?'selected':''}" data-command-index="${i}">${c.kind==='文件'?fileIcon(c.name):icon('terminal')}<span>${esc(c.name)}</span><small>${c.kind}</small></button>`).join('')||'<p style="padding:10px">没有匹配项</p>';}
   function openCommands(query=''){$('commandInput').value=typeof query==='string'?query:'';$('commandDialog').showModal();commandList();$('commandInput').focus();}
   function runCommand(index){const item=commandList.items[index];if(item){$('commandDialog').close();item.run();}}
-  function showMenu(anchor,items){const menu=$('nativeMenu');menu.innerHTML=items.map((item,i)=>item===null?'<hr>':`<button role="menuitem" data-menu-index="${i}"><span>${item.label}</span><span class="shortcut">${item.key||''}</span></button>`).join('');menu.hidden=false;const rect=anchor.getBoundingClientRect();menu.style.left=Math.max(4,Math.min(innerWidth-menu.offsetWidth-5,rect.left))+'px';menu.style.top=Math.min(innerHeight-menu.offsetHeight-5,rect.bottom+3)+'px';menu.onclick=e=>{const b=e.target.closest('[data-menu-index]');if(!b)return;menu.hidden=true;items[Number(b.dataset.menuIndex)]?.run?.();};menu.querySelector('button')?.focus();}
+  function showMenu(anchor,items,{focusFirst=true}={}){const menu=$('nativeMenu');menu.innerHTML=items.map((item,i)=>item===null?'<hr>':`<button role="menuitem" data-menu-index="${i}"><span>${item.label}</span><span class="shortcut">${item.key||''}</span></button>`).join('');menu.hidden=false;const rect=anchor.getBoundingClientRect();menu.style.left=Math.max(4,Math.min(innerWidth-menu.offsetWidth-5,rect.left))+'px';menu.style.top=Math.min(innerHeight-menu.offsetHeight-5,rect.bottom+3)+'px';menu.onclick=e=>{const b=e.target.closest('[data-menu-index]');if(!b)return;menu.hidden=true;items[Number(b.dataset.menuIndex)]?.run?.();};if(focusFirst)menu.querySelector('button')?.focus();else{menu.tabIndex=-1;menu.focus();}}
   function newFile(){frame.classList.remove('sidebar-hidden');$('fileTree').hidden=false;renderTree();const form=document.createElement('form');form.className='tree-new-file';form.innerHTML='<span class="codicon codicon-file"></span><input aria-label="新文件路径" placeholder="输入文件名或相对路径">';$('fileTree').prepend(form);const input=form.querySelector('input');input.focus();form.onsubmit=e=>{e.preventDefault();const path=input.value.trim();if(!validFiles({[path]:''})||Object.hasOwn(workspace.files,path))return notify('请输入有效且尚未存在的相对文件路径');workspace.files[path]='';dirty.add(path);path.split('/').slice(0,-1).reduce((prefix,n)=>{const p=prefix?prefix+'/'+n:n;collapsed.delete(p);return p;},'');openFile(path);window.MS_EDITOR?.focus();$('codeInput')?.focus();};input.onkeydown=e=>{if(e.key==='Escape'){form.remove();$('fileTree').querySelector('button')?.focus();}};}
   function historyMove(direction){const from=navigation[direction],to=navigation[direction==='back'?'forward':'back'];const path=from.pop();if(!path)return;to.push(active);openFile(path,0,false);}
   function explainFile(){if(!context)return openCommands();say('<p>解释当前文件。</p>','user');const path=context;say('<p><button class="source-link" data-source="'+esc(path)+'">'+esc(path)+'</button> '+(path.endsWith('model.yaml')?'定义了 MoE 模型结构、训练 batch、并行拓扑与重计算策略。当前重计算粒度为 <code>selective</code>。启动时还需结合 shell 参数和实际运行日志核对最终采用值。':path.endsWith('train_npu.sh')?'是 NPU 训练启动脚本：设置设备可见性，通过 torchrun 启动训练，并传入 batch、序列长度、数值精度与重计算参数。':'是当前训练工程的一部分，可作为后续任务的文件上下文。')+'</p>');}
@@ -294,7 +304,41 @@
     button.querySelector('.codicon').className='codicon codicon-screen-'+(maximized?'normal':'full');
     window.dispatchEvent(new Event('resize'));
   };
-  $('chatHistory').onclick=e=>showMenu(e.currentTarget,[{label:messages.length?'检查长序列训练配置':'没有聊天历史记录',run:()=>{frame.classList.remove('chat-hidden');}}]);
+  const chatSessions=new Map();
+  let chatSessionId='current';
+  function openConstraintHistory(){
+    const history=window.MS_CONSTRAINT_HISTORY;
+    if(!history)return;
+    clearTimeout(timer);busy=false;$('chatSend').hidden=false;$('chatStop').hidden=true;
+    if(chatSessionId!==history.id)chatSessions.set(chatSessionId,{title:chatTopic(),messages});
+    chatSessionId=history.id;
+    messages=chatSessions.get(history.id)?.messages || history.rounds.flatMap((round,index)=>{
+      const url=history.url+'?embed=inline&theme=dark&case='+encodeURIComponent(round.id);
+      const tools={
+        'worldsize-v2':['validate_parallel_config','suggest_config_fixes'],
+        heads:['validate_parallel_config'],
+        layers:['validate_parallel_config'],
+        compatibility:['validate_parallel_config','suggest_config_fixes'],
+        capacity:['validate_parallel_config','estimate_training_capacity'],
+      }[round.id]||[];
+      return [{role:'user',html:'<p>'+esc(round.question)+'</p>',historyTitle:index===0?history.title:undefined},
+        {role:'assistant',html:`<details class="constraint-tool-call" open><summary>${icon('chevron-right')}${icon('tools')}<span class="constraint-tool-name">${tools.map(esc).join(' · ')}</span><span class="constraint-tool-server">MindSpeed Config</span></summary><section class="constraint-inline-card" data-theme="dark" aria-label="${esc(round.label)} MCP 卡片"><header class="constraint-inline-heading"><span>${esc(round.label)}</span><a href="${esc(history.url+'?theme=dark&case='+round.id)}" target="_blank" rel="noopener">独立打开 ↗</a></header><iframe data-constraint-case="${esc(round.id)}" title="${esc(round.label)}交互卡片" src="${esc(url)}"></iframe></section></details><p class="constraint-answer" data-constraint-answer="${esc(round.id)}" hidden></p>`}];
+    });
+    frame.classList.remove('chat-hidden');renderChat();$('chatMessages').scrollTop=0;
+  }
+  $('newChat').addEventListener('click',()=>{
+    if(messages.length)chatSessions.set(chatSessionId,{title:chatTopic(),messages});
+    chatSessionId='current-'+Date.now();
+  },true);
+  $('chatHistory').onclick=e=>{
+    if(messages.length)chatSessions.set(chatSessionId,{title:chatTopic(),messages});
+    const history=window.MS_CONSTRAINT_HISTORY;
+    showMenu(e.currentTarget,[...(history?[{label:esc(history.title),run:openConstraintHistory}]:[]),
+      ...[...chatSessions].filter(([id])=>id!==history?.id).map(([id,session])=>({label:esc(session.title),run:()=>{
+        if(messages.length)chatSessions.set(chatSessionId,{title:chatTopic(),messages});
+        clearTimeout(timer);busy=false;$('chatSend').hidden=false;$('chatStop').hidden=true;chatSessionId=id;messages=session.messages;frame.classList.remove('chat-hidden');renderChat();
+      }}))],{focusFirst:false});
+  };
   $('chatMore').onclick=e=>showMenu(e.currentTarget,[{label:'新建聊天',run:()=>$('newChat').click()},{label:'将当前文件添加到聊天',run:()=>{context=active.startsWith('@')?'':active;renderContext();}},{label:'隐藏聊天',run:()=>frame.classList.add('chat-hidden')}]);
   $('chatViewMenu').onclick=e=>showMenu(e.currentTarget,[{label:'聊天',run:()=>{}},{label:'聊天历史记录',run:()=>$('chatHistory').click()}]);
   $('editorMore').onclick=e=>showMenu(e.currentTarget,[{label:'关闭',run:()=>document.querySelector('.editor-tab[aria-selected=true] .tab-close')?.click()},{label:'关闭其他',run:()=>{tabs=[active];renderTabs();}},{label:'关闭全部',run:()=>{tabs=[];active='';renderTabs();renderEditor();renderTree();}}]);
@@ -302,7 +346,7 @@
   $('accountButton').onclick=e=>showMenu(e.currentTarget,[{label:'GitHub Copilot',run:()=>frame.classList.remove('chat-hidden')},{label:'管理账户',run:()=>openFile('@settings')}]);
   $('remoteExplorer').onclick=e=>showMenu(e.currentTarget,[{label:'SSH: npu-dev-01',run:()=>frame.classList.remove('terminal-hidden')}]);$('copilotStatus').onclick=()=>frame.classList.toggle('chat-hidden');$('notifications').onclick=e=>showMenu(e.currentTarget,[{label:'没有新通知',run:()=>{}}]);$('branchStatus').onclick=e=>showMenu(e.currentTarget,[{label:'✓ main',run:()=>{}}]);$('syncStatus').onclick=()=>{const el=$('syncStatus').querySelector('.codicon');el.classList.add('codicon-modifier-spin');setTimeout(()=>el.classList.remove('codicon-modifier-spin'),650);};
   document.addEventListener('pointerdown',e=>{if(!e.target.closest('#nativeMenu'))$('nativeMenu').hidden=true;});
-  $('nativeMenu').onkeydown=e=>{const buttons=Array.from($('nativeMenu').querySelectorAll('button'));const index=buttons.indexOf(document.activeElement);if(['ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();buttons[(index+(e.key==='ArrowDown'?1:buttons.length-1))%buttons.length]?.focus();}};
+  $('nativeMenu').onkeydown=e=>{const buttons=Array.from($('nativeMenu').querySelectorAll('button'));const index=buttons.indexOf(document.activeElement);if(['ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();buttons[index<0?(e.key==='ArrowDown'?0:buttons.length-1):(index+(e.key==='ArrowDown'?1:buttons.length-1))%buttons.length]?.focus();}};
   window.addEventListener('ms:editor-ready',()=>{if(!active.startsWith('@')||active==='@diff')renderEditor();});
   window.addEventListener('message',e=>{if(e.source!==$('taskFrame')?.contentWindow||workspace.webviewUrl)return;const msg=e.data;if(!msg||typeof msg!=='object')return;if(msg.type==='ms-demo-ready')syncTask();if(msg.type==='ms-demo-action'){if(msg.action==='candidate')return chooseCandidate(msg.candidate);if(msg.action==='source'&&fixturePaths.includes(msg.path))return openFile(msg.path,Number(msg.line)||0);({diff:reviewDiff,test:shortTest,plan:shortTest,export:exportPackage,start:()=>startCheck(),next,evidence:()=>openFile('@s1')})[msg.action]?.();}});
   resizePanel('explorerResize','--explorer-width',()=>$('explorer').offsetWidth,'right',145,()=>Math.max(145,frame.clientWidth*.3));resizePanel('chatResize','--chat-width',()=>$('chatPanel').offsetWidth,'left',250,()=>Math.max(250,frame.clientWidth*.48));resizePanel('terminalResize','--terminal-height',()=>$('terminal').offsetHeight,'vertical',80,()=>Math.max(80,frame.clientHeight*.55));

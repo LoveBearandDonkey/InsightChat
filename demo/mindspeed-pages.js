@@ -2,12 +2,21 @@
 (() => {
   const channel='mindspeed-config-demo/v1';
   const bundled=new URL('vendor/mindspeed/index.html',document.currentScript.src).href;
-  const published='https://lovebearanddonkey.github.io/mindspeed-config-mcp/config-relation-plane-mindspeed-config-mcp.html';
-  const local=['127.0.0.1','localhost','[::1]'].includes(location.hostname);
+  const embedStyles=new URL('mindspeed-embed.css',document.currentScript.src).href;
   const sessions=new Map();
 
   document.addEventListener('msi:mindspeed-frame',event=>{
     const {id,frame}=event.detail;
+    frame.addEventListener('load',()=>{
+      // Same-origin fallback pages keep their packaged files and hashes intact.
+      // Cross-origin MCP pages receive this stylesheet from the bridge instead.
+      try{
+        const doc=frame.contentDocument;
+        if(!doc||doc.querySelector('[data-mindspeed-embed]'))return;
+        const link=doc.createElement('link');link.rel='stylesheet';link.href=embedStyles;
+        link.dataset.mindspeedEmbed='';doc.head.append(link);
+      }catch(_){}
+    });
     const session=sessions.get(id);
     if(!session)return;
     const origin=new URL(session.url).origin;
@@ -31,7 +40,7 @@
   });
 
   window.MS_MINDSPEED_PAGES=Object.freeze({async check(payload,signal){
-    const candidates=[window.MINDSPEED_DEMO_WORKBENCH_URL||(!local?published:bundled),bundled];
+    const candidates=[window.MINDSPEED_DEMO_WORKBENCH_URL||bundled,bundled];
     let lastError;
     for(const target of [...new Set(candidates)]){
       if(signal.aborted)throw new DOMException('本次检查已停止','AbortError');

@@ -68,7 +68,7 @@
       const missing=data.missing_required_fields||[];
       const conclusion=missing.length?`完整校验还缺 ${missing.length} 项配置，当前不能判定通过。`:errors.length?`发现 ${errors.length} 条静态规则问题${errors[0]?.message?'：'+errors[0].message:''}。`:conflicts.length?`存在 ${conflicts.length} 项来源差异，需核对后确认。`:result.validation?'已完成并行静态校验，未发现阻断问题；实际训练仍需在目标环境验证。':'已解析配置，尚未完成并行静态校验。';
       const execution=local?'MindSpeed MCP 未能完成调用，已改用工作台页面本地校验':'已调用 MindSpeed MCP 的 '+result.calls.map(escape).join('、');
-      window.MS_DEMO.appendMessage(`<p>${execution}，联合读取 <strong>${escape(active)}</strong> 所在目录的 ${result.files.length} 份配置。${escape(conclusion)}</p><p><a href="${escape(result.url)}" data-mindspeed-result="${escape(result.id)}">打开 MindSpeed 配置工作台 ↗</a></p>`);
+      window.MS_DEMO.appendMessage(`<p>${execution}，联合读取 <strong>${escape(active)}</strong> 所在目录的 ${result.files.length} 份配置。${escape(conclusion)}</p><p><a href="${escape(result.url)}" data-mindspeed-result="${escape(result.id)}"><span class="codicon codicon-link" aria-hidden="true"></span>打开 MindSpeed 配置工作台</a></p>`);
       if(!local)window.MS_DEMO.openMindspeed(result.id,result.url);
     }catch(error){window.MS_DEMO.appendMessage('<p>'+escape(controller.signal.aborted?'本次检查已停止。':'MindSpeed 配置校验未完成：'+error.message+'；未生成通过结论。')+'</p>');}
     finally{checking=false;controller=null;$('chatSend').hidden=false;$('chatStop').hidden=true;$('chatInput').dispatchEvent(new Event('input'));}

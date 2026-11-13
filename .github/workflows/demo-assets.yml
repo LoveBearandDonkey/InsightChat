@@ -1,0 +1,68 @@
+name: Verify demo page dependencies
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Deploy the verified artifact to GitHub Pages
+        type: boolean
+        default: false
+  schedule:
+    - cron: '17 1 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: InsightChat
+      - uses: actions/checkout@v4
+        with:
+          repository: LoveBearandDonkey/mindspeed-config-mcp
+          ref: main
+          path: mindspeed-config-mcp
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Reject stale snapshots and prepare the static demo
+        working-directory: InsightChat
+        run: npm run package:demo
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-demo-pages
+          path: InsightChat/dist/demo-pages
+          include-hidden-files: true
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-demo-pages
+          path: site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Deploy the verified demo
+        id: deployment
+        uses: actions/deploy-pages@v4

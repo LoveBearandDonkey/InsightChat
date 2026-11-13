@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "channel": "mindspeed-constraint-lens/v1",
+  "source_repository": "mindspeed-config-mcp",
+  "source_path": "apps/web/prototypes/constraint-lens.html",
+  "source_revision": "dfccd22ea6b75eb433fb3e2b45d5f75d588ee0af",
+  "sha256": "a8454faa1b5e34fa82da220a1b3945bef34364da9417faed81ffd8bf192a3473",
+  "source_content_sha256": "69fc45692c82f8218ec17eef3356bebb56ed7025b659e7954896701948627ef2",
+  "execution_mode": "constructed-history-local-prototype",
+  "mcp_protocol_invoked": false,
+  "rounds": [
+    {
+      "id": "worldsize-v2",
+      "label": "WorldSize",
+      "question": "我改过一些切分配置，再帮我检查下对 Rank 配置是否有影响"
+    },
+    {
+      "id": "heads",
+      "label": "注意力切分",
+      "question": "我们准备把 TP 设为 7，模型目前有 30 个注意力头。帮我看看这样切分会不会有问题，怎么调整合适？"
+    },
+    {
+      "id": "layers",
+      "label": "均匀分层",
+      "question": "模型当前有 100 层，计划分给 7 个 PP Stage，目标是每个 Stage 16 层。现在还差多少层？"
+    },
+    {
+      "id": "compatibility",
+      "label": "配置选项冲突",
+      "question": "配置选项之间有哪些互斥关系或启用前提？"
+    },
+    {
+      "id": "capacity",
+      "label": "理论容量",
+      "question": "项目准备使用单卡 64 GiB 的昇腾 NPU。帮我估一下这套训练配置的显存风险，哪个 Stage 最紧？"
+    }
+  ]
+}

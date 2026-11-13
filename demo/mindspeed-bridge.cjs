@@ -56,7 +56,7 @@ async function html() {
   const resource = await (await client()).readResource({uri:'ui://mindspeed-config/result-view.html'});
   const text = resource.contents.find(item=>item.text)?.text;
   if(!text) throw new Error('MCP 页面资源为空，请先构建 UI');
-  return text.replace('<head>',`<head><script>window.__MINDSPEED_WEB_SERVICE__={apiBase:'/demo/mindspeed/api'};</script><style>.pto-ide-frame__topbar.pto-ide-frame__standalone-chrome{display:none!important}html,body{height:100%;margin:0}.pto-ide-frame{width:100%!important;height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;border:0!important;border-radius:0!important;aspect-ratio:auto!important}</style><script>document.addEventListener('mcp:workbench-handoff',event=>{const handoff=event.detail;if(!handoff.demo_ready)return;setTimeout(()=>{document.dispatchEvent(new CustomEvent('mcp:restore-snapshot-request',{detail:{snapshot:{config:handoff.demo_config,source:{name:handoff.source.name,version_kind:'unsaved'}}}}));document.getElementById('croImportClose')?.click();},0);});</script>`);
+  return text.replace('<head>',`<head><link rel="stylesheet" href="/demo/mindspeed-embed.css" data-mindspeed-embed><script>window.__MINDSPEED_WEB_SERVICE__={apiBase:'/demo/mindspeed/api'};</script><style>.pto-ide-frame__topbar.pto-ide-frame__standalone-chrome{display:none!important}html,body{height:100%;margin:0}.pto-ide-frame{width:100%!important;height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;border:0!important;border-radius:0!important;aspect-ratio:auto!important}</style><script>document.addEventListener('mcp:workbench-handoff',event=>{const handoff=event.detail;if(!handoff.demo_ready)return;setTimeout(()=>{document.dispatchEvent(new CustomEvent('mcp:restore-snapshot-request',{detail:{snapshot:{config:handoff.demo_config,source:{name:handoff.source.name,version_kind:'unsaved'}}}}));document.getElementById('croImportClose')?.click();},0);});</script>`);
 }
 async function body(req) {
   let text='';
@@ -82,5 +82,5 @@ async function handle(req,res,url) {
   } catch(error) {json(502,{message:error.message});}
   return true;
 }
-async function close(){if(connection)await (await connection).close();}
+async function close(){const previous=connection;connection=null;if(previous)await (await previous).close();}
 module.exports={handle,check,close};
