@@ -2,43 +2,53 @@
 (function () {
   'use strict';
 
-  const HOLD = 1000;
-  const EXPLODE_DURATION = 1400;
+  const HOLD = 500;
+  const EXPLODE_DURATION = 1200;
   const EDGE_PEEK_X = 32;
   const EDGE_PEEK_Y = 20;
   const LIFT_DURATION = 180;
   const PERSPECTIVE = 1800;
   const EXPLODED = HOLD + 400 + EXPLODE_DURATION;
-  const GLASS_START = EXPLODED + 400;
-  const GLASS_LOW = GLASS_START + 700;
-  const GLASS_RESTORE = GLASS_LOW + 350;
-  const GLASS_END = GLASS_RESTORE + 1200;
-  const RADIUS_PEAK = GLASS_END + 450;
-  const RADIUS_END = RADIUS_PEAK + 450;
+  const GLASS_START = EXPLODED + 200;
+  const GLASS_LOW = GLASS_START + 400;
+  const GLASS_RESTORE = GLASS_LOW + 80;
+  const GLASS_END = GLASS_RESTORE + 600;
+  const RADIUS_PEAK = GLASS_END + 375;
+  const RADIUS_END = RADIUS_PEAK + 375;
   const BRAND_PEAK = GLASS_END + 100;
   const BRAND_FOCUS = BRAND_PEAK + 220;
-  const BRAND_END = RADIUS_END + 120;
-  const COLOR_START = BRAND_END + 100;
-  const AVATAR_VISIBLE = COLOR_START + 320;
-  const SPIN_FAST = AVATAR_VISIBLE + 900;
-  const COLOR_MORPH_START = SPIN_FAST - 120;
-  const COLOR_MORPH_END = SPIN_FAST + 240;
-  const COLOR_STOP = COLOR_MORPH_END + 900;
-  const COLOR_CHARGE = COLOR_STOP + 160;
-  const COLOR_CHARGED = COLOR_CHARGE + 340;
-  const COLOR_BLOOM = COLOR_CHARGED + 100;
-  const COLOR_SETTLED = COLOR_BLOOM + 1760;
-  const COLOR_HANDOFF = COLOR_SETTLED + 200;
+  const BRAND_END = RADIUS_END + 100;
+  // Radius/brand and color effects share a start instead of waiting in sequence.
+  const COLOR_START = GLASS_END;
+  const AVATAR_VISIBLE = COLOR_START + 240;
+  const SPIN_FAST = AVATAR_VISIBLE + 550;
+  const COLOR_MORPH_START = SPIN_FAST - 100;
+  const COLOR_MORPH_END = SPIN_FAST + 200;
+  const COLOR_STOP = COLOR_MORPH_END + 550;
+  const COLOR_CHARGE = COLOR_STOP + 120;
+  const COLOR_CHARGED = COLOR_CHARGE + 280;
+  const COLOR_BLOOM = COLOR_CHARGED + 80;
+  const COLOR_BLOOM_DURATION = 1000;
+  const COLOR_BLOOM_SCALE = COLOR_BLOOM_DURATION / 1760;
+  const COLOR_MORPH_SCALE = (COLOR_MORPH_END - COLOR_MORPH_START) / 360;
+  const COLOR_SETTLED = COLOR_BLOOM + COLOR_BLOOM_DURATION;
+  const COLOR_HANDOFF = COLOR_SETTLED + 160;
   const COLOR_END = COLOR_HANDOFF + 20;
-  const EDGE_END = COLOR_END + 450;
+  const EDGE_END = COLOR_END + 180;
   const PANE_DURATION = 600;
-  const COMPONENT_DELAY = EDGE_END - GLASS_END;
-  const LAND = 780;
-  const REPLACE = 20;
-  const REVEAL_LEAD = 140;
-  const HEAD_START = HOLD + 6640 + COMPONENT_DELAY + PANE_DURATION;
-  const HEAD_END = HOLD + 7090 + COMPONENT_DELAY + PANE_DURATION;
-  const DURATION = HOLD + 11500 + COMPONENT_DELAY + PANE_DURATION;
+  // Scale flight, crossfade and shadow timing together, preserving their poses.
+  const FLIGHT_SCALE = 550 / 800;
+  const LAND = 780 * FLIGHT_SCALE;
+  const REPLACE = 20 * FLIGHT_SCALE;
+  const REVEAL_LEAD = 140 * FLIGHT_SCALE;
+  const COMPONENT_GAP = 100;
+  const COMPONENT_STEP = LAND + REPLACE + COMPONENT_GAP;
+  // Start the header as soon as the background is ready; edge light runs alongside.
+  const COMPONENT_START = COLOR_END;
+  const PANE_START = COMPONENT_START + COMPONENT_STEP + LAND + REPLACE;
+  const PANE_END = PANE_START + PANE_DURATION;
+  const HEAD_START = PANE_END + 90;
+  const HEAD_END = HEAD_START + 450;
   const FLIGHT_EASE = [0.22, 0.5, 0.55, 1];
   const FLIGHT_TIMING = `cubic-bezier(${FLIGHT_EASE.join(',')})`;
   const FLIGHT_OPACITY = 0.75;
@@ -46,17 +56,18 @@
   const GROUND_BLURS = [2, 16, 42];
   const CARD_BLURS = [3, 24, 90];
   const PARTS = [
-    { id: 1, name: '窗口标题栏', start: 4700, targets: ['.pto-ide-frame__topbar'], direction: 'up', offscreen: true, delay: 0, scale: 1.10 },
-    { id: 2, name: '数据管理', start: 5750, targets: ['.msi-sidebar'], direction: 'left', delay: 0, scale: 1.12 },
-    { id: 3, name: '分析页签', start: 7170, targets: ['.msi-tabs'], direction: 'up', offscreen: true, delay: 200, scale: 1.10 },
-    { id: 4, name: '时间线', start: 8220, targets: ['#msiTimelinePanel > .msi-toolbar', '#msiTimelineSwims'], extra: ['#msiMouseTools'], direction: 'up', delay: 400, scale: 1.12 },
-    { id: 6, name: '选中详情', start: 9270, targets: ['#msiSelectionPanel'], extra: ['#msiFootResizer'], direction: 'down', delay: 0, scale: 1.10 },
-    { id: 5, name: '智能对话', start: 10320, targets: ['#trainChatPanel'], extra: ['#chatShellResizer'], direction: 'right', delay: 0, scale: 1.12 },
-  ].map(part => ({ ...part, start: HOLD + part.start + COMPONENT_DELAY + (part.id === 1 || part.id === 2 ? 0 : PANE_DURATION) }));
-  // Move the pane's slot after the explorer has fully replaced its old artwork.
-  // The title and later components keep their existing playback times.
-  const PANE_START = PARTS.find(part => part.id === 2).start + LAND + REPLACE;
-  const PANE_END = PANE_START + PANE_DURATION;
+    { id: 1, name: '窗口标题栏', targets: ['.pto-ide-frame__topbar'], direction: 'up', offscreen: true, delay: 0, scale: 1.10 },
+    { id: 2, name: '数据管理', targets: ['.msi-sidebar'], direction: 'left', delay: 0, scale: 1.12 },
+    { id: 3, name: '分析页签', targets: ['.msi-tabs'], direction: 'up', offscreen: true, delay: 200, scale: 1.10 },
+    { id: 4, name: '时间线', targets: ['#msiTimelinePanel > .msi-toolbar', '#msiTimelineSwims'], extra: ['#msiMouseTools'], direction: 'up', delay: 400, scale: 1.12 },
+    { id: 6, name: '选中详情', targets: ['#msiSelectionPanel'], extra: ['#msiFootResizer'], direction: 'down', delay: 0, scale: 1.10 },
+    { id: 5, name: '智能对话', targets: ['#trainChatPanel'], extra: ['#chatShellResizer'], direction: 'right', delay: 0, scale: 1.12 },
+  ].map((part, index) => ({
+    ...part,
+    start: index < 2 ? COMPONENT_START + index * COMPONENT_STEP : HEAD_END + 80 + (index - 2) * COMPONENT_STEP,
+  }));
+  // Derive the ending from the final landing so timing edits cannot cut it off.
+  const DURATION = PARTS[5].start + LAND + REPLACE + 380;
   const CHAT_REVEAL = PARTS[5].start + LAND - REVEAL_LEAD;
 
   function run(stage, onFinish) {
@@ -391,11 +402,11 @@
       ]);
       animate(avatar, [
         { at: 0, opacity: 1 }, { at: COLOR_MORPH_START, opacity: 1, easing: 'ease-in-out' },
-        { at: SPIN_FAST + 60, opacity: 0 }, { at: DURATION, opacity: 0 },
+        { at: SPIN_FAST + 60 * COLOR_MORPH_SCALE, opacity: 0 }, { at: DURATION, opacity: 0 },
       ]);
       animate(blurredAvatar, [
         { at: 0, opacity: 0 }, { at: COLOR_MORPH_START, opacity: 0, easing: 'ease-in-out' },
-        { at: SPIN_FAST + 60, opacity: 1 }, { at: DURATION, opacity: 1 },
+        { at: SPIN_FAST + 60 * COLOR_MORPH_SCALE, opacity: 1 }, { at: DURATION, opacity: 1 },
       ]);
       animate(orbit, [
         { at: 0, transform: avatarPose(0) },
@@ -413,9 +424,9 @@
         const orbitRadius = source.clientWidth * 0.23;
         const ox = quadrant[0] * orbitRadius, oy = quadrant[1] * orbitRadius;
         const chargedX = ox * 0.22, chargedY = oy * 0.22;
-        const start = COLOR_BLOOM + index * 30;
-        const dissolved = start + 80;
-        const end = start + 1550;
+        const start = COLOR_BLOOM + index * 30 * COLOR_BLOOM_SCALE;
+        const dissolved = start + 80 * COLOR_BLOOM_SCALE;
+        const end = start + 1550 * COLOR_BLOOM_SCALE;
         const flightEase = 'cubic-bezier(.18,.78,.32,1)';
         const ballPose = (dx, dy, scale = 1) => `translate(-50%, -50%) translate3d(${dx}px, ${dy}px, 0) scale(${scale})`;
         animate(orb, [
@@ -430,7 +441,7 @@
         ]);
         animate(orb, [
           { at: 0, opacity: 0 }, { at: COLOR_MORPH_START, opacity: 0, easing: 'ease-out' },
-          { at: COLOR_MORPH_START + 140, opacity: 1 },
+          { at: COLOR_MORPH_START + 140 * COLOR_MORPH_SCALE, opacity: 1 },
           { at: start, opacity: 1, easing: 'ease-in-out' },
           { at: dissolved, opacity: 0 }, { at: DURATION, opacity: 0 },
         ]);
@@ -445,7 +456,7 @@
         animate(element, [
           { at: 0, opacity: 0 }, { at: start, opacity: 0, easing: 'ease-in-out' },
           { at: dissolved, opacity: 0.58, easing: 'ease-in-out' },
-          { at: start + 520, opacity: 0.36, easing: 'ease-out' },
+          { at: start + 520 * COLOR_BLOOM_SCALE, opacity: 0.36, easing: 'ease-out' },
           { at: end, opacity: alpha }, { at: DURATION, opacity: alpha },
         ]);
       });
@@ -456,7 +467,7 @@
         { at: BRAND_PEAK, opacity: 1 }, { at: RADIUS_END, opacity: 1, easing: 'ease-in-out' },
         { at: BRAND_END, opacity: 0, easing: 'ease-out' },
         { at: COLOR_END, opacity: 0, easing: 'ease-out' },
-        { at: EDGE_END, opacity: 1 }, { at: PARTS[0].start, opacity: 1 },
+        { at: EDGE_END, opacity: 1 }, { at: Math.max(EDGE_END, PARTS[0].start), opacity: 1 },
         { at: PARTS[0].start + LAND, opacity: 0 }, { at: DURATION, opacity: 0 },
       ]);
       animate(frame, [
@@ -604,7 +615,7 @@
           { at: contact + REPLACE, opacity: 0 }, { at: DURATION, opacity: 0 },
         ]);
         animate(img, [
-          { at: 0, opacity: 1 }, { at: part.start - 200, opacity: 1, easing: 'ease-out' },
+          { at: 0, opacity: 1 }, { at: part.start - 200 * FLIGHT_SCALE, opacity: 1, easing: 'ease-out' },
           { at: part.start, opacity: FLIGHT_OPACITY },
           { at: contact - REVEAL_LEAD, opacity: FLIGHT_OPACITY, easing: 'ease-out' },
           { at: contact + REPLACE, opacity: 0 }, { at: DURATION, opacity: 0 },
@@ -635,7 +646,7 @@
       else if (time < COLOR_STOP) state = 'color-morph';
       else if (time < COLOR_BLOOM) state = 'color-charge';
       else if (time < COLOR_END) state = 'color-fill';
-      else if (time < EDGE_END) state = 'glass-edge';
+      else if (time < Math.min(EDGE_END, PARTS[0].start)) state = 'glass-edge';
       else if (time < PARTS[0].start) state = 'component-intro';
       else if (time >= PANE_START && time < HEAD_START) state = 'pane';
       else if (time >= HEAD_START && time < PARTS[2].start) state = 'content-head';

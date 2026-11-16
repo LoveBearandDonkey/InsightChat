@@ -5646,7 +5646,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
          .wzh-chat-queue      —— 外层槽位,只负责占位;收起时把下外边距压成负值,
                                  输入框(z-index 更高、底不透明)就会往上盖住卡片下半截;
          .wzh-chat-queue-card —— 卡片本体。收起时左右各内收 16px(比输入框窄一圈)、底色转灰、
-                                 描边隐去、底部内边距加厚,加上沿 z 轴后退一档的位移,
+                                 描边保持一致、底部内边距加厚,加上沿 z 轴后退一档的位移,
                                  读起来就是整块垫到输入框背后、只在上方露出一截;
          .wzh-chat-queue-listwrap —— 列表的可伸缩容器,高度用 grid-template-rows 1fr→0fr 收掉,
                                  列表本身同时向下位移并淡出。 */
@@ -5660,7 +5660,7 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     .wzh-chat-queue-card {
       box-sizing: border-box; margin: 0; padding: 10px 12px;
       display: flex; flex-direction: column; gap: 8px;
-      border: 1px solid var(--border-line); border-radius: 14px;
+      border: 1px solid var(--card-neutral-border); border-radius: 14px;
       background: #fafafa;
       transform-origin: 50% 100%;
       transition: margin var(--duration-slow) var(--easing-default),
@@ -5676,7 +5676,6 @@ html[data-embed-preview="true"][data-frame-ratio="wide"] .pto-ide-frame {
     .wzh-chat-queue.is-collapsed .wzh-chat-queue-card {
       margin: 0 16px; padding: 13px 16px 24px; gap: 0;
       background: #fafafa;
-      border-color: var(--card-neutral-border);
     }
     /* 深色主题用等透明度的白色渐变，保持相同层次而不压黑背景。 */
     :root[data-theme='dark'] .wzh-chat-queue.is-collapsed .wzh-chat-queue-card {

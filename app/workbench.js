@@ -695,6 +695,7 @@
     renderTree(oldPositions);
     renderContentTitle();
     refreshCompareSwimlanes();
+    if (active) setSelectionPanelCollapsed(true);
     syncSmartCompareButton();
   }
 
