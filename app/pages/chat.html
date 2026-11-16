@@ -997,12 +997,15 @@
             </div>
             <div class="wzh-skills-upload" id="trainChatSkillsUpload" hidden>
               <div class="wzh-skills-upload-heading"><button class="wzh-skills-upload-back" id="trainChatSkillsUploadBack" type="button" aria-label="返回 Skills 列表"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 4-8 8 8 8M6 12h15"/></svg></button><span>添加技能</span></div>
-              <div class="wzh-skills-dropzone" id="trainChatSkillsDropzone" role="button" tabindex="0" aria-label="点击查看示例技能，或拖入本地 Skill 文件">
+              <div class="wzh-skills-dropzone" id="trainChatSkillsDropzone" role="button" tabindex="0" aria-label="点击查看示例技能，或拖入本地 Skill 文件" aria-describedby="trainChatSkillsUploadRequirements">
                 <img class="wzh-skills-upload-illustration" src="../../src/pic/icon/skill_upload.png" alt="">
                 <span class="wzh-skills-upload-plus" aria-hidden="true">＋</span>
-                <strong>拖入或点击选择本地Skill文件</strong>
-                <small>需包含 SKILL.md，可选多个Skill文件</small>
+                <span class="wzh-skills-upload-prompt">拖入或点击选择本地Skill文件</span>
               </div>
+              <ul class="wzh-skills-upload-requirements" id="trainChatSkillsUploadRequirements">
+                <li>上传文件夹或者 .zip、.skill 文件中必须包含 SKILL.md 文件</li>
+                <li>.md 文件必须包含 YAML 格式编写的 Skill 名称和描述</li>
+              </ul>
               <div class="wzh-skills-upload-error" id="trainChatSkillsUploadError" role="alert" hidden></div>
               <div class="wzh-skills-selected" id="trainChatSkillsSelected" hidden>
                 <h4>已选择 <span class="wzh-skills-group-count" id="trainChatSkillsSelectedCount">0</span></h4>

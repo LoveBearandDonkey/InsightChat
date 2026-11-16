@@ -36,7 +36,7 @@
 .wzh-skills-item:only-child { border-radius: 15px; }
 .wzh-skills-item:hover, .wzh-skills-item:focus-within { background: var(--wzh-list-hover); }
 .wzh-skills-item + .wzh-skills-item { border-top: 1px solid var(--divider-strong); }
-.wzh-skills-row { display: flex; align-items: center; gap: 12px; min-height: 74px; padding: 9px 16px; box-sizing: border-box; }
+.wzh-skills-row { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 9px 16px; box-sizing: border-box; }
 .wzh-skills-icon { width: 42px; height: 42px; flex: 0 0 42px; }
 .wzh-skills-icon--skill { display: grid; place-items: center; background: var(--wzh-catalog-icon-bg); clip-path: path('M21 1 C37 1 41 5 41 21 C41 37 37 41 21 41 C5 41 1 37 1 21 C1 5 5 1 21 1Z'); }
 .wzh-skills-icon-mark { display: block; width: 22px; height: 22px; background: var(--brand-blue); -webkit-mask: url('../src/pic/icon/skill.svg') center / contain no-repeat; mask: url('../src/pic/icon/skill.svg') center / contain no-repeat; }
@@ -130,18 +130,18 @@ img.wzh-official-mark { display: inline-block; width: 16px; height: 16px; flex: 
 .wzh-skills-upload-heading { display: flex; align-items: center; gap: 10px; margin: 0 0 22px; min-height: 30px; color: var(--foreground); font: 400 14px/1.4 var(--font-sans); }
 .wzh-skills-upload-back { display: grid; place-items: center; flex: 0 0 20px; width: 20px; height: 28px; padding: 0; border: 0; background: transparent; color: var(--foreground); cursor: pointer; }
 .wzh-skills-upload-back svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
-.wzh-skills-dropzone { --wzh-upload-dash: #c9c9c9; position: relative; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 294px; padding: 20px; border: 1px solid transparent; border-radius: 8px; background: #fafafa; color: var(--foreground); text-align: center; cursor: pointer; }
+.wzh-skills-dropzone { --wzh-upload-dash: #c9c9c9; position: relative; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 220px; padding: 20px; border: 1px solid transparent; border-radius: 8px; background: #fafafa; color: var(--foreground); text-align: center; cursor: pointer; }
 .wzh-skills-dropzone::before { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: repeating-linear-gradient(90deg, var(--wzh-upload-dash) 0 6px, transparent 6px 10px) top / 100% 1px no-repeat, repeating-linear-gradient(90deg, var(--wzh-upload-dash) 0 6px, transparent 6px 10px) bottom / 100% 1px no-repeat, repeating-linear-gradient(0deg, var(--wzh-upload-dash) 0 6px, transparent 6px 10px) left / 1px 100% no-repeat, repeating-linear-gradient(0deg, var(--wzh-upload-dash) 0 6px, transparent 6px 10px) right / 1px 100% no-repeat; }
 :root[data-theme='dark'] .wzh-skills-dropzone { --wzh-upload-dash: #777; background: var(--surface-2); }
 .wzh-skills-dropzone:hover, .wzh-skills-dropzone.is-dragover { --wzh-upload-dash: var(--brand-blue); }
 .wzh-skills-upload-illustration { display: block; width: 90px; height: 80px; object-fit: contain; margin-bottom: 19px; }
 .wzh-skills-upload-plus { display: none; width: 20px; height: 20px; margin-bottom: 4px; border-radius: 50%; background: #202020; color: #fff; font: 500 18px/20px var(--font-sans); }
-.wzh-skills-dropzone strong { font: 600 14px/1.5 var(--font-sans); }
-.wzh-skills-dropzone small { margin-top: 7px; color: var(--foreground-placeholder); font: 400 12px/1.4 var(--font-sans); }
+.wzh-skills-upload-prompt { font: 400 14px/1.5 var(--font-sans); }
 .wzh-skills-dropzone.has-selection { min-height: 106px; padding: 12px; }
 .wzh-skills-dropzone.has-selection .wzh-skills-upload-illustration { display: none; }
 .wzh-skills-dropzone.has-selection .wzh-skills-upload-plus { display: block; }
-.wzh-skills-dropzone.has-selection small { margin-top: 2px; }
+.wzh-skills-upload-requirements { margin: 12px 0 0; padding-left: 18px; color: var(--foreground-secondary); font: 400 12px/1.6 var(--font-sans); }
+.wzh-skills-upload-requirements li + li { margin-top: 4px; }
 .wzh-skills-upload-error { margin: 10px 0 0; color: var(--danger); font: 400 12px/1.4 var(--font-sans); }
 .wzh-skills-selected { margin-top: 28px; }
 .wzh-skills-selected h4, .wzh-skills-directory h4 { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; color: var(--foreground); font: 400 14px/1.4 var(--font-sans); }
@@ -186,7 +186,6 @@ img.wzh-official-mark { display: inline-block; width: 16px; height: 16px; flex: 
 .wzh-skills-upload-foot { position: relative; z-index: 1; background: var(--surface-1); }
 @media (max-width: 640px) {
   .wzh-settings-dialog.is-skills-upload { width: calc(100% - 16px); height: calc(100% - 16px); }
-  .wzh-skills-dropzone { min-height: 220px; }
   .wzh-skills-selected-row { gap: 7px; padding-inline: 8px; }
   .wzh-skills-selected-actions { gap: 8px; }
   .wzh-skills-directory-row { gap: 8px; padding-inline: 10px; }

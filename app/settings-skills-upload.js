@@ -10,6 +10,7 @@
     const view = document.getElementById('trainChatSkillsUpload');
     const foot = document.getElementById('trainChatSkillsUploadFoot');
     const zone = document.getElementById('trainChatSkillsDropzone');
+    const prompt = zone.querySelector('.wzh-skills-upload-prompt');
     const folderInput = document.createElement('input');
     folderInput.type = 'file';
     folderInput.multiple = true;
@@ -93,6 +94,7 @@
     function render() {
       const hasEntries = entries.length > 0;
       zone.classList.toggle('has-selection', hasEntries);
+      prompt.textContent = hasEntries ? '继续拖入或点击选择本地Skill文件' : '拖入或点击选择本地Skill文件';
       selected.hidden = !hasEntries;
       confirm.disabled = !hasEntries;
       count.textContent = String(entries.length);
