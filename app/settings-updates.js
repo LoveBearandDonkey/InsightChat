@@ -19,7 +19,7 @@
     }
     let model = readModel();
     let state = model.pending ? 'available' : 'ready';
-    let timer = 0, celebration = null, medalAnimation = null, scaleAnimation = null, liftAnimation = null;
+    let timer = 0, celebration = null, medalAnimation = null, scaleAnimation = null, liftAnimation = null, confettiCue = null;
     let presentationEpoch = 0, activeUpgradeEpoch = 0;
     let descriptionStatus = '', descriptionTimer = 0, descriptionAnimation = null;
     const action = document.getElementById('trainChatUpdateAction');
@@ -146,6 +146,8 @@
     }
     function stopPresentation() {
       presentationEpoch++;
+      confettiCue?.cancel();
+      confettiCue = null;
       clearConfetti();
       medalAnimation?.cancel();
       medalAnimation = null;
@@ -164,13 +166,15 @@
       if (reducedMotion.matches || card.getClientRects().length === 0) return;
       card.classList.add('is-upgrade-motion');
       const startTime = document.timeline.currentTime;
+      const spinDuration = 3000;
+      const releaseOffset = .94;
       medalAnimation = medal.animate([
         { offset: 0, transform: 'rotateY(0deg)' },
         { offset: .64, transform: 'rotateY(0deg)' },
         { offset: 1, transform: 'rotateY(1080deg)' },
-      ], { duration: 3000, fill: 'forwards' });
+      ], { duration: spinDuration, fill: 'forwards' });
       // Begin the 1.1 s landing at 2.5 turns (2820 ms), during the final half-turn.
-      const landingStart = 3000 * .94;
+      const landingStart = spinDuration * releaseOffset;
       const liftDuration = landingStart + 1100;
       liftAnimation = tilt.animate([
         { at: 0, transform: 'translateY(0)', easing: 'ease-out' },
@@ -186,15 +190,25 @@
       scaleAnimation = scaleGroup.animate([
         { offset: 0, transform: 'scale(1)' },
         { offset: .64, transform: 'scale(1)', easing: 'cubic-bezier(.2,.75,.3,1)' },
-        { offset: .94, transform: 'scale(.72)', easing: 'cubic-bezier(.12,.9,.25,1)' },
+        { offset: releaseOffset, transform: 'scale(.72)', easing: 'cubic-bezier(.12,.9,.25,1)' },
         { offset: 1, transform: 'scale(1)' },
-      ], { duration: 3000, fill: 'forwards' });
+      ], { duration: spinDuration, fill: 'forwards' });
       medalAnimation.startTime = startTime;
       scaleAnimation.startTime = startTime;
       liftAnimation.startTime = startTime;
       medalAnimation.finished.catch(() => {});
       scaleAnimation.finished.catch(() => {});
       liftAnimation.finished.catch(() => {});
+      // Start the burst with the final half-turn's scale release and landing.
+      const epoch = presentationEpoch;
+      const cue = card.animate([], { duration: spinDuration * releaseOffset });
+      confettiCue = cue;
+      cue.startTime = startTime;
+      cue.finished.then(() => {
+        if (confettiCue === cue) confettiCue = null;
+        if (epoch !== presentationEpoch) return;
+        Promise.resolve(celebrate(2200, document.timeline.currentTime)).catch(() => clearConfetti());
+      }, () => {});
     }
     function celebrate(duration, startTime) {
       clearConfetti();
@@ -207,7 +221,8 @@
         const fire = window.confetti.create(canvas, { resize: true, useWorker: false, disableForReducedMotion: true });
         const current = { fire, canvas, fade: null };
         celebration = current;
-        const options = { particleCount: 40, spread: 65, startVelocity: 17, ticks: 200, gravity: .8, scalar: .65, colors: ['#d7bd82', '#549bff', '#a784ed', '#52cdbb'], disableForReducedMotion: true };
+        // Ease the launch with air resistance, then let the downward pull regain speed.
+        const options = { particleCount: 40, spread: 65, startVelocity: 17, decay: .92, ticks: 200, gravity: 1.15, scalar: .65, colors: ['#d7bd82', '#549bff', '#a784ed', '#52cdbb'], disableForReducedMotion: true };
         const left = fire({ ...options, angle: 60, origin: { x: .16, y: .8 } });
         const right = fire({ ...options, angle: 120, origin: { x: .84, y: .8 } });
         Promise.all([left, right]).catch(() => {});
@@ -230,8 +245,7 @@
       if (epoch !== presentationEpoch) return;
       scaleAnimation?.cancel();
       scaleAnimation = null;
-      // The landing is already running; do not wait for confetti to finish.
-      Promise.resolve(celebrate(2200, document.timeline.currentTime)).catch(() => clearConfetti());
+      // The burst and landing have already started with the scale release.
       if (liftAnimation) await liftAnimation.finished.catch(() => {});
       if (epoch !== presentationEpoch) return;
       medalAnimation?.cancel();
