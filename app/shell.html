@@ -522,12 +522,17 @@
           <button type="button" class="wzh-settings-nav-item" data-settings-section="mcp"><span class="wzh-settings-nav-icon wzh-settings-nav-icon--asset" aria-hidden="true"><img src="../../src/pic/icon/mcp.svg" alt=""></span>MCP</button>
           <button type="button" class="wzh-settings-nav-item" data-settings-section="knowledge"><svg class="wzh-settings-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5.5C9.7 4.1 6.8 3.8 3.5 4.5v14c3.3-.7 6.2-.4 8.5 1 2.3-1.4 5.2-1.7 8.5-1v-14c-3.3-.7-6.2-.4-8.5 1Z"/><path d="M12 5.5v14"/></svg>知识库</button>
         </nav>
+        <div class="wzh-settings-style-bar">
+          <div class="wzh-settings-style-switch" role="group" aria-label="弹窗风格">
+            <button type="button" data-settings-style="1" aria-pressed="true">风格1</button>
+            <button type="button" data-settings-style="2" aria-pressed="false">测试</button>
+          </div>
+        </div>
       </aside>
       <div class="wzh-settings-main">
         <header class="wzh-settings-head">
           <div class="wzh-settings-head-title">
             <h3 id="trainChatSettingsHeading">Agent</h3>
-            <p class="wzh-settings-head-note" id="trainChatSettingsGeneralNote" hidden>与启动相关的配置变动，将在下一次打开软件或助手时生效</p>
           </div>
           <button class="wzh-settings-close wzh-chat-head-btn" id="trainChatSettingsClose" type="button" aria-label="关闭助手设置" title="关闭"><img src="../../src/pic/icon/close.svg" alt=""></button>
         </header>
@@ -579,17 +584,35 @@
             <details class="wzh-settings-session"><summary><svg class="msi-tree-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>会话配置</summary><p>当前没有额外的会话配置项。</p></details>
           </section>
           <section class="wzh-settings-section wzh-settings-general" data-settings-panel="general" aria-label="通用设置" hidden>
+            <article class="wzh-capability-update" id="trainChatCapabilityUpdate" data-state="ready" aria-labelledby="trainChatUpdateTitle">
+              <div class="wzh-update-hero">
+                <div class="wzh-update-badge" id="trainChatUpdateBadge" role="img" aria-label="知识库版本 v 1.0.8">
+                  <!-- @update-badge-pattern -->
+                  <svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs><filter id="wzh-update-engraved" x="-15%" y="-20%" width="130%" height="140%" color-interpolation-filters="sRGB"><feOffset in="SourceAlpha" dx="0" dy=".7" result="shift"/><feGaussianBlur in="shift" stdDeviation=".35" result="soft"/><feComposite in="SourceAlpha" in2="soft" operator="out" result="inset"/><feFlood flood-color="#352918" flood-opacity=".7"/><feComposite in2="inset" operator="in" result="shadow"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="shadow"/></feMerge></filter></defs></svg>
+                  <div class="wzh-update-float"><div class="wzh-update-tilt"><div class="wzh-update-medal"><div class="wzh-update-scale">
+                    <div class="wzh-update-medal-face wzh-update-medal-front"><img class="wzh-update-medal-art" src="../assets/update-badge.svg" alt=""><svg class="wzh-update-medal-pattern" viewBox="0 0 100 116" aria-hidden="true"><use href="#wzh-update-pattern"/></svg><span class="wzh-update-medal-shine" aria-hidden="true"></span><strong id="trainChatUpdateVersion" style="filter:url(#wzh-update-engraved)">v 1.0.8</strong></div>
+                    <div class="wzh-update-medal-face wzh-update-medal-back" aria-hidden="true"><img class="wzh-update-medal-art" src="../assets/update-badge.svg" alt=""><svg class="wzh-update-medal-pattern" viewBox="0 0 100 116"><use href="#wzh-update-pattern"/></svg><span class="wzh-update-medal-shine"></span><strong data-update-badge-version style="filter:url(#wzh-update-engraved)">v 1.0.8</strong></div>
+                  </div></div></div></div>
+                </div>
+                <div class="wzh-update-copy"><h4 id="trainChatUpdateTitle">我的助手官方技能</h4><p id="trainChatUpdateDescription" role="status" aria-live="polite" aria-atomic="true">v1.0.8，通信分析更细，显存排查参考更全。</p><div class="wzh-update-meta"><button class="wzh-update-details-toggle" id="trainChatUpdateDetailsToggle" type="button" aria-expanded="false" aria-controls="trainChatUpdateDetails"><span>版本详情</span><svg class="wzh-update-chevron" viewBox="0 0 20 20" width="14" height="14" fill="none" aria-hidden="true"><path d="m5.5 7.5 4.5 4.5 4.5-4.5"/></svg></button><div class="wzh-update-progress" id="trainChatUpdateProgress" role="progressbar" aria-label="技能与知识更新进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><span></span></div></div></div>
+                <button class="wzh-update-primary is-secondary btn btn-compact" id="trainChatUpdateAction" type="button">检查更新</button>
+              </div>
+              <div class="wzh-update-details" id="trainChatUpdateDetails" hidden>
+                <div><span class="wzh-update-kind">Skills · 2 项升级</span><strong>通信慢在哪里，显存花在哪里</strong><p>细化通信等待与计算重叠分析，补充显存峰值的排查步骤。</p><button type="button" data-update-section="skills">查看内置 Skills <span aria-hidden="true">↗</span></button></div>
+                <div><span class="wzh-update-kind">知识库 · 18 篇新增</span><strong>让排查建议，多一些经验支撑</strong><p>补充分布式训练与显存排障案例，为分析提供更完整的参考。</p><button type="button" data-update-section="knowledge">查看内置知识库 <span aria-hidden="true">↗</span></button></div>
+              </div>
+            </article>
             <div class="wzh-general-group" aria-label="基础设置">
               <div class="wzh-general-row">
-                <span class="wzh-general-row-label"><span class="wzh-general-icon wzh-general-icon--launch" aria-hidden="true"></span>启动方式</span>
-                <div class="wzh-general-segment" role="group" aria-label="启动方式" data-general-choice="launch">
+                <span class="wzh-general-row-label"><span class="wzh-general-icon wzh-general-icon--launch" aria-hidden="true"></span><span class="wzh-general-label-copy"><span>启动方式</span><span class="wzh-general-row-note" id="trainChatGeneralLaunchNote">下一次启动助手时生效</span></span></span>
+                <div class="wzh-general-segment" role="group" aria-label="启动方式" aria-describedby="trainChatGeneralLaunchNote" data-general-choice="launch">
                   <button type="button" class="is-active" data-value="default" aria-pressed="true">默认启动</button>
                   <button type="button" data-value="click" aria-pressed="false">点击启动</button>
                 </div>
               </div>
               <div class="wzh-general-row">
-                <span class="wzh-general-row-label"><span class="wzh-general-icon wzh-general-icon--floating" aria-hidden="true"></span>默认助手形态</span>
-                <div class="wzh-general-segment" role="group" aria-label="默认助手形态" data-general-choice="window">
+                <span class="wzh-general-row-label"><span class="wzh-general-icon wzh-general-icon--floating" aria-hidden="true"></span><span class="wzh-general-label-copy"><span>默认助手形态</span><span class="wzh-general-row-note" id="trainChatGeneralWindowNote">下一次启动助手时生效</span></span></span>
+                <div class="wzh-general-segment" role="group" aria-label="默认助手形态" aria-describedby="trainChatGeneralWindowNote" data-general-choice="window">
                   <button type="button" class="is-active" data-value="split" aria-pressed="true">分屏窗</button>
                   <button type="button" data-value="floating" aria-pressed="false">悬浮窗</button>
                 </div>
@@ -599,8 +622,8 @@
                 <button type="button" class="wzh-general-switch" data-general-switch="locate" role="switch" aria-checked="true" aria-label="自动锚定选中性能文件"><span></span></button>
               </div>
               <div class="wzh-general-row">
-                <span class="wzh-general-row-label"><span class="wzh-general-icon wzh-general-icon--update" aria-hidden="true"></span>自动检查更新</span>
-                <button type="button" class="wzh-general-switch" data-general-switch="update" role="switch" aria-checked="true" aria-label="自动检查更新"><span></span></button>
+                <span class="wzh-general-row-label"><span class="wzh-general-icon wzh-general-icon--update" aria-hidden="true"></span><span class="wzh-general-label-copy"><span>自动检查更新</span><span class="wzh-general-row-note" id="trainChatGeneralUpdateNote">下一次启动助手时生效</span></span></span>
+                <button type="button" class="wzh-general-switch" data-general-switch="update" role="switch" aria-checked="true" aria-label="自动检查更新" aria-describedby="trainChatGeneralUpdateNote"><span></span></button>
               </div>
             </div>
             <div class="wzh-general-prompt-group">
@@ -628,7 +651,7 @@
                 <button class="wzh-skills-add" id="trainChatSkillsAdd" type="button">＋ 添加</button>
               </div>
             </div>
-            <div id="trainChatSkillsContent" aria-live="polite"></div>
+            <div class="wzh-settings-catalog-content" id="trainChatSkillsContent" aria-live="polite"></div>
             </div>
             <div class="wzh-skills-upload" id="trainChatSkillsUpload" hidden>
               <div class="wzh-skills-upload-heading"><button class="wzh-skills-upload-back" id="trainChatSkillsUploadBack" type="button" aria-label="返回 Skills 列表"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 4-8 8 8 8M6 12h15"/></svg></button><span>添加技能</span></div>
@@ -665,7 +688,7 @@
                 <button class="wzh-skills-add" id="trainChatMcpAdd" type="button">＋ 添加</button>
               </div>
             </div>
-            <div id="trainChatMcpContent" aria-live="polite"></div>
+            <div class="wzh-settings-catalog-content" id="trainChatMcpContent" aria-live="polite"></div>
           </section>
           <section class="wzh-settings-section wzh-settings-knowledge" data-settings-panel="knowledge" aria-label="知识库设置" hidden>
             <div class="wzh-skills-toolbar">
@@ -680,7 +703,7 @@
                 <button class="wzh-skills-add" id="trainChatKnowledgeAdd" type="button">＋ 添加</button>
               </div>
             </div>
-            <div id="trainChatKnowledgeContent" aria-live="polite"></div>
+            <div class="wzh-settings-catalog-content" id="trainChatKnowledgeContent" aria-live="polite"></div>
           </section>
         </div>
         <footer class="wzh-settings-foot">
@@ -709,6 +732,8 @@
   <script defer src="../import-dialog.js"></script>
   <script defer src="../settings-dialog.js"></script>
   <script defer src="../settings-general.js"></script>
+  <script defer src="../canvas-confetti.min.js"></script>
+  <script defer src="../settings-updates.js"></script>
   <script defer src="../overlay-scrollbars.js"></script>
   <script defer src="../settings-skills.js"></script>
   <script defer src="../settings-skills-upload.js"></script>

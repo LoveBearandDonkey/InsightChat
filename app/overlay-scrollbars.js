@@ -3,7 +3,9 @@
   'use strict';
 
   function initOverlayScrollbars() {
-    ['.wzh-settings-scroll', '#contentCard', '#msiOverviewPanel', '#msiTuningDocumentPanel'].forEach((selector) => {
+    ['.wzh-settings-scroll', '#trainChatSkillsContent', '#trainChatMcpContent',
+      '#trainChatKnowledgeContent', '#trainChatSkillsUpload',
+      '#contentCard', '#msiOverviewPanel', '#msiTuningDocumentPanel'].forEach((selector) => {
       const scroller = document.querySelector(selector);
       const host = scroller?.parentElement;
       if (!scroller || !host) return;

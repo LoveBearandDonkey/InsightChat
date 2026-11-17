@@ -22,6 +22,12 @@
     const warning = document.getElementById('trainChatSettingsWarning');
     const warningSave = document.getElementById('trainChatSettingsWarningSave');
     const warningDiscard = document.getElementById('trainChatSettingsWarningDiscard');
+    const styleButtons = [...dialog.querySelectorAll('[data-settings-style]')];
+    dialog.dataset.settingsStyle = '1';
+    styleButtons.forEach((button) => button.addEventListener('click', () => {
+      dialog.dataset.settingsStyle = button.dataset.settingsStyle;
+      styleButtons.forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+    }));
 
     function moveDialog(left, top) {
       const maxLeft = Math.max(0, overlay.clientWidth - dialog.offsetWidth);
@@ -114,7 +120,6 @@
       script: document.getElementById('trainChatSettingsScript'),
     };
     const heading = document.getElementById('trainChatSettingsHeading');
-    const generalNote = document.getElementById('trainChatSettingsGeneralNote');
     const agentConfigTitle = document.getElementById('trainChatSettingsAgentConfigTitle');
     const navItems = [...dialog.querySelectorAll('[data-settings-section]')];
     const panels = [...dialog.querySelectorAll('[data-settings-panel]')];
@@ -236,8 +241,6 @@
       });
       panels.forEach((panel) => { panel.hidden = panel.dataset.settingsPanel !== section; });
       heading.textContent = { general: '通用', agent: 'Agent', skills: 'Skills', mcp: 'MCP', knowledge: '知识库' }[section];
-      generalNote.hidden = section !== 'general';
-      dialog.classList.toggle('is-general', section === 'general');
       footer.hidden = section !== 'agent';
       dialog.dispatchEvent(new CustomEvent('settings:section-change', { detail: { section } }));
     }
@@ -256,7 +259,7 @@
     trigger.addEventListener('click', () => {
       draft = clone(saved);
       renderAgent();
-      setSection('agent');
+      setSection('general');
       setMode('form');
       updateDirty();
       overlay.hidden = false;

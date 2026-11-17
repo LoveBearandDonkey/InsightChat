@@ -270,7 +270,16 @@
         render();
       }
     });
-    render();
+    const builtin = libraries.find(library => library.id === 'ascend');
+    const builtinDescription = builtin.description;
+    function syncBuiltinUpdate() {
+      builtin.description = window.MSI_BUILTIN_UPDATES?.getState().installed
+        ? '包含 2000+ 篇文档案例；本次演示已补充分布式训练与显存排障的 18 篇新案例。'
+        : builtinDescription;
+      render();
+    }
+    document.addEventListener('msi:builtin-update', syncBuiltinUpdate);
+    syncBuiltinUpdate();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initKnowledgeSettings, { once: true });

@@ -132,7 +132,7 @@ html = html.replaceAll('href="chat.html"', 'href=""');
 for (const file of ['settings-dialog.css', 'settings-skills.css']) {
   html = html.replace('<link rel="stylesheet" href="../' + file + '">', '');
 }
-for (const file of ['settings-dialog.js', 'settings-skills.js', 'settings-skills-upload.js',
+for (const file of ['settings-dialog.js', 'settings-updates.js', 'canvas-confetti.min.js', 'settings-skills.js', 'settings-skills-upload.js',
   'settings-mcp.js', 'settings-knowledge.js', 'tuning-document.js']) {
   html = html.replace('<script defer src="../' + file + '"></script>', '');
 }

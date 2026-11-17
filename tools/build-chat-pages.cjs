@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {buildMemoryViz} = require('./build-memory-viz.cjs');
 const {buildVisualIcon} = require('./build-visual-icon.cjs');
+const esbuild = require('esbuild');
 
 const root = path.resolve(__dirname, '..');
 const app = path.join(root, 'app');
@@ -12,6 +13,10 @@ const titles = { overview: '智能对话 · 空白工作台', timeline: '时间�
 
 function renderPage(view) {
   let html = fs.readFileSync(path.join(app, 'shell.html'), 'utf8');
+  const pattern = fs.readFileSync(path.join(app, 'assets/update-badge-pattern.svg'), 'utf8')
+    .trim().replace(/^<svg\b[^>]*>/, '').replace(/<\/svg>$/, '');
+  html = html.replace('<!-- @update-badge-pattern -->',
+    '<svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs><symbol id="wzh-update-pattern" viewBox="0 0 100 116" fill="none">' + pattern + '</symbol></defs></svg>');
   html = html.replace('__ENTRY_VIEW__', view);
   html = html.replace('<title>智能对话 · 空白工作台</title>', '<title>' + titles[view] + '</title>');
   html = html.replace(/<!-- @include pages\/([\w-]+\.html) -->/g, (_, file) =>
@@ -35,7 +40,7 @@ function renderPage(view) {
   html = html.replace('  <!-- @overview-script -->', view === 'overview'
     ? '  <script defer src="../overview.js"></script>' : '');
   if (overview) html = html.replace('</body>', '  <script defer src="../visual-upgrade.js"></script>\n</body>');
-  if (html.includes('<!-- @include') || html.includes('<!-- @overview-script') ||
+  if (html.includes('<!-- @include') || html.includes('<!-- @overview-script') || html.includes('<!-- @update-badge-pattern') ||
       /__[A-Z_]+__/.test(html)) {
     throw new Error('Unresolved chat page template marker');
   }
@@ -53,6 +58,15 @@ function renderVisualUpgrade() {
 }
 
 function buildAll() {
+  // Keep the celebration offline-capable and retain the upstream ISC license.
+  const confettiRoot = path.dirname(require.resolve('canvas-confetti/package.json'));
+  const confettiPackage = JSON.parse(fs.readFileSync(path.join(confettiRoot, 'package.json'), 'utf8'));
+  const confettiLicense = fs.readFileSync(path.join(confettiRoot, 'LICENSE'), 'utf8').trim();
+  const confetti = esbuild.transformSync(fs.readFileSync(path.join(confettiRoot, 'dist/confetti.browser.js'), 'utf8'), {
+    minify: true, target: 'es2018', legalComments: 'none',
+  }).code;
+  fs.writeFileSync(path.join(app, 'canvas-confetti.min.js'),
+    `/*! Generated from canvas-confetti ${confettiPackage.version}.\n${confettiLicense}\n*/\n${confetti}`);
   buildVisualIcon();
   buildMemoryViz();
   for (const [file, view] of Object.entries(entries)) {

@@ -17,6 +17,7 @@
       { id: 'overview', kind: 'system', name: '模型性能分析', description: '包含 50 个系统内置 Skills，覆盖算子、通信、显存等性能分析能力。', enabled: true, usage: 0, count: 50 },
     ];
     const icon = '<span class="wzh-skills-icon wzh-skills-icon--skill" aria-hidden="true"><span class="wzh-skills-icon-mark"></span></span>';
+    const systemIcon = '<span class="wzh-knowledge-ascend-icon" aria-hidden="true"><svg class="wzh-special-icon-outline" viewBox="0 0 42 42"><path d="M21 1 C37 1 41 5 41 21 C41 37 37 41 21 41 C5 41 1 37 1 21 C1 5 5 1 21 1Z"/></svg><span class="wzh-knowledge-ascend-crop"><img src="../../src/pic/icon/ascend-official.svg" alt=""></span></span>';
     let filter = 'all';
     let openMenuId = null;
     let expandedId = null;
@@ -47,7 +48,7 @@
       item.dataset.skillId = skill.id;
       const row = element('div', 'wzh-skills-row');
       const iconWrap = element('span');
-      iconWrap.innerHTML = icon;
+      iconWrap.innerHTML = skill.kind === 'system' ? systemIcon : icon;
       row.appendChild(iconWrap.firstChild);
       const copy = element('div', 'wzh-skills-copy');
       const name = element('strong', 'wzh-skills-name', skill.name);
@@ -281,7 +282,16 @@
       search.value = '';
       render();
     });
-    render();
+    const builtin = skills.find(skill => skill.id === 'overview');
+    const builtinDescription = builtin.description;
+    function syncBuiltinUpdate() {
+      builtin.description = window.MSI_BUILTIN_UPDATES?.getState().installed
+        ? '包含 50 个系统内置 Skills；本次演示已升级通信等待分析与显存峰值排查方法。'
+        : builtinDescription;
+      render();
+    }
+    document.addEventListener('msi:builtin-update', syncBuiltinUpdate);
+    syncBuiltinUpdate();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initSkillsCatalog, { once: true });
