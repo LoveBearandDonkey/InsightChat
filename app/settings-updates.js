@@ -37,6 +37,129 @@
     const trigger = document.getElementById('trainChatKeyBtn');
     const general = document.querySelector('[data-settings-section="general"]');
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+    let flight = null;
+    function drawExhaust(ctx, x, y, scale, energy, available) {
+      const t = Math.max(0, Math.min(1, (energy - .08) / .92));
+      const thrust = t * t * (3 - 2 * t);
+      if (thrust < .005 || available < 4) return;
+      // A single tapering light band; size and opacity follow the flight speed.
+      const length = Math.min(44 * thrust * scale, available);
+      const top = 16 * scale * thrust;
+      const bottom = top * .48;
+      // Continue the same straight trapezoid upward behind the badge.
+      // Extrapolate its sides so the visible width and taper stay unchanged.
+      const overlap = 20 * scale * thrust;
+      const upper = top + (top - bottom) * overlap / length;
+      const gradient = ctx.createLinearGradient(x, y, x, y + length);
+      gradient.addColorStop(0, `rgba(246, 210, 150, ${thrust * .5})`);
+      gradient.addColorStop(.45, `rgba(226, 178, 132, ${thrust * .26})`);
+      gradient.addColorStop(1, 'rgba(204, 158, 147, 0)');
+      ctx.save();
+      ctx.filter = 'blur(1.1px)';
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.moveTo(x - upper, y - overlap);
+      ctx.lineTo(x + upper, y - overlap);
+      ctx.lineTo(x + bottom, y + length);
+      ctx.lineTo(x - bottom, y + length);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    function stopFlight() {
+      if (flight) {
+        cancelAnimationFrame(flight.frame);
+        flight.canvas.remove();
+        flight = null;
+      }
+    }
+    function startFlight(startTime, releaseTime, duration) {
+      stopFlight();
+      const canvas = document.createElement('canvas');
+      canvas.className = 'wzh-update-flight';
+      canvas.setAttribute('aria-hidden', 'true');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      card.prepend(canvas);
+      const current = { canvas, frame: 0 };
+      flight = current;
+      const clamp = value => Math.max(0, Math.min(1, value));
+      const smooth = value => { const t = clamp(value); return t * t * (3 - 2 * t); };
+      // Accent colors from the card border, with warm streaks among the cool ones.
+      const palette = ['94, 166, 238', '57, 185, 192', '151, 112, 218', '215, 163, 71', '228, 132, 116', '88, 179, 145'];
+      const particles = Array.from({ length: 84 }, (_, index) => ({
+        x: Math.random(), y: Math.random(), depth: .25 + Math.random() * .75,
+        local: index % 3 !== 0, alpha: 0, color: palette[index % palette.length],
+      }));
+      let previous = startTime, width = 0, height = 0, pixelRatio = 0;
+      function tick() {
+        current.frame = 0;
+        if (flight !== current) return;
+        const now = document.timeline.currentTime;
+        const elapsed = Math.max(0, now - startTime);
+        if (elapsed >= duration || reducedMotion.matches || !card.getClientRects().length) {
+          stopFlight();
+          return;
+        }
+        // Resume at the live presentation time; never accumulate a hidden tab's delta.
+        const dt = Math.min(40, Math.max(0, now - previous)) / 1000;
+        previous = now;
+        if (!document.hidden) {
+          const rect = card.getBoundingClientRect();
+          const dpr = Math.min(devicePixelRatio || 1, 2);
+          const w = card.clientWidth, h = card.clientHeight;
+          if (w !== width || h !== height || dpr !== pixelRatio) {
+            width = w; height = h; pixelRatio = dpr;
+            canvas.width = Math.ceil(w * dpr); canvas.height = Math.ceil(h * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          }
+          ctx.clearRect(0, 0, width, height);
+          const acceleration = smooth((elapsed - 240) / 2050);
+          const release = smooth((elapsed - releaseTime) / (duration - releaseTime));
+          const energy = acceleration * (1 - release);
+          const fade = smooth(elapsed / 400) * (1 - smooth((elapsed - releaseTime) / 900));
+          // Sample the actual eased scale instead of approximating the badge's release.
+          const transform = getComputedStyle(scaleGroup).transform;
+          const matrix = transform === 'none' ? null : new DOMMatrixReadOnly(transform);
+          const scale = matrix ? Math.hypot(matrix.m11, matrix.m12, matrix.m13) : 1;
+          const liftTransform = getComputedStyle(tilt).transform;
+          const lift = liftTransform === 'none' ? 0 : new DOMMatrixReadOnly(liftTransform).m42;
+          const count = (8 + energy * 76) * Math.pow(scale, 1.5);
+          const badgeRect = badge.getBoundingClientRect();
+          const centerX = badgeRect.left - rect.left + badgeRect.width / 2;
+          const centerY = badgeRect.top - rect.top + badgeRect.height / 2;
+          const speed = 22 + 640 * energy;
+          for (let i = 0; i < particles.length; i++) {
+            const p = particles[i];
+            p.alpha += (clamp(count - i) - p.alpha) * Math.min(1, dt * 12);
+            p.y += dt * speed * (.35 + p.depth) / height;
+            if (p.y > 1.5) { p.y = -.5; p.x = Math.random(); }
+            if (p.alpha < .005) continue;
+            const x = p.local ? centerX + (p.x - .5) * 205 * scale : p.x * width;
+            const y = centerY + (p.y * height - centerY) * scale;
+            const length = (5 + energy * 62) * p.depth * scale;
+            const drift = (x - centerX) * .035;
+            const edgeFade = smooth(y / 18) * smooth((height - y) / 24);
+            const textFade = x > centerX + 65 ? .28 : 1;
+            const alpha = p.alpha * fade * edgeFade * textFade * (.18 + p.depth * .3);
+            if (alpha < .003) continue;
+            const gradient = ctx.createLinearGradient(x - drift, y - length, x, y);
+            gradient.addColorStop(0, `rgba(${p.color}, 0)`);
+            gradient.addColorStop(.7, `rgba(${p.color}, ${alpha * .6})`);
+            gradient.addColorStop(1, `rgba(${p.color}, ${alpha})`);
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = (.5 + p.depth * 1.1) * scale;
+            ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(x - drift, y - length); ctx.lineTo(x, y); ctx.stroke();
+          }
+          // The mask's rounded bottom tip is at y=110.75 in its 116-unit viewBox.
+          const exhaustY = centerY + lift + badgeRect.height * (52.75 / 116) * scale - 3 * scale;
+          drawExhaust(ctx, centerX, exhaustY, scale, energy, height - exhaustY - 6);
+        }
+        current.frame = requestAnimationFrame(tick);
+      }
+      tick();
+    }
     let shadowVisible = false, shadowFrame = 0, lastShadow = '';
     function updateShadow() {
       const matrix = element => {
@@ -146,6 +269,7 @@
     }
     function stopPresentation() {
       presentationEpoch++;
+      stopFlight();
       confettiCue?.cancel();
       confettiCue = null;
       clearConfetti();
@@ -196,6 +320,7 @@
       medalAnimation.startTime = startTime;
       scaleAnimation.startTime = startTime;
       liftAnimation.startTime = startTime;
+      startFlight(startTime, landingStart, liftDuration);
       medalAnimation.finished.catch(() => {});
       scaleAnimation.finished.catch(() => {});
       liftAnimation.finished.catch(() => {});

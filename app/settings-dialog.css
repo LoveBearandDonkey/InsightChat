@@ -1,5 +1,6 @@
 /* 助手设置沿用主窗口的主题变量与半透明模糊表面。 */
-.wzh-capability-update { position: relative; margin: 16px 0 16px; padding: 16px 18px; overflow: visible; border: 1px solid transparent; border-radius: 16px; background: var(--surface-1); }
+/* Leave headroom inside the scroll viewport for the full-size floating badge. */
+.wzh-capability-update { position: relative; margin: 32px 0 16px; padding: 16px 18px; overflow: visible; border: 1px solid transparent; border-radius: 16px; background: var(--surface-1); }
 /* Coral, violet, blue and cyan sampled from the assistant avatar palette. */
 .wzh-capability-update::before { content: ''; position: absolute; inset: -1px; padding: 1px; border-radius: inherit; background: linear-gradient(115deg, #ff9275, #c477e9 28%, #6268f3 52%, #35bce9 76%, #64dbd3); opacity: .7; mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite: exclude; pointer-events: none; }
 .wzh-update-hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; min-height: 72px; padding-left: 114px; }
@@ -45,13 +46,16 @@
 #trainChatKeyBtn { position: relative; }
 #trainChatKeyBtn > .wzh-update-dot { position: absolute; top: 2px; right: 2px; width: 8px; height: 8px; border: 2px solid var(--surface-1); border-radius: 50%; background: var(--danger); }
 .wzh-update-confetti { position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; pointer-events: none; clip-path: inset(0 round 16px); }
+.wzh-update-flight { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; clip-path: inset(0 round 16px); }
+.wzh-update-badge, .wzh-update-copy, .wzh-update-primary, .wzh-update-details { z-index: 1; }
+.wzh-update-copy, .wzh-update-primary, .wzh-update-details { position: relative; }
 .wzh-capability-update.is-upgrade-motion .wzh-update-float { animation: none; transform: none; }
 .wzh-capability-update.is-upgrade-motion .wzh-update-tilt { transform: none; }
 .wzh-capability-update.is-upgrade-motion .wzh-update-medal-shine, .wzh-capability-update.is-upgrade-motion .wzh-update-medal-edge { animation: wzh-badge-sheen .72s linear infinite; }
 @keyframes wzh-badge-float { 0%, 100% { transform: translateY(0) rotateY(-2deg); } 50% { transform: translateY(-2px) rotateY(2deg); } }
 @keyframes wzh-badge-sheen { 0% { background-position: 110% 50%; } 100% { background-position: -10% 50%; } }
 @media (max-width: 520px) { .wzh-update-hero { padding-left: 0; padding-top: 54px; gap: 10px; } .wzh-update-copy h4 { font-size: 16px; } .wzh-update-primary { padding-inline: 10px; } }
-@media (prefers-reduced-motion: reduce) { .wzh-capability-update .wzh-update-float, .wzh-capability-update .wzh-update-medal-shine, .wzh-capability-update .wzh-update-medal-edge { animation: none !important; } .wzh-update-tilt { transform: none; } .wzh-update-progress > span, .wzh-update-chevron, .wzh-update-tilt, .wzh-update-medal-shine { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .wzh-update-flight { display: none; } .wzh-capability-update .wzh-update-float, .wzh-capability-update .wzh-update-medal-shine, .wzh-capability-update .wzh-update-medal-edge { animation: none !important; } .wzh-update-tilt { transform: none; } .wzh-update-progress > span, .wzh-update-chevron, .wzh-update-tilt, .wzh-update-medal-shine { transition: none; } }
 .wzh-settings-overlay {
   position: absolute;
   inset: 0;
