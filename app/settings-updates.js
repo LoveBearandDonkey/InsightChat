@@ -38,9 +38,37 @@
     const general = document.querySelector('[data-settings-section="general"]');
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
     let flight = null;
-    function drawExhaust(ctx, x, y, scale, energy, available) {
+    let sheenAnimations = [];
+    function stopSheen() {
+      sheenAnimations.forEach(animation => animation.cancel());
+      sheenAnimations = [];
+    }
+    function startSheen(startTime, releaseTime, duration) {
+      stopSheen();
+      const period = 720;
+      // Finish the current sweep, then brake to the resting highlight position.
+      const brakingStart = Math.ceil(releaseTime / period) * period;
+      const brakingDuration = duration - brakingStart;
+      // Match the loop's incoming speed and reach zero speed at the final frame.
+      const initialSlope = (120 / period) * brakingDuration / 55;
+      badge.querySelectorAll('.wzh-update-medal-shine, .wzh-update-medal-edge').forEach(layer => {
+        const loop = layer.animate([
+          { backgroundPosition: '110% 50%' }, { backgroundPosition: '-10% 50%' },
+        ], { duration: period, iterations: brakingStart / period });
+        const braking = layer.animate([
+          { backgroundPosition: '110% 50%' }, { backgroundPosition: '55% 50%' },
+        ], { delay: brakingStart, duration: brakingDuration, fill: 'forwards',
+          easing: `cubic-bezier(.16,${initialSlope * .16},.35,1)` });
+        for (const animation of [loop, braking]) {
+          animation.startTime = startTime;
+          animation.finished.catch(() => {});
+          sheenAnimations.push(animation);
+        }
+      });
+    }
+    function drawExhaust(ctx, x, y, scale, energy, available, fade) {
       const t = Math.max(0, Math.min(1, (energy - .08) / .92));
-      const thrust = t * t * (3 - 2 * t);
+      const thrust = t * t * (3 - 2 * t) * fade;
       if (thrust < .005 || available < 4) return;
       // A single tapering light band; size and opacity follow the flight speed.
       const length = Math.min(44 * thrust * scale, available);
@@ -73,7 +101,7 @@
         flight = null;
       }
     }
-    function startFlight(startTime, releaseTime, duration) {
+    function startFlight(startTime, releaseTime, duration, spinDuration) {
       stopFlight();
       const canvas = document.createElement('canvas');
       canvas.className = 'wzh-update-flight';
@@ -152,9 +180,13 @@
             ctx.lineCap = 'round';
             ctx.beginPath(); ctx.moveTo(x - drift, y - length); ctx.lineTo(x, y); ctx.stroke();
           }
-          // The mask's rounded bottom tip is at y=110.75 in its 116-unit viewBox.
-          const exhaustY = centerY + lift + badgeRect.height * (52.75 / 116) * scale - 3 * scale;
-          drawExhaust(ctx, centerX, exhaustY, scale, energy, height - exhaustY - 6);
+          // Retract during the final half-turn; vanish at the front-facing finish.
+          if (elapsed < spinDuration) {
+            const exhaustFade = 1 - smooth((elapsed - releaseTime) / (spinDuration - releaseTime));
+            // The mask's rounded bottom tip is at y=110.75 in its 116-unit viewBox.
+            const exhaustY = centerY + lift + badgeRect.height * (52.75 / 116) * scale - 3 * scale;
+            drawExhaust(ctx, centerX, exhaustY, scale, energy, height - exhaustY - 6, exhaustFade);
+          }
         }
         current.frame = requestAnimationFrame(tick);
       }
@@ -225,8 +257,8 @@
       progress.querySelector('span').style.width = value + '%';
     }
     function paintDescription() {
-      const text = descriptionStatus || (model.pending ? `发现 v ${model.pending} · 2 项 Skill 升级，18 篇新知识。`
-        : `v${model.version}，通信分析更细，显存排查参考更全。`);
+      const text = descriptionStatus || (model.pending ? '发现新版本 · 2 项 Skill 升级，18 篇新知识。'
+        : '通信分析更细，显存排查参考更全。');
       description.dataset.status = String(!!descriptionStatus);
       description.title = text;
       if (description.textContent === text) return;
@@ -270,6 +302,7 @@
     function stopPresentation() {
       presentationEpoch++;
       stopFlight();
+      stopSheen();
       confettiCue?.cancel();
       confettiCue = null;
       clearConfetti();
@@ -320,7 +353,8 @@
       medalAnimation.startTime = startTime;
       scaleAnimation.startTime = startTime;
       liftAnimation.startTime = startTime;
-      startFlight(startTime, landingStart, liftDuration);
+      startSheen(startTime, landingStart, liftDuration);
+      startFlight(startTime, landingStart, liftDuration, spinDuration);
       medalAnimation.finished.catch(() => {});
       scaleAnimation.finished.catch(() => {});
       liftAnimation.finished.catch(() => {});
@@ -378,6 +412,7 @@
       liftAnimation?.cancel();
       liftAnimation = null;
       card.classList.remove('is-upgrade-motion');
+      stopSheen();
       state = 'ready';
       render();
     }
@@ -404,7 +439,8 @@
         trigger.setAttribute('aria-label', available ? '打开助手设置，有技能与知识更新' : '打开助手设置');
         trigger.title = available ? '助手设置 · 有新本领可更新' : '助手设置';
       }
-      title.textContent = available && !updating ? '助手本领可升级啦~' : '我的助手官方技能';
+      title.textContent = updating ? '助手技能正在加速升级中'
+        : available ? '助手本领可升级啦~' : `我的助手官方技能版本：v${model.version}`;
       detailsToggle.querySelector('span').textContent = available && !updating ? '更新详情' : '版本详情';
       paintDescription();
       badge.querySelector('#trainChatUpdateVersion').textContent = 'v ' + model.version;

@@ -22,6 +22,7 @@
     const count = document.getElementById('trainChatSkillsSelectedCount');
     const confirm = document.getElementById('trainChatSkillsUploadConfirm');
     const error = document.getElementById('trainChatSkillsUploadError');
+    const directory = view.querySelector('.wzh-skills-directory');
     const directoryName = document.getElementById('trainChatSkillsDirectoryName');
     const scroll = dialog.querySelector('.wzh-settings-scroll');
     let entries = [];
@@ -77,6 +78,7 @@
       foot.hidden = false;
       dialog.classList.add('is-skills-upload');
       scroll.scrollTop = 0;
+      view.scrollTop = 0;
       document.getElementById('trainChatSkillsUploadBack').focus({ preventScroll: true });
     }
 
@@ -96,6 +98,7 @@
       zone.classList.toggle('has-selection', hasEntries);
       prompt.textContent = hasEntries ? '继续拖入或点击选择本地Skill文件' : '拖入或点击选择本地Skill文件';
       selected.hidden = !hasEntries;
+      directory.hidden = hasEntries;
       confirm.disabled = !hasEntries;
       count.textContent = String(entries.length);
       list.replaceChildren();

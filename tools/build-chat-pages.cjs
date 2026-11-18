@@ -23,7 +23,7 @@ function renderPage(view) {
     fs.readFileSync(path.join(pages, file), 'utf8').trimEnd());
   // 概览页已有两处专属外观；生成时保留它们，其余结构仍共用 shell 和视图片段。
   const overview = view === 'overview';
-  html = html.replace('        <!-- @visual-upgrade-entry -->\n', overview
+  html = html.replace(/        <!-- @visual-upgrade-entry -->\r?\n/, overview
     ? '        <a class="msi-visual-upgrade-entry" href="visual-upgrade.html" title="查看视觉 2.0 升级演示"><img class="msi-visual-upgrade-icon" src="../../src/pic/icon/visual-3s.gif" width="18" height="18" alt="" aria-hidden="true"><span>视觉 2.0</span></a>\n'
     : '');
   const variants = {

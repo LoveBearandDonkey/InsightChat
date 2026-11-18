@@ -128,11 +128,11 @@ img.wzh-official-mark { display: inline-block; width: 16px; height: 16px; flex: 
 }
 
 /* 添加 Skill 的下钻页。 */
-.wzh-settings-dialog.is-skills-upload { width: min(864px, calc(100% - 16px)); height: min(648px, calc(100% - 16px)); }
 .wzh-settings-dialog.is-skills-upload .wzh-settings-main { position: relative; }
 .wzh-settings-dialog.is-skills-upload .wzh-settings-scroll { padding-bottom: 24px; }
+.wzh-settings-dialog.is-skills-upload .wzh-settings-scroll:has(.wzh-skills-dropzone.has-selection) { padding-bottom: 0; }
 .wzh-skills-upload[hidden], .wzh-skills-selected[hidden], .wzh-skills-upload-error[hidden] { display: none; }
-.wzh-skills-upload-heading { display: flex; align-items: center; gap: 10px; margin: 0 0 22px; min-height: 30px; color: var(--foreground); font: 400 14px/1.4 var(--font-sans); }
+.wzh-skills-upload-heading { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 10px; margin: 0 0 10px; padding-bottom: 12px; min-height: 30px; background: var(--surface-1); color: var(--foreground); font: 400 14px/1.4 var(--font-sans); }
 .wzh-skills-upload-back { display: grid; place-items: center; flex: 0 0 20px; width: 20px; height: 28px; padding: 0; border: 0; background: transparent; color: var(--foreground); cursor: pointer; }
 .wzh-skills-upload-back svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
 .wzh-skills-dropzone { position: relative; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 200px; padding: 20px; border: 1px dashed var(--border-line); border-radius: 8px; background: var(--surface-2); color: var(--foreground); text-align: center; cursor: pointer; }
@@ -189,7 +189,6 @@ img.wzh-official-mark { display: inline-block; width: 16px; height: 16px; flex: 
 .wzh-settings-dialog .wzh-skills-directory-danger:focus-visible { outline-color: var(--danger); }
 .wzh-skills-upload-foot { position: relative; z-index: 1; background: var(--surface-1); }
 @media (max-width: 640px) {
-  .wzh-settings-dialog.is-skills-upload { width: calc(100% - 16px); height: calc(100% - 16px); }
   .wzh-skills-selected-row { gap: 7px; padding-inline: 8px; }
   .wzh-skills-selected-actions { gap: 8px; }
   .wzh-skills-directory-row { gap: 8px; padding-inline: 10px; }
